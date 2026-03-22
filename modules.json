@@ -31,6 +31,11 @@
         ],
         "claude-md": [
           "claude-md-rules.md"
+        ],
+        "tests": [
+          "test_anti_deferral.sh",
+          "test_session_orient.sh",
+          "test_agent_file_reminder.sh"
         ]
       },
       "settings_merge": {
@@ -119,6 +124,9 @@
         ],
         "skills": [
           "configure-context-awareness"
+        ],
+        "tests": [
+          "test_context_awareness_hook.sh"
         ]
       },
       "install_note": "Special handler: files live at module root, not in scripts/. Installer copies to .claude/cc-context-awareness/.",
@@ -223,7 +231,8 @@
           "channel-routing.md"
         ],
         "tests": [
-          "test_channel_commit.sh"
+          "test_channel_commit.sh",
+          "test_wait_for_results.sh"
         ]
       },
       "settings_merge": {
@@ -307,6 +316,9 @@
         ],
         "config": [
           "protected-files.txt"
+        ],
+        "tests": [
+          "test_file_protection.sh"
         ]
       },
       "settings_merge": {

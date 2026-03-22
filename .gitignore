@@ -6,6 +6,10 @@ verification_findings/
 Thumbs.db
 desktop.ini
 
+# Python
+__pycache__/
+*.pyc
+
 # IDE
 .idea/
 .vscode/

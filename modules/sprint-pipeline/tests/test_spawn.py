@@ -8,6 +8,9 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+# Add tools/ to path so we can import spawn
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+
 
 # -- Task 1: Config -----------------------------------------------------------
 

@@ -242,7 +242,7 @@ try:
 except json.JSONDecodeError:
     print('WARNING: $config_target contains invalid JSON -- skipping bar_style update.', file=sys.stderr)
     sys.exit(0)
-c['bar_style'] = os.environ.get('_SENTINEL_BAR_STYLE', 'auto')
+c.setdefault('statusline', {})['bar_style'] = os.environ.get('_SENTINEL_BAR_STYLE', 'auto')
 with open('$config_target', 'w') as f: json.dump(c, f, indent=2)
 " 2>/dev/null || true
     fi
@@ -524,7 +524,7 @@ if [[ "$TARGET" == "global" && "$DRY_RUN" != "true" ]]; then
     [[ ! -f "$cmd_file" ]] && continue
     if grep -q 'bash scripts/' "$cmd_file" 2>/dev/null; then
       # Portable sed -i (BSD vs GNU)
-      local tmp_cmd="${cmd_file}.tmp"
+      tmp_cmd="${cmd_file}.tmp"
       sed "s|bash scripts/|bash ~/.claude/scripts/|g" "$cmd_file" > "$tmp_cmd" && mv "$tmp_cmd" "$cmd_file"
       log "  Updated paths in: $(basename "$cmd_file")"
     fi
