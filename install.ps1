@@ -337,6 +337,26 @@ Write-Host ""
 # Ensure core is always included
 if ($Modules -notmatch "core") { $Modules = "core,$Modules" }
 
+# Resolve dependencies
+$manifest = Get-Content (Join-Path $SentinelRoot "modules.json") -Raw | ConvertFrom-Json
+$changed = $true
+while ($changed) {
+    $changed = $false
+    $checkArray = $Modules -split "," | ForEach-Object { $_.Trim() }
+    foreach ($mod in $checkArray) {
+        $modDef = $manifest.modules.$mod
+        if ($modDef -and $modDef.dependencies) {
+            foreach ($dep in $modDef.dependencies) {
+                if ($Modules -notmatch [regex]::Escape($dep)) {
+                    $Modules = "$dep,$Modules"
+                    $changed = $true
+                    Log "  Auto-adding dependency: $dep (required by $mod)"
+                }
+            }
+        }
+    }
+}
+
 # Install each module
 $modArray = $Modules -split "," | ForEach-Object { $_.Trim() }
 foreach ($mod in $modArray) {

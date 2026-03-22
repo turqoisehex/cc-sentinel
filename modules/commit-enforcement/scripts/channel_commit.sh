@@ -274,7 +274,7 @@ COMMIT_ARGS=(-m "$MESSAGE" --local-verify --skip-tests)
 
 [[ -n "$CHANNEL" ]] && export SENTINEL_CHANNEL="$CHANNEL"
 COMMIT_EXIT=0
-bash "$(dirname "$0")/../hooks/safe-commit.sh" --internal "${COMMIT_ARGS[@]}" || COMMIT_EXIT=$?
+bash .claude/hooks/safe-commit.sh --internal "${COMMIT_ARGS[@]}" || COMMIT_EXIT=$?
 
 rm -f "$DIFF_FILE" "$COMMIT_ACTIVE_FILE"
 release_lock

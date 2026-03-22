@@ -316,11 +316,14 @@ for mod_key in modules:
         settings["statusLine"] = sl
 
 # Handle notification module — replace __NOTIFICATION_SCRIPT__ placeholder
-os_name = os.uname().sysname if hasattr(os, 'uname') else 'Unknown'
+import platform
+os_name = platform.system()
 if os_name == "Linux":
     notif_cmd = f"bash {hook_prefix}/hooks/flash-notification.sh"
 elif os_name == "Darwin":
     notif_cmd = f"bash {hook_prefix}/hooks/flash-notification.sh"
+elif os_name == "Windows":
+    notif_cmd = f"powershell -ExecutionPolicy Bypass -File {hook_prefix}/hooks/flash.ps1"
 else:
     notif_cmd = None
 
@@ -417,6 +420,32 @@ echo ""
 if ! echo "$MODULES" | grep -q "core"; then
   MODULES="core,$MODULES"
 fi
+
+# Resolve dependencies
+resolve_deps() {
+  local manifest="$SENTINEL_ROOT/modules.json"
+  local resolved="$MODULES"
+  local changed="true"
+  while [[ "$changed" == "true" ]]; do
+    changed="false"
+    IFS=',' read -ra check_array <<< "$resolved"
+    for mod in "${check_array[@]}"; do
+      mod=$(echo "$mod" | tr -d ' ')
+      if command -v jq &>/dev/null; then
+        deps=$(jq -r ".modules[\"$mod\"].dependencies[]? // empty" "$manifest" 2>/dev/null)
+        for dep in $deps; do
+          if ! echo ",$resolved," | grep -q ",$dep,"; then
+            resolved="$dep,$resolved"
+            changed="true"
+            log "  Auto-adding dependency: $dep (required by $mod)"
+          fi
+        done
+      fi
+    done
+  done
+  MODULES="$resolved"
+}
+resolve_deps
 
 # Export for Python subprocess
 export SENTINEL_ROOT MODULES SETTINGS_FILE HOOK_PREFIX TARGET

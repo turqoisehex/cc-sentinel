@@ -102,7 +102,7 @@ Thresholds trigger automatic reminders:
 - **65%** -- "Could a fresh session resume from your state files?"
 - **75%** -- "Wrap up current unit of work."
 - **85%** -- "State files current. Commit if at a natural boundary."
-- **95%** -- "Auto-compaction imminent. State files must be complete."
+- **92%** -- "Auto-compaction imminent. State files must be complete."
 
 **Windows support:** cc-sentinel includes the only known Windows-compatible version of cc-context-awareness. On macOS/Linux, you can choose between the bundled version or the [canonical repository](https://github.com/sdi2200262/cc-context-awareness).
 
