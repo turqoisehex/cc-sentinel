@@ -1,0 +1,290 @@
+{
+  "version": "1.0.0",
+  "modules": {
+    "core": {
+      "name": "Core",
+      "description": "Context loss, deferral prevention, state management, session orientation",
+      "required": true,
+      "dependencies": [],
+      "files": {
+        "hooks": [
+          "anti-deferral.sh",
+          "session-orient.sh",
+          "pre-compact-state-save.sh",
+          "post-compact-reorient.sh",
+          "agent-file-reminder.sh"
+        ],
+        "commands": ["self-test.md"],
+        "templates": ["current-task-template.md", "channel-template.md"],
+        "reference": ["operator-cheat-sheet.md"],
+        "claude-md": ["claude-md-rules.md"]
+      },
+      "settings_merge": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/anti-deferral.sh",
+                  "timeout": 5
+                },
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/agent-file-reminder.sh",
+                  "timeout": 5
+                }
+              ]
+            }
+          ],
+          "SessionStart": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/session-orient.sh",
+                  "timeout": 10
+                }
+              ]
+            },
+            {
+              "matcher": "compact",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/post-compact-reorient.sh",
+                  "timeout": 10
+                }
+              ]
+            }
+          ],
+          "PreCompact": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/pre-compact-state-save.sh",
+                  "timeout": 10
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "context-awareness": {
+      "name": "Context Awareness",
+      "description": "Visual context window meter, graduated warnings, compaction reset",
+      "required": false,
+      "dependencies": ["core"],
+      "platform": {
+        "windows": {
+          "source": "bundled",
+          "note": "Only known working Windows version"
+        },
+        "linux": {
+          "source": "bundled|canonical",
+          "canonical_repo": "sdi2200262/cc-context-awareness"
+        },
+        "darwin": {
+          "source": "bundled|canonical",
+          "canonical_repo": "sdi2200262/cc-context-awareness"
+        }
+      },
+      "files": {
+        "scripts": [
+          "context-awareness-hook.sh",
+          "context-awareness-statusline.sh",
+          "context-awareness-reset.sh",
+          "config.json"
+        ],
+        "skills": ["configure-context-awareness"]
+      },
+      "settings_merge": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/cc-context-awareness/context-awareness-hook.sh",
+                  "timeout": 10
+                }
+              ]
+            }
+          ],
+          "SessionStart": [
+            {
+              "matcher": "compact",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/cc-context-awareness/context-awareness-reset.sh",
+                  "timeout": 10
+                }
+              ]
+            }
+          ]
+        },
+        "statusLine": {
+          "type": "command",
+          "command": "bash .claude/cc-context-awareness/context-awareness-statusline.sh"
+        }
+      }
+    },
+    "verification": {
+      "name": "Verification",
+      "description": "5-agent verification squad, adversarial self-check, completion gate",
+      "required": false,
+      "dependencies": ["core"],
+      "files": {
+        "hooks": ["stop-task-check.sh"],
+        "commands": ["squad.md", "grill.md"],
+        "reference": ["verification-squad.md"],
+        "skills": ["grill"]
+      },
+      "settings_merge": {
+        "hooks": {
+          "Stop": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/stop-task-check.sh",
+                  "timeout": 10
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "commit-enforcement": {
+      "name": "Commit Enforcement",
+      "description": "Per-commit verification, test gating, multi-channel coordination",
+      "required": false,
+      "dependencies": ["core", "verification"],
+      "files": {
+        "hooks": ["safe-commit.sh", "auto-format.sh"],
+        "scripts": ["channel_commit.sh", "wait_for_results.sh", "wait_for_work.sh"],
+        "agents": ["commit-adversarial.md", "commit-cold-reader.md"],
+        "reference": ["channel-routing.md"]
+      },
+      "settings_merge": {
+        "hooks": {
+          "PostToolUse": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/auto-format.sh",
+                  "timeout": 15
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "sprint-pipeline": {
+      "name": "Sprint Pipeline",
+      "description": "Structured workflow: audit, design, build, perfect, finalize",
+      "required": false,
+      "dependencies": ["core", "verification"],
+      "files": {
+        "commands": [
+          "1.md", "2.md", "3.md", "4.md", "5.md",
+          "audit.md", "design.md", "build.md", "perfect.md", "finalize.md",
+          "cold.md", "cleanup.md", "opus.md", "sonnet.md", "status.md", "rewrite.md"
+        ],
+        "reference": ["spec-verification.md"],
+        "agents": ["code-simplifier.md"]
+      },
+      "settings_merge": {},
+      "recommended_plugins": [
+        "superpowers@claude-plugins-official",
+        "context7@claude-plugins-official",
+        "feature-dev@claude-plugins-official",
+        "pr-review-toolkit@claude-plugins-official",
+        "claude-md-management@claude-plugins-official",
+        "ralph-loop@claude-plugins-official",
+        "claude-code-setup@claude-plugins-official"
+      ]
+    },
+    "governance-protection": {
+      "name": "Governance Protection",
+      "description": "Protected files, correction capture, rule maintenance",
+      "required": false,
+      "dependencies": ["core"],
+      "files": {
+        "hooks": ["file-protection.sh"],
+        "commands": ["mistake.md", "prune-rules.md"],
+        "config": ["protected-files.txt"]
+      },
+      "settings_merge": {
+        "hooks": {
+          "PreToolUse": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/file-protection.sh",
+                  "timeout": 10
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "notification": {
+      "name": "Notification",
+      "description": "Desktop alerts when CC completes or needs input",
+      "required": false,
+      "dependencies": ["core"],
+      "platform": {
+        "windows": { "script": "flash.ps1" },
+        "linux": { "script": "flash-linux.sh" },
+        "darwin": { "script": "flash-macos.sh" }
+      },
+      "files": {
+        "scripts": ["flash.ps1", "flash-linux.sh", "flash-macos.sh"]
+      },
+      "settings_merge": {
+        "hooks": {
+          "Stop": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "__NOTIFICATION_SCRIPT__",
+                  "timeout": 5
+                }
+              ]
+            }
+          ],
+          "Notification": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "__NOTIFICATION_SCRIPT__",
+                  "timeout": 5
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
