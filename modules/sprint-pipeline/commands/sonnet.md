@@ -35,7 +35,7 @@ Run `bash scripts/wait_for_work.sh [--channel N]` with `run_in_background: true`
 
 Read the prompt file.
 
-**Heartbeat:** Before parsing: `date -u +"%Y-%m-%dT%H:%M:%SZ" > "verification_findings/_pending/[chN/].heartbeat"`
+**Heartbeat:** Handled automatically by `wait_for_work.sh` background process — writes `.heartbeat` every 3s, continues after work is found, self-terminates when listener session exits. No manual heartbeat write needed.
 
 **Parse YAML frontmatter:**
 - `type`: commit-verification | squad | implementation
@@ -82,7 +82,7 @@ One agent per task -- each has full tool access (Edit, Write, Bash).
 
 ### Cleanup
 
-Delete consumed prompt file. Return to Wait.
+Delete consumed prompt file. Kill heartbeat if needed: `kill $(cat verification_findings/_pending/[chN/].heartbeat_pid) 2>/dev/null; rm -f verification_findings/_pending/[chN/].heartbeat_pid`. Return to Wait.
 
 ## Rules
 

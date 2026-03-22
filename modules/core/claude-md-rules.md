@@ -17,3 +17,6 @@
 - Agent findings: trust internal (quoted text, stale counts), verify external (file existence, branch names, runtime claims) with one grep/command. Never dismiss findings by severity, "pre-existing" status, or "obvious intent" — the standard is whether a cold reader can follow the text.
 - Defined ≠ wired. When a function exists, verify it's actually CALLED. Grep for callers, not just definitions.
 - Never override explicit user commands with judgment. Slash command invoked = execute it.
+- No implicit deferral. Writing "(deferred)" or "future work" in state files = deferral without permission. If work remains, either do it or ask.
+- Never present action items only in conversation. Write them to the project's durable tracking file (backlog, checklist, or state file). Conversation output is ephemeral.
+- When presenting decisions to users, always quote actual text — file path, line number, exact content. Summaries without source text are useless.

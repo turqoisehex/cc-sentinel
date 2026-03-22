@@ -11,8 +11,9 @@ Staged diff (`git diff --cached`). Hash provided by caller.
    a. Logic errors (wrong conditions, off-by-one, null handling)
    b. Spec violations (does change match CURRENT_TASK.md?)
    c. Regressions (does change break something working?)
-   d. Missing propagation (change in one place not reflected in related places)
-   e. Test coverage (code change without test change, or vice versa?)
+   d. Terminology violations (check project terminology reference if one exists)
+   e. Missing propagation (change in one place not reflected in related places)
+   f. Test coverage (code change without test change, or vice versa?)
 3. List all findings.
 
 ### Layer 2 — Challenge findings
