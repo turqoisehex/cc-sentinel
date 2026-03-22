@@ -486,7 +486,7 @@ resolve_deps() {
     IFS=',' read -ra check_array <<< "$resolved"
     for mod in "${check_array[@]}"; do
       mod=$(echo "$mod" | tr -d ' ')
-      deps=$(jq -r ".modules[\"$mod\"].dependencies[]? // empty" "$manifest" 2>/dev/null)
+      deps=$(jq -r ".modules[\"$mod\"].dependencies[]? // empty" "$manifest" 2>/dev/null | tr -d '\r')
       for dep in $deps; do
         if ! echo ",$resolved," | grep -q ",$dep,"; then
           resolved="$dep,$resolved"
@@ -497,7 +497,17 @@ resolve_deps() {
 
     done
   done
-  MODULES="$resolved"
+  # Deduplicate while preserving order
+  local seen="" deduped=""
+  IFS=',' read -ra dedup_array <<< "$resolved"
+  for mod in "${dedup_array[@]}"; do
+    mod=$(echo "$mod" | tr -d ' ')
+    if ! echo ",$seen," | grep -q ",$mod,"; then
+      [[ -n "$deduped" ]] && deduped="$deduped,$mod" || deduped="$mod"
+      seen="$seen,$mod"
+    fi
+  done
+  MODULES="$deduped"
 }
 resolve_deps
 
