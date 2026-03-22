@@ -523,7 +523,9 @@ if [[ "$TARGET" == "global" && "$DRY_RUN" != "true" ]]; then
   for cmd_file in "${CLAUDE_DIR}/commands"/*.md; do
     [[ ! -f "$cmd_file" ]] && continue
     if grep -q 'bash scripts/' "$cmd_file" 2>/dev/null; then
-      sed -i "s|bash scripts/|bash ~/.claude/scripts/|g" "$cmd_file"
+      # Portable sed -i (BSD vs GNU)
+      local tmp_cmd="${cmd_file}.tmp"
+      sed "s|bash scripts/|bash ~/.claude/scripts/|g" "$cmd_file" > "$tmp_cmd" && mv "$tmp_cmd" "$cmd_file"
       log "  Updated paths in: $(basename "$cmd_file")"
     fi
   done
