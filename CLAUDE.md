@@ -68,12 +68,12 @@ Determine the correct installer command based on OS:
 
 **Windows:**
 ```powershell
-powershell -File install.ps1 -Modules "<selected>" -Target "<target>" -BarStyle "<style>"
+powershell -File install.ps1 -Modules "<selected>" -Target "<target>"
 ```
 
 **macOS/Linux:**
 ```bash
-bash install.sh --modules "<selected>" --target "<target>" --bar-style "<style>"
+bash install.sh --modules "<selected>" --target "<target>"
 ```
 
 If Context Awareness is selected AND the OS is macOS or Linux, ask:
@@ -99,19 +99,17 @@ After the installer completes, read `modules/core/claude-md-rules.md` and inject
 
 ### Step 7: Plugin Suggestions
 
-If the Sprint Pipeline module was installed, suggest recommended plugins:
+If the Sprint Pipeline module was installed, recommend complementary plugins. Present each with its purpose and install command. Do NOT modify settings.json — plugin installation requires the user to run `/plugins` themselves.
 
-"The sprint pipeline works best with these community plugins. Would you like me to enable them?"
+"The sprint pipeline works best with these community plugins. You can enable any of them with `/plugins`:"
 
-- **superpowers** - brainstorming, planning, TDD, verification workflows
-- **context7** - library documentation lookup
-- **feature-dev** - guided feature development
-- **pr-review-toolkit** - comprehensive PR review
-- **claude-md-management** - CLAUDE.md maintenance
-- **ralph-loop** - re-feed until completion
-- **claude-code-setup** - automation recommendations
-
-If the user agrees, update `enabledPlugins` in their settings.json. If that fails, tell them to run `/plugins` and enable manually.
+- **superpowers** (`superpowers@claude-plugins-official`) — brainstorming, planning, TDD, verification workflows
+- **context7** (`context7@claude-plugins-official`) — library documentation lookup
+- **feature-dev** (`feature-dev@claude-plugins-official`) — guided feature development
+- **pr-review-toolkit** (`pr-review-toolkit@claude-plugins-official`) — comprehensive PR review
+- **claude-md-management** (`claude-md-management@claude-plugins-official`) — CLAUDE.md maintenance
+- **ralph-loop** (`ralph-loop@claude-plugins-official`) — re-feed until completion
+- **claude-code-setup** (`claude-code-setup@claude-plugins-official`) — automation recommendations
 
 ### Step 8: Run Self-Test
 

@@ -66,7 +66,11 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
-if ! command -v python3 &>/dev/null && ! command -v python &>/dev/null; then
+if command -v python3 &>/dev/null; then
+  PYTHON="python3"
+elif command -v python &>/dev/null; then
+  PYTHON="python"
+else
   echo ""
   log "ERROR: Python 3 is required but not found."
   log "The installer uses Python for settings.json merge."
@@ -226,8 +230,8 @@ install_context_awareness() {
     else
       config_target="${CLAUDE_DIR}/cc-context-awareness/config.json"
     fi
-    if [[ -f "$config_target" ]] && command -v python3 &>/dev/null; then
-      _SENTINEL_BAR_STYLE="$BAR_STYLE" python3 -c "
+    if [[ -f "$config_target" ]]; then
+      _SENTINEL_BAR_STYLE="$BAR_STYLE" "$PYTHON" -c "
 import json, os
 with open('$config_target') as f: c = json.load(f)
 c['bar_style'] = os.environ.get('_SENTINEL_BAR_STYLE', 'auto')
@@ -291,7 +295,7 @@ merge_settings() {
   fi
 
   # Use Python for JSON merge (jq not guaranteed on all systems)
-  python3 << 'PYEOF'
+  "$PYTHON" << 'PYEOF'
 import json, sys, os
 
 sentinel_root = os.environ.get("SENTINEL_ROOT", ".")

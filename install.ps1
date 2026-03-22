@@ -231,70 +231,72 @@ function Merge-Settings {
         $mod = $manifest.modules.$modKey
         if (-not $mod) { continue }
         $merge = $mod.settings_merge
-        if (-not $merge -or -not $merge.hooks) { continue }
+        if (-not $merge) { continue }
 
-        foreach ($prop in $merge.hooks.PSObject.Properties) {
-            $eventType = $prop.Name
-            $entries = @($prop.Value)
+        if ($merge.hooks) {
+            foreach ($prop in $merge.hooks.PSObject.Properties) {
+                $eventType = $prop.Name
+                $entries = @($prop.Value)
 
-            if (-not $settings.hooks.$eventType) {
-                $settings.hooks | Add-Member -NotePropertyName $eventType -NotePropertyValue @() -Force
-            }
+                if (-not $settings.hooks.$eventType) {
+                    $settings.hooks | Add-Member -NotePropertyName $eventType -NotePropertyValue @() -Force
+                }
 
-            foreach ($entry in $entries) {
-                $newHooks = @()
-                foreach ($hook in $entry.hooks) {
-                    $cmd = $hook.command
-                    if ($Target -eq "global") {
-                        $cmd = $cmd -replace "\.claude/", "$($env:USERPROFILE -replace '\\','/')/.claude/"
-                    }
-                    # Windows: wrap bash commands with full path
-                    if ($cmd -match "^bash ") {
-                        $gitBash = "C:/Program Files/Git/bin/bash.exe"
-                        if (Test-Path $gitBash) {
-                            # Keep as-is — CC handles bash invocation
+                foreach ($entry in $entries) {
+                    $newHooks = @()
+                    foreach ($hook in $entry.hooks) {
+                        $cmd = $hook.command
+                        if ($Target -eq "global") {
+                            $cmd = $cmd -replace "\.claude/", "$($env:USERPROFILE -replace '\\','/')/.claude/"
+                        }
+                        # Windows: wrap bash commands with full path
+                        if ($cmd -match "^bash ") {
+                            $gitBash = "C:/Program Files/Git/bin/bash.exe"
+                            if (Test-Path $gitBash) {
+                                # Keep as-is — CC handles bash invocation
+                            }
+                        }
+
+                        # Handle notification placeholder
+                        if ($cmd -eq "__NOTIFICATION_SCRIPT__") {
+                            $cmd = "powershell -ExecutionPolicy Bypass -File $HookPrefix/hooks/flash.ps1"
+                        }
+
+                        $newHooks += @{
+                            type = $hook.type
+                            command = $cmd
+                            timeout = $hook.timeout
                         }
                     }
 
-                    # Handle notification placeholder
-                    if ($cmd -eq "__NOTIFICATION_SCRIPT__") {
-                        $cmd = "powershell -ExecutionPolicy Bypass -File $HookPrefix/hooks/flash.ps1"
+                    $newEntry = @{
+                        matcher = if ($entry.matcher) { $entry.matcher } else { "" }
+                        hooks = $newHooks
                     }
 
-                    $newHooks += @{
-                        type = $hook.type
-                        command = $cmd
-                        timeout = $hook.timeout
-                    }
-                }
-
-                $newEntry = @{
-                    matcher = if ($entry.matcher) { $entry.matcher } else { "" }
-                    hooks = $newHooks
-                }
-
-                # Append (avoid duplicates by command string)
-                $existing = $settings.hooks.$eventType | Where-Object { $_.matcher -eq $newEntry.matcher }
-                if ($existing) {
-                    foreach ($nh in $newHooks) {
-                        $isDup = $existing.hooks | Where-Object { $_.command -eq $nh.command }
-                        if (-not $isDup) {
-                            $existing.hooks += $nh
+                    # Append (avoid duplicates by command string)
+                    $existing = $settings.hooks.$eventType | Where-Object { $_.matcher -eq $newEntry.matcher }
+                    if ($existing) {
+                        foreach ($nh in $newHooks) {
+                            $isDup = $existing.hooks | Where-Object { $_.command -eq $nh.command }
+                            if (-not $isDup) {
+                                $existing.hooks += $nh
+                            }
                         }
+                    } else {
+                        $settings.hooks.$eventType += $newEntry
                     }
-                } else {
-                    $settings.hooks.$eventType += $newEntry
                 }
             }
+        }
 
-            # StatusLine
-            if ($merge.statusLine) {
-                $sl = $merge.statusLine.PSObject.Copy()
-                if ($Target -eq "global") {
-                    $sl.command = $sl.command -replace "\.claude/", "$($env:USERPROFILE -replace '\\','/')/.claude/"
-                }
-                $settings | Add-Member -NotePropertyName "statusLine" -NotePropertyValue $sl -Force
+        # StatusLine (outside hooks loop — a module may have statusLine without hooks)
+        if ($merge.statusLine) {
+            $sl = $merge.statusLine.PSObject.Copy()
+            if ($Target -eq "global") {
+                $sl.command = $sl.command -replace "\.claude/", "$($env:USERPROFILE -replace '\\','/')/.claude/"
             }
+            $settings | Add-Member -NotePropertyName "statusLine" -NotePropertyValue $sl -Force
         }
     }
 
