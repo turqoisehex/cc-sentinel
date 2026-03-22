@@ -1,0 +1,12 @@
+# Verification working directory (created by hooks at runtime)
+verification_findings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
