@@ -63,8 +63,20 @@ Handles: staging lock, diff capture, Sonnet dispatch, validation, retry, tests, 
 | Verify work product (5-agent squad) | `squad` | Parallel agents (read-only) |
 | Edit code, create files, run tests | `implementation` | One agent per task (full access) |
 
+## Git Conflict Resolution
+
+When channel work conflicts with main or another channel:
+
+1. `git stash` your uncommitted changes.
+2. `git pull --rebase origin main` (or the target branch).
+3. `git stash pop` — if conflicts, resolve manually.
+4. For each conflicting file: read both versions, merge intentionally. Never blindly accept "ours" or "theirs."
+5. Run tests after resolution.
+6. Commit the merge via `channel_commit.sh`.
+
 ## Known Limitations
 
 - **Self-dispatch deadlock:** Sonnet cannot consume prompts it writes.
 - **CT race condition:** `.commit_active` prevents concurrent file modifications.
 - **Heartbeat:** `wait_for_work.sh` writes `.heartbeat` every 3s. Stale >30s = warning.
+- **Cross-channel squad leak:** Squad directories from one channel could theoretically satisfy another channel's completion gate if both are active simultaneously. The stop hook scopes checks to active CT files to mitigate this.

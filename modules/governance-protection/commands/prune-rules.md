@@ -22,7 +22,9 @@ Do NOT auto-remove or auto-update. User decides each item.
 
 ### Step 4: Apply and commit
 
-Commit the updated CLAUDE.md and CT file with `--skip-squad`.
+```bash
+bash scripts/channel_commit.sh --files "CLAUDE.md CURRENT_TASK.md" -m "chore: prune accumulated corrections" --skip-squad
+```
 
 ### Step 5: Remove governance marker
 

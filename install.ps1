@@ -125,8 +125,18 @@ function Install-Module($moduleName) {
     # Templates
     $templatesDir = Join-Path $moduleDir "templates"
     if (Test-Path $templatesDir) {
+        $rulesTemplates = @("design-invariants.md", "terminology.md")
         Get-ChildItem $templatesDir -Filter "*.md" | ForEach-Object {
-            Copy-FileChecked $_.FullName $_.Name
+            if ($rulesTemplates -contains $_.Name) {
+                $dest = Join-Path $ClaudeDir "rules" $_.Name
+                if (-not (Test-Path $dest)) {
+                    Copy-FileChecked $_.FullName $dest
+                } else {
+                    Log "  Skipped (exists): $($_.Name)"
+                }
+            } else {
+                Copy-FileChecked $_.FullName $_.Name
+            }
         }
     }
 

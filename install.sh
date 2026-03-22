@@ -151,11 +151,23 @@ install_module() {
     done
   fi
 
-  # Templates (go to project root)
+  # Templates (project root or .claude/rules/ for rule stubs)
   if [[ -d "$module_dir/templates" ]]; then
+    local rules_templates="design-invariants.md terminology.md"
     for f in "$module_dir"/templates/*.md; do
       [[ ! -f "$f" ]] && continue
-      copy_file "$f" "$(basename "$f")"
+      local bname
+      bname=$(basename "$f")
+      if echo "$rules_templates" | grep -qw "$bname"; then
+        local dest="${CLAUDE_DIR}/rules/${bname}"
+        if [[ ! -f "$dest" ]]; then
+          copy_file "$f" "$dest"
+        else
+          log "  Skipped (exists): $bname"
+        fi
+      else
+        copy_file "$f" "$bname"
+      fi
     done
   fi
 

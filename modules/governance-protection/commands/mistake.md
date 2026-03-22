@@ -27,7 +27,9 @@ Count Accumulated Corrections entries. If >= 15: warn user, invoke `/prune-rules
 
 ### Step 5: Commit
 
-Commit the updated CLAUDE.md and CT file with `--skip-squad`.
+```bash
+bash scripts/channel_commit.sh --files "CLAUDE.md CURRENT_TASK.md" -m "fix: encode correction" --skip-squad
+```
 
 ### Step 6: Remove governance marker
 

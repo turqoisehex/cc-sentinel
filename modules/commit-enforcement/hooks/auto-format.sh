@@ -10,25 +10,36 @@ INPUT="$(cat)"
 TOOL="$(echo "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null | tr -d '\r')"
 [[ "$TOOL" != "Write" && "$TOOL" != "Edit" && "$TOOL" != "MultiEdit" ]] && exit 0
 
-# Extract the file that was just written
+# Extract the file(s) that were just written
+FILE_PATHS=()
 if [[ "$TOOL" == "MultiEdit" ]]; then
-  FILE_PATH="$(echo "$INPUT" | jq -r '.tool_input.edits[0]?.file_path // empty' 2>/dev/null | tr -d '\r')"
+  while IFS= read -r fp; do
+    [[ -n "$fp" ]] && FILE_PATHS+=("$fp")
+  done < <(echo "$INPUT" | jq -r '.tool_input.edits[]?.file_path // empty' 2>/dev/null | tr -d '\r')
 else
-  FILE_PATH="$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null | tr -d '\r')"
+  fp="$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null | tr -d '\r')"
+  [[ -n "$fp" ]] && FILE_PATHS+=("$fp")
 fi
-[[ -z "$FILE_PATH" ]] && exit 0
+[[ ${#FILE_PATHS[@]} -eq 0 ]] && exit 0
 
-# Format only the changed file, not the whole project
-if [ -f "pubspec.yaml" ]; then
-  dart format "$FILE_PATH" 2>/dev/null || true
-elif [ -f "package.json" ]; then
-  npx prettier --write "$FILE_PATH" 2>/dev/null || true
-elif [ -f "Cargo.toml" ]; then
-  cargo fmt -- "$FILE_PATH" 2>/dev/null || true
-elif [ -f "go.mod" ]; then
-  gofmt -w "$FILE_PATH" 2>/dev/null || true
-elif [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
-  black "$FILE_PATH" 2>/dev/null || ruff format "$FILE_PATH" 2>/dev/null || true
-fi
+# Format each changed file
+format_file() {
+  local f="$1"
+  if [ -f "pubspec.yaml" ]; then
+    dart format "$f" 2>/dev/null || true
+  elif [ -f "package.json" ]; then
+    npx prettier --write "$f" 2>/dev/null || true
+  elif [ -f "Cargo.toml" ]; then
+    cargo fmt -- "$f" 2>/dev/null || true
+  elif [ -f "go.mod" ]; then
+    gofmt -w "$f" 2>/dev/null || true
+  elif [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
+    black "$f" 2>/dev/null || ruff format "$f" 2>/dev/null || true
+  fi
+}
+
+for FILE_PATH in "${FILE_PATHS[@]}"; do
+  format_file "$FILE_PATH"
+done
 
 exit 0

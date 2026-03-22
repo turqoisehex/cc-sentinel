@@ -22,7 +22,9 @@
         ],
         "templates": [
           "current-task-template.md",
-          "channel-template.md"
+          "channel-template.md",
+          "design-invariants.md",
+          "terminology.md"
         ],
         "reference": [
           "operator-cheat-sheet.md"

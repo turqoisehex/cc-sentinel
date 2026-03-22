@@ -2,5 +2,22 @@
 # List files that require GOVERNANCE-EDIT-AUTHORIZED marker to modify.
 # One filename per line. Matched against basename of edited file.
 # Lines starting with # are comments.
+
+# Core governance
 CLAUDE.md
 settings.json
+
+# Slash commands (add your project-specific commands below)
+# squad.md
+# grill.md
+# mistake.md
+
+# Agent definitions
+# commit-adversarial.md
+# commit-cold-reader.md
+
+# Rules and reference (uncomment as needed for your project)
+# design-invariants.md
+# terminology.md
+# verification-squad.md
+# channel-routing.md
