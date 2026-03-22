@@ -60,9 +60,11 @@ Based on answers, recommend modules. Always include Core. Show a table:
 | Governance Protection | Accidental rule modification | Yes if using rules |
 | Notification | No alerts when done | Yes (low cost) |
 
-Let the user select. Auto-include dependencies (e.g., Sprint Pipeline requires Core + Verification).
+Let the user select. Auto-include dependencies (e.g., Sprint Pipeline requires Core + Verification + Commit Enforcement).
 
 ### Step 5: Run Installer
+
+Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, commands, or settings."
 
 Determine the correct installer command based on OS. Use the full path to the installer scripts in this repository (the directory containing this CLAUDE.md file):
 

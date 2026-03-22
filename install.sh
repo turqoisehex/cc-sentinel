@@ -51,7 +51,11 @@ else
   HOOK_PREFIX=".claude"
 fi
 
-SCRIPTS_DIR="scripts"
+if [[ "$TARGET" == "global" ]]; then
+  SCRIPTS_DIR="$HOME/.claude/scripts"
+else
+  SCRIPTS_DIR="scripts"
+fi
 
 # --- Helper functions (defined before use) ---
 log() { echo "[cc-sentinel] $*"; }
@@ -512,6 +516,18 @@ for mod in "${MOD_ARRAY[@]}"; do
 done
 
 echo ""
+
+# For global installs, rewrite script paths in command .md files
+if [[ "$TARGET" == "global" && "$DRY_RUN" != "true" ]]; then
+  log "Rewriting script paths for global install..."
+  for cmd_file in "${CLAUDE_DIR}/commands"/*.md; do
+    [[ ! -f "$cmd_file" ]] && continue
+    if grep -q 'bash scripts/' "$cmd_file" 2>/dev/null; then
+      sed -i "s|bash scripts/|bash ~/.claude/scripts/|g" "$cmd_file"
+      log "  Updated paths in: $(basename "$cmd_file")"
+    fi
+  done
+fi
 
 # Merge settings
 merge_settings

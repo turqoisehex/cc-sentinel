@@ -78,39 +78,55 @@ if [[ -n "$STAGED_FOR_CHECKS" ]]; then
       fi
     fi
 
-    # Both agents must pass
+    # Both agents must pass (skip if local-verify with no result files — single-terminal mode)
     COMMIT_AGENTS=("commit_check${CH_SUFFIX}.md:commit-adversarial:Adversarial" "commit_cold_read${CH_SUFFIX}.md:commit-cold-reader:Cold Reader")
-    for agent_entry in "${COMMIT_AGENTS[@]}"; do
-      IFS=':' read -r CHECK_FILE AGENT_NAME DISPLAY_NAME <<< "$agent_entry"
-      CHECK_PATH="verification_findings/$CHECK_FILE"
-
-      if [[ ! -f "$CHECK_PATH" ]]; then
-        echo "" >&2
-        echo "================================================================" >&2
-        echo "  COMMIT BLOCKED: Per-commit ${DISPLAY_NAME} check required." >&2
-        echo "  Run the ${AGENT_NAME} agent first, then retry." >&2
-        echo "================================================================" >&2
-        exit 1
+    if [[ "$SONNET_VERIFY" == "false" ]]; then
+      # Single-terminal mode: check result files if they exist, skip if absent
+      HAVE_RESULTS="true"
+      for agent_entry in "${COMMIT_AGENTS[@]}"; do
+        IFS=':' read -r CHECK_FILE _ _ <<< "$agent_entry"
+        [[ ! -f "verification_findings/$CHECK_FILE" ]] && HAVE_RESULTS="false" && break
+      done
+      if [[ "$HAVE_RESULTS" == "false" ]]; then
+        echo "  Per-commit agent checks skipped (no Sonnet listener)." >&2
       fi
+    else
+      HAVE_RESULTS="true"
+    fi
 
-      if ! grep -q "$CURRENT_HASH" "$CHECK_PATH" 2>/dev/null; then
-        echo "" >&2
-        echo "================================================================" >&2
-        echo "  COMMIT BLOCKED: ${DISPLAY_NAME} check is stale." >&2
-        echo "  Re-run the ${AGENT_NAME} agent with current diff." >&2
-        echo "================================================================" >&2
-        exit 1
-      fi
+    if [[ "$HAVE_RESULTS" == "true" ]]; then
+      for agent_entry in "${COMMIT_AGENTS[@]}"; do
+        IFS=':' read -r CHECK_FILE AGENT_NAME DISPLAY_NAME <<< "$agent_entry"
+        CHECK_PATH="verification_findings/$CHECK_FILE"
 
-      if ! grep -qE "VERDICT: (PASS|WARN)" "$CHECK_PATH" 2>/dev/null; then
-        echo "" >&2
-        echo "================================================================" >&2
-        echo "  COMMIT BLOCKED: ${DISPLAY_NAME} check FAILED." >&2
-        echo "  Fix the issues, then re-run the agent." >&2
-        echo "================================================================" >&2
-        exit 1
-      fi
-    done
+        if [[ ! -f "$CHECK_PATH" ]]; then
+          echo "" >&2
+          echo "================================================================" >&2
+          echo "  COMMIT BLOCKED: Per-commit ${DISPLAY_NAME} check required." >&2
+          echo "  Run the ${AGENT_NAME} agent first, then retry." >&2
+          echo "================================================================" >&2
+          exit 1
+        fi
+
+        if ! grep -q "$CURRENT_HASH" "$CHECK_PATH" 2>/dev/null; then
+          echo "" >&2
+          echo "================================================================" >&2
+          echo "  COMMIT BLOCKED: ${DISPLAY_NAME} check is stale." >&2
+          echo "  Re-run the ${AGENT_NAME} agent with current diff." >&2
+          echo "================================================================" >&2
+          exit 1
+        fi
+
+        if ! grep -qE "VERDICT: (PASS|WARN)" "$CHECK_PATH" 2>/dev/null; then
+          echo "" >&2
+          echo "================================================================" >&2
+          echo "  COMMIT BLOCKED: ${DISPLAY_NAME} check FAILED." >&2
+          echo "  Fix the issues, then re-run the agent." >&2
+          echo "================================================================" >&2
+          exit 1
+        fi
+      done
+    fi
   fi
 fi
 

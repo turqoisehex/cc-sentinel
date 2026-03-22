@@ -50,6 +50,9 @@ DIFF_FILE="verification_findings/staged_diff${CH_SUFFIX}.diff"
 LOCK_DIR=".git/commit.lock"
 COMMIT_ACTIVE_FILE="${PENDING_DIR}/.commit_active"
 
+# Resolve scripts directory: project-local first, then global
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 _cleanup_exit() {
   rm -f "$COMMIT_ACTIVE_FILE" 2>/dev/null
   rm -rf "$LOCK_DIR" 2>/dev/null
@@ -152,7 +155,7 @@ Files: ${FILE_ARRAY[*]}
 YAML_EOF
 
   echo "Dispatched to ${dispatch_file} — waiting for results" >&2
-  bash scripts/wait_for_results.sh --timeout 300 "$CHECK_FILE" "$COLD_READ_FILE"
+  bash "$SCRIPT_DIR/wait_for_results.sh" --timeout 300 "$CHECK_FILE" "$COLD_READ_FILE"
   return $?
 }
 
@@ -187,14 +190,25 @@ validate_results() {
 }
 
 # --- Heartbeat Check ---
+# Returns 0 if Sonnet listener is active, 1 if not (caller should fallback).
 check_heartbeat() {
   local hb_file="${PENDING_DIR}/.heartbeat"
-  [[ ! -f "$hb_file" ]] && echo "WARNING: No Sonnet heartbeat. Use --local-verify or start /sonnet." >&2 && return
+  if [[ ! -f "$hb_file" ]]; then
+    echo "WARNING: No Sonnet heartbeat detected — switching to local verification." >&2
+    echo "  Start /sonnet in a second terminal for full per-commit verification." >&2
+    return 1
+  fi
   local now hb_time age
   now=$(date +%s)
   hb_time=$(stat -c %Y "$hb_file" 2>/dev/null || stat -f %m "$hb_file" 2>/dev/null || echo 0)
   age=$((now - hb_time))
+  if (( age > 300 )); then
+    echo "WARNING: Sonnet heartbeat stale (${age}s) — switching to local verification." >&2
+    echo "  Start /sonnet in a second terminal for full per-commit verification." >&2
+    return 1
+  fi
   (( age > 30 )) && echo "WARNING: Sonnet heartbeat stale (${age}s)." >&2
+  return 0
 }
 
 # --- Main Flow ---
@@ -207,7 +221,11 @@ while (( ATTEMPT < MAX_RETRIES )); do
   ATTEMPT=$((ATTEMPT + 1))
   phase1_stage_and_dispatch "$ATTEMPT" || exit 1
 
-  [[ "$LOCAL_VERIFY" != "true" ]] && check_heartbeat
+  if [[ "$LOCAL_VERIFY" != "true" ]]; then
+    if ! check_heartbeat; then
+      LOCAL_VERIFY="true"
+    fi
+  fi
 
   WAIT_EXIT=0
   dispatch_and_wait || WAIT_EXIT=$?

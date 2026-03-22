@@ -25,11 +25,13 @@ SESSION_JSONL=~/.claude/projects/<PROJECT_SLUG>/${SESSION_ID}.jsonl  # Replace <
 echo "$SESSION_JSONL"
 ```
 
-Write prompt to `verification_findings/_pending/[chN/]cold_prep_<timestamp>.md`. Wait:
+Write prompt to `verification_findings/_pending/[chN/]cold_prep_<timestamp>.md`. Wait for results:
 ```bash
 rm -f verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md
-bash scripts/wait_for_results.sh verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md
 ```
+If `scripts/wait_for_results.sh` exists: `bash scripts/wait_for_results.sh verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md`
+
+If not (Core-only install without Commit Enforcement): execute the two agent tasks directly as subagents instead of dispatching to Sonnet.
 
 **Prompt file content** (YAML frontmatter required). Resolve bracket notation before writing:
 
@@ -154,11 +156,17 @@ Read both agent result files and CT. For each grill question, verify checkable a
 
 If CT, backlog, or plan were modified, commit. If all three are clean, skip — no empty commits.
 
+If `scripts/channel_commit.sh` exists (Commit Enforcement module installed):
 ```bash
 bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md <backlog-file> <plan-file>" -m "cold: state files cold-start ready" --skip-squad
 ```
-
 `--skip-squad` — per-commit agents provide sufficient coverage for state-file-only changes.
+
+If channel_commit.sh is not available (Core-only install):
+```bash
+git add CURRENT_TASK_chN.md <backlog-file> <plan-file>
+git commit -m "cold: state files cold-start ready"
+```
 
 Report: orphans resolved (N), transcript items rescued (N), incomplete items written (N), stale refs fixed (N), grill issues (N found/N fixed).
 

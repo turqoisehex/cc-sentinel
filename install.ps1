@@ -46,7 +46,11 @@ if ($Target -eq "global") {
     $HookPrefix = ".claude"
 }
 
-$ScriptsDir = "scripts"
+if ($Target -eq "global") {
+    $ScriptsDir = Join-Path $env:USERPROFILE ".claude" "scripts"
+} else {
+    $ScriptsDir = "scripts"
+}
 
 function Log($msg) { Write-Host "[cc-sentinel] $msg" }
 
@@ -402,6 +406,22 @@ foreach ($mod in $modArray) {
         "context-awareness" { Install-ContextAwareness }
         "notification" { Install-Notification }
         default { Install-Module $mod }
+    }
+}
+
+# For global installs, rewrite script paths in command .md files
+if ($Target -eq "global" -and -not $DryRun) {
+    Log "Rewriting script paths for global install..."
+    $cmdsPath = Join-Path $ClaudeDir "commands"
+    if (Test-Path $cmdsPath) {
+        Get-ChildItem $cmdsPath -Filter "*.md" | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            if ($content -match "bash scripts/") {
+                $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
+                $content | Set-Content $_.FullName -NoNewline
+                Log "  Updated paths in: $($_.Name)"
+            }
+        }
     }
 }
 

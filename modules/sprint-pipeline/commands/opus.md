@@ -5,7 +5,6 @@ Set this session's channel identity. Adapts to project infrastructure.
 ## Procedure
 
 1. **Detect channel infrastructure.** Check if any of these exist:
-   - `CURRENT_TASK_CHANNEL_TEMPLATE.md`
    - `channel-template.md`
    - `.claude/reference/channel-routing.md`
 
