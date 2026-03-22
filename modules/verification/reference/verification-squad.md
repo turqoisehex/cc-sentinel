@@ -102,7 +102,7 @@ Claimed, found, searched
 ...
 ```
 
-### VP Methods
+### Methods
 
 **M4 — String-literal exact match:**
 - Every key, label, identifier copied from definition to usage must match character by character
@@ -179,7 +179,7 @@ Category, full evidence, rule file:specific rule cited (if applicable)
 ...
 ```
 
-### VP Methods
+### Methods
 
 **M5 — Comment-code consistency:**
 - Comments are claims, not evidence
@@ -203,7 +203,7 @@ Category, full evidence, rule file:specific rule cited (if applicable)
 - Q3: What is the most likely thing I got wrong?
 - Q4: What assumption am I making that I haven't verified?
 
-**Failure modes to watch (VP Appendix B):**
+**Failure modes to watch:**
 - **Charity bias** — assuming the author meant the right thing despite ambiguous text
 - **Completion impulse** — wanting to pass because the work "looks done"
 - **Fix-forward spiral** — overlooking a design flaw because a workaround exists
@@ -263,7 +263,7 @@ Requirement text, expected, found/missing
 2. [G] Settings panel — NOT ADDRESSED
 ```
 
-### VP Methods
+### Methods
 
 **M1 — Inventory & cross-reference:**
 - Extract flat lists from both spec and work product independently
@@ -334,7 +334,7 @@ Categories: [UNTRACED], [UNCERTAIN]
 Change, upstream/downstream/lateral trace, specific risk (what breaks, how, when)
 ```
 
-### VP Methods
+### Methods
 
 **M2 — Lifecycle trace:**
 - Trace each change from entry to exit through every call, read, and write

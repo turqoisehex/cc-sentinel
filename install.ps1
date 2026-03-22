@@ -402,6 +402,9 @@ while ($changed) {
     }
 }
 
+# Deduplicate modules (preserving order)
+$Modules = (($Modules -split "," | ForEach-Object { $_.Trim() } | Select-Object -Unique) -join ",")
+
 # Install each module
 $modArray = $Modules -split "," | ForEach-Object { $_.Trim() }
 foreach ($mod in $modArray) {
