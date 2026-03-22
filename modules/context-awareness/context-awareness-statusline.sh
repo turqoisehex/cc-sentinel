@@ -139,8 +139,10 @@ echo "$NEW_FIRED" > "$FIRED_FILE"
 FILLED_COUNT=$(( USED_PCT * BAR_WIDTH / 100 ))
 EMPTY_COUNT=$(( BAR_WIDTH - FILLED_COUNT ))
 
-# Build bar using printf repetition
-BAR="$(printf "%${FILLED_COUNT}s" | tr ' ' "$BAR_FILLED")$(printf "%${EMPTY_COUNT}s" | tr ' ' "$BAR_EMPTY")"
+# Build bar using loop (tr corrupts multi-byte Unicode chars like █/░)
+BAR=""
+for ((i=0; i<FILLED_COUNT; i++)); do BAR+="$BAR_FILLED"; done
+for ((i=0; i<EMPTY_COUNT; i++)); do BAR+="$BAR_EMPTY"; done
 
 # Build output from format string
 OUTPUT="${FORMAT//\{bar\}/$BAR}"
