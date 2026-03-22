@@ -23,9 +23,17 @@ Report: "N of M plan items complete. Remaining: [list with one-line context each
 
 ## Step 3: Commit All Work
 
-If uncommitted changes exist, one commit for all session work:
+If uncommitted changes exist, one commit for all session work.
+
+If `scripts/channel_commit.sh` exists (Commit Enforcement module installed):
 ```bash
 bash scripts/channel_commit.sh [--channel N] --files "<all changed files>" -m "wip: end-of-session commit" --skip-squad
+```
+
+If channel_commit.sh is not available (Core-only install):
+```bash
+git add <all changed files>
+git commit -m "wip: end-of-session commit"
 ```
 Use proper message if changes include completed work. Clean tree → skip.
 
@@ -39,10 +47,11 @@ Delete session artifacts. **Only YOUR channel's artifacts** — never touch othe
 
 **Do NOT delete:** `/perfect`, spec-to-code, or transcript decision results (sprint records). Files referenced in CT or your project backlog. When in doubt, keep it.
 
-Commit only if tracked files were deleted (squad dirs and `_pending/` are gitignored):
+Commit only if tracked files were deleted (squad dirs and `_pending/` are gitignored). If `scripts/channel_commit.sh` exists:
 ```bash
 bash scripts/channel_commit.sh [--channel N] --files "<deleted tracked files>" -m "cleanup: remove session artifacts" --skip-squad
 ```
+If not: `git add <deleted tracked files> && git commit -m "cleanup: remove session artifacts"`
 
 ## Step 5: Document Remaining Work
 
@@ -55,10 +64,11 @@ For each incomplete item: ensure CT has enough context for zero-context executio
 
 ## Step 7: Final Commit and Report
 
-If files changed:
+If files changed. With channel_commit.sh:
 ```bash
 bash scripts/channel_commit.sh [--channel N] --files "<changed files>" -m "cleanup: [session state updated | channel N cleared]" --skip-squad
 ```
+Without: `git add <changed files> && git commit -m "cleanup: session state updated"`
 
 Report:
 ```

@@ -10,7 +10,7 @@
 
 ### Step 0: Gate checks and task setup
 
-1. **Sonnet listener** must be running. If not: STOP, tell user to start it.
+1. **Sonnet check.** If `scripts/wait_for_results.sh` exists (Commit Enforcement installed): check for an active Sonnet listener. If no heartbeat, warn: "No Sonnet listener — Step 1 will use subagents instead of Sonnet dispatch." If `wait_for_results.sh` does not exist (Core-only install): skip — Step 1 uses subagents directly.
 2. **Template check.** If CT Active Task is `(none)` and no plan steps: report "CT at template — nothing to prepare" and **stop**.
 3. TaskCreate every step below. Mark in_progress→completed.
 

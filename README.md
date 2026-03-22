@@ -185,7 +185,9 @@ Claude: [Runs verification squad. Produces final report.
          Cleans up session artifacts. Ready to ship.]
 ```
 
-Additional commands: `/cold` (cold-start resume), `/cleanup` (session cleanup), `/opus` (channel management), `/sonnet` (Sonnet dispatch), `/status` (progress overview), `/rewrite` (content rewrite pipeline).
+Additional Sprint Pipeline commands: `/opus` (channel management), `/sonnet` (Sonnet dispatch), `/rewrite` (content rewrite pipeline), `/spawn` (multi-session launcher).
+
+Core utility commands (available without Sprint Pipeline): `/cold` (cold-start resume), `/cleanup` (session cleanup), `/status` (progress overview).
 
 Recommends complementary Claude Code plugins: superpowers, context7, feature-dev, pr-review-toolkit, claude-md-management, ralph-loop, claude-code-setup. The installer lists each plugin's purpose and install command -- it does not auto-install them.
 
