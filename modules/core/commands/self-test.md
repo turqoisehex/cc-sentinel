@@ -1,0 +1,81 @@
+# /self-test — Verify Installation Integrity
+
+**Trigger:** `/self-test`
+
+Run diagnostic checks to verify cc-sentinel is correctly installed and configured.
+
+## Procedure
+
+Run each check below. Report PASS/FAIL for each. At the end, summarize with total pass/fail counts.
+
+### 1. Settings.json hooks
+
+Read the project's `.claude/settings.json` (or `~/.claude/settings.json` for global installs). For each installed module, verify that its hooks are registered:
+
+- **Core:** `anti-deferral.sh` in PreToolUse, `session-orient.sh` in SessionStart, `pre-compact-state-save.sh` in PreCompact, `post-compact-reorient.sh` in SessionStart (compact matcher), `agent-file-reminder.sh` in PreToolUse
+- **Context Awareness:** `context-awareness-hook.sh` in PreToolUse, `context-awareness-reset.sh` in SessionStart (compact matcher), statusLine configured
+- **Verification:** `stop-task-check.sh` in Stop
+- **Commit Enforcement:** `auto-format.sh` in PostToolUse
+- **Governance Protection:** `file-protection.sh` in PreToolUse
+- **Notification:** platform-appropriate flash script in Stop + Notification
+
+For each hook: check the command path exists as a file on disk. PASS if registered AND file exists. FAIL if either is missing.
+
+### 2. Command files
+
+Check that `.claude/commands/` contains all expected command files for installed modules:
+
+- **Core:** `self-test.md`
+- **Verification:** `squad.md`, `grill.md`
+- **Sprint Pipeline:** `1.md` through `5.md`, `audit.md`, `design.md`, `build.md`, `perfect.md`, `finalize.md`, `cold.md`, `cleanup.md`, `opus.md`, `sonnet.md`, `status.md`, `rewrite.md`
+- **Governance Protection:** `mistake.md`, `prune-rules.md`
+
+### 3. Reference files
+
+Check `.claude/reference/` for expected files:
+
+- **Core:** `operator-cheat-sheet.md`
+- **Verification:** `verification-squad.md`
+- **Commit Enforcement:** `channel-routing.md`
+- **Sprint Pipeline:** `spec-verification.md`
+
+### 4. Templates
+
+Check project root for:
+- `CURRENT_TASK.md` or `CURRENT_TASK_TEMPLATE.md` — at least one must exist
+
+### 5. CLAUDE.md rules
+
+Read the project's `CLAUDE.md`. Check for the presence of cc-sentinel behavioral rules (search for "Fix it now" or "cc-sentinel rules" marker). PASS if rules block is present.
+
+### 6. Working directory
+
+If the Verification module is installed, check that `verification_findings/` directory exists. If not, create it.
+
+Check that `verification_findings/` is listed in `.gitignore` (if this is a git repo).
+
+### 7. Skills
+
+Check that installed skills exist:
+- **Context Awareness:** `.claude/skills/configure-context-awareness/SKILL.md`
+- **Verification:** `.claude/skills/grill/SKILL.md`
+
+### 8. Summary
+
+Print a summary table:
+
+```
+cc-sentinel self-test results:
+  Hooks registered:     [N/M PASS]
+  Hook files on disk:   [N/M PASS]
+  Command files:        [N/M PASS]
+  Reference files:      [N/M PASS]
+  Templates:            [PASS/FAIL]
+  CLAUDE.md rules:      [PASS/FAIL]
+  Working directory:    [PASS/FAIL]
+  Skills:               [N/M PASS]
+
+  Overall: [PASS/FAIL] ([total] checks, [passed] passed, [failed] failed)
+```
+
+If any checks fail, list each failure with the expected path and what was missing.

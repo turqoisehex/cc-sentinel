@@ -95,7 +95,7 @@
         }
       },
       "files": {
-        "scripts": [
+        "root": [
           "context-awareness-hook.sh",
           "context-awareness-statusline.sh",
           "context-awareness-reset.sh",
@@ -103,6 +103,7 @@
         ],
         "skills": ["configure-context-awareness"]
       },
+      "install_note": "Special handler: files live at module root, not in scripts/. Installer copies to .claude/cc-context-awareness/.",
       "settings_merge": {
         "hooks": {
           "PreToolUse": [
@@ -255,8 +256,9 @@
         "darwin": { "script": "flash-macos.sh" }
       },
       "files": {
-        "scripts": ["flash.ps1", "flash-linux.sh", "flash-macos.sh"]
+        "root": ["flash.ps1", "flash-linux.sh", "flash-macos.sh"]
       },
+      "install_note": "Special handler: files live at module root. Installer selects platform-appropriate script.",
       "settings_merge": {
         "hooks": {
           "Stop": [

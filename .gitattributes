@@ -1,0 +1,9 @@
+# Shell scripts must have LF line endings
+*.sh text eol=lf
+
+# PowerShell can use CRLF
+*.ps1 text eol=crlf
+
+# Markdown and JSON: auto
+*.md text eol=auto
+*.json text eol=auto

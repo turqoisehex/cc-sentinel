@@ -1,0 +1,43 @@
+{
+  "thresholds": [
+    {
+      "percent": 50,
+      "level": "checkpoint",
+      "message": "Context usage is at {percentage}% ({remaining}% remaining). Silently evaluate whether you have been documenting progress as you work. If there are undocumented decisions, findings, or partial results, write them to the project's designated state file now. Do not stop to discuss this with the user -- just document and continue working."
+    },
+    {
+      "percent": 65,
+      "level": "awareness",
+      "message": "Context window is at {percentage}% ({remaining}% remaining). Evaluate whether a fresh session could pick up where you left off from your state file alone. If not, update it now with key decisions, current approach, and remaining work. Do not interrupt the user -- document silently and continue."
+    },
+    {
+      "percent": 75,
+      "level": "preparation",
+      "message": "Context window is at {percentage}% ({remaining}% remaining). Invoke /cold now. This will prepare state files for a cold-start handoff. Do not ask the user for permission -- invoke the skill immediately and continue working."
+    },
+    {
+      "percent": 85,
+      "level": "warning",
+      "message": "Context is at {percentage}% -- only {remaining}% remaining. Commit all changes to git now. Ensure state files are current and accurate. Include: current status, what was accomplished, what remains, decisions made, current approach, blockers, and any non-obvious findings. Keep working -- auto-compaction will handle the transition."
+    },
+    {
+      "percent": 92,
+      "level": "critical",
+      "message": "CRITICAL: {percentage}% context used, only {remaining}% left. Auto-compaction imminent. Commit everything on disk. Ensure state files are complete cold-start documents. Keep working -- auto-compaction will fire and continuation will be seamless."
+    }
+  ],
+  "repeat_mode": "once_per_tier_reset_on_compaction",
+  "statusline": {
+    "enabled": true,
+    "bar_width": 20,
+    "bar_filled": "\u2588",
+    "bar_empty": "\u2591",
+    "format": "context {bar} {percentage}%",
+    "color_normal": "37",
+    "color_warning": "33",
+    "warning_indicator": "",
+    "bar_style": "auto"
+  },
+  "hook_event": "PreToolUse",
+  "flag_dir": "/tmp"
+}

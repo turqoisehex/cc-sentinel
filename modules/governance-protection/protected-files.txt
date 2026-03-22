@@ -1,0 +1,7 @@
+# Protected Files
+# List files that require GOVERNANCE-EDIT-AUTHORIZED marker to modify.
+# One path per line. Supports glob patterns.
+#
+# Example:
+# CLAUDE.md
+# .claude/rules/*.md

@@ -1,0 +1,360 @@
+# install.ps1 — cc-sentinel Windows installer
+# Called by CLAUDE.md conversation script with discovered parameters.
+#
+# Usage:
+#   powershell -File install.ps1 -Modules "core,verification,..." -Target project|global [-BarStyle unicode|ascii|auto] [-DryRun]
+
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$Modules,
+
+    [Parameter(Mandatory=$true)]
+    [ValidateSet("project", "global")]
+    [string]$Target,
+
+    [string]$BarStyle = "auto",
+
+    [switch]$DryRun
+)
+
+$ErrorActionPreference = "Stop"
+$SentinelRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# --- Determine target directories ---
+if ($Target -eq "global") {
+    $ClaudeDir = Join-Path $env:USERPROFILE ".claude"
+    $SettingsFile = Join-Path $ClaudeDir "settings.json"
+    $HookPrefix = Join-Path $env:USERPROFILE ".claude"
+} else {
+    $ClaudeDir = ".claude"
+    $SettingsFile = Join-Path ".claude" "settings.json"
+    $HookPrefix = ".claude"
+}
+
+$ScriptsDir = "scripts"
+
+function Log($msg) { Write-Host "[cc-sentinel] $msg" }
+
+function Copy-FileChecked($src, $dst) {
+    if ($DryRun) {
+        Log "  WOULD COPY: $src -> $dst"
+    } else {
+        $dir = Split-Path -Parent $dst
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        Copy-Item -Path $src -Destination $dst -Force
+        Log "  Copied: $(Split-Path -Leaf $dst)"
+    }
+}
+
+function Install-Module($moduleName) {
+    $moduleDir = Join-Path $SentinelRoot "modules" $moduleName
+
+    if (-not (Test-Path $moduleDir)) {
+        Write-Warning "Module directory not found: $moduleDir"
+        return
+    }
+
+    Log "Installing module: $moduleName"
+
+    # Hooks
+    $hooksDir = Join-Path $moduleDir "hooks"
+    if (Test-Path $hooksDir) {
+        Get-ChildItem $hooksDir -File | ForEach-Object {
+            Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "hooks" $_.Name)
+        }
+    }
+
+    # Commands
+    $cmdsDir = Join-Path $moduleDir "commands"
+    if (Test-Path $cmdsDir) {
+        Get-ChildItem $cmdsDir -Filter "*.md" | ForEach-Object {
+            Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "commands" $_.Name)
+        }
+    }
+
+    # Reference
+    $refDir = Join-Path $moduleDir "reference"
+    if (Test-Path $refDir) {
+        Get-ChildItem $refDir -Filter "*.md" | ForEach-Object {
+            Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "reference" $_.Name)
+        }
+    }
+
+    # Agents
+    $agentsDir = Join-Path $moduleDir "agents"
+    if (Test-Path $agentsDir) {
+        Get-ChildItem $agentsDir -Filter "*.md" | ForEach-Object {
+            Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "agents" $_.Name)
+        }
+    }
+
+    # Scripts
+    $scriptsModDir = Join-Path $moduleDir "scripts"
+    if (Test-Path $scriptsModDir) {
+        Get-ChildItem $scriptsModDir -Filter "*.sh" | ForEach-Object {
+            Copy-FileChecked $_.FullName (Join-Path $ScriptsDir $_.Name)
+        }
+    }
+
+    # Skills
+    $skillsDir = Join-Path $moduleDir "skills"
+    if (Test-Path $skillsDir) {
+        Get-ChildItem $skillsDir -Directory | ForEach-Object {
+            $skillName = $_.Name
+            Get-ChildItem $_.FullName -File | ForEach-Object {
+                Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "skills" $skillName $_.Name)
+            }
+        }
+    }
+
+    # Templates
+    $templatesDir = Join-Path $moduleDir "templates"
+    if (Test-Path $templatesDir) {
+        Get-ChildItem $templatesDir -Filter "*.md" | ForEach-Object {
+            Copy-FileChecked $_.FullName $_.Name
+        }
+    }
+
+    # Config files
+    $protectedFiles = Join-Path $moduleDir "protected-files.txt"
+    if (Test-Path $protectedFiles) {
+        Copy-FileChecked $protectedFiles (Join-Path $ClaudeDir "hooks" "protected-files.txt")
+    }
+
+    # claude-md rules
+    $rulesFile = Join-Path $moduleDir "claude-md-rules.md"
+    if (Test-Path $rulesFile) {
+        Log "  Rules file available: claude-md-rules.md (will be injected into CLAUDE.md)"
+    }
+}
+
+function Install-ContextAwareness {
+    $moduleDir = Join-Path $SentinelRoot "modules" "context-awareness"
+
+    # Windows always uses bundled (only known working Windows version)
+    Log "Installing bundled context-awareness (Windows)..."
+    $caTarget = Join-Path $ClaudeDir "cc-context-awareness"
+
+    Get-ChildItem $moduleDir -File | Where-Object { $_.Extension -in ".sh", ".json" -or $_.Name -like "*.sh" } | ForEach-Object {
+        Copy-FileChecked $_.FullName (Join-Path $caTarget $_.Name)
+    }
+
+    # Update bar_style
+    if (-not $DryRun) {
+        $configPath = Join-Path $caTarget "config.json"
+        if (Test-Path $configPath) {
+            $config = Get-Content $configPath | ConvertFrom-Json
+            $config | Add-Member -NotePropertyName "bar_style" -NotePropertyValue $BarStyle -Force
+            $config | ConvertTo-Json -Depth 10 | Set-Content $configPath
+        }
+    }
+
+    # Skills
+    $skillsDir = Join-Path $moduleDir "skills"
+    if (Test-Path $skillsDir) {
+        Get-ChildItem $skillsDir -Directory | ForEach-Object {
+            $skillName = $_.Name
+            Get-ChildItem $_.FullName -File | ForEach-Object {
+                Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "skills" $skillName $_.Name)
+            }
+        }
+    }
+}
+
+function Install-Notification {
+    $moduleDir = Join-Path $SentinelRoot "modules" "notification"
+
+    # Windows uses flash.ps1
+    $src = Join-Path $moduleDir "flash.ps1"
+    if (Test-Path $src) {
+        Copy-FileChecked $src (Join-Path $ClaudeDir "hooks" "flash.ps1")
+        Log "  Windows notification: flash.ps1"
+    }
+}
+
+function Merge-Settings {
+    Log "Merging hook registrations into settings.json..."
+
+    if ($DryRun) {
+        Log "  WOULD MERGE: hook registrations into $SettingsFile"
+        return
+    }
+
+    # Create settings.json if needed
+    $settingsDir = Split-Path -Parent $SettingsFile
+    if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
+    if (-not (Test-Path $SettingsFile)) { '{}' | Set-Content $SettingsFile }
+
+    $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
+    $manifest = Get-Content (Join-Path $SentinelRoot "modules.json") -Raw | ConvertFrom-Json
+
+    if (-not $settings.hooks) {
+        $settings | Add-Member -NotePropertyName "hooks" -NotePropertyValue @{} -Force
+    }
+
+    $modList = $Modules -split "," | ForEach-Object { $_.Trim() }
+    foreach ($modKey in $modList) {
+        $mod = $manifest.modules.$modKey
+        if (-not $mod) { continue }
+        $merge = $mod.settings_merge
+        if (-not $merge -or -not $merge.hooks) { continue }
+
+        foreach ($prop in $merge.hooks.PSObject.Properties) {
+            $eventType = $prop.Name
+            $entries = @($prop.Value)
+
+            if (-not $settings.hooks.$eventType) {
+                $settings.hooks | Add-Member -NotePropertyName $eventType -NotePropertyValue @() -Force
+            }
+
+            foreach ($entry in $entries) {
+                $newHooks = @()
+                foreach ($hook in $entry.hooks) {
+                    $cmd = $hook.command
+                    if ($Target -eq "global") {
+                        $cmd = $cmd -replace "\.claude/", "$($env:USERPROFILE -replace '\\','/')/.claude/"
+                    }
+                    # Windows: wrap bash commands with full path
+                    if ($cmd -match "^bash ") {
+                        $gitBash = "C:/Program Files/Git/bin/bash.exe"
+                        if (Test-Path $gitBash) {
+                            # Keep as-is — CC handles bash invocation
+                        }
+                    }
+
+                    # Handle notification placeholder
+                    if ($cmd -eq "__NOTIFICATION_SCRIPT__") {
+                        $cmd = "powershell -ExecutionPolicy Bypass -File $HookPrefix/hooks/flash.ps1"
+                    }
+
+                    $newHooks += @{
+                        type = $hook.type
+                        command = $cmd
+                        timeout = $hook.timeout
+                    }
+                }
+
+                $newEntry = @{
+                    matcher = if ($entry.matcher) { $entry.matcher } else { "" }
+                    hooks = $newHooks
+                }
+
+                # Append (avoid duplicates by command string)
+                $existing = $settings.hooks.$eventType | Where-Object { $_.matcher -eq $newEntry.matcher }
+                if ($existing) {
+                    foreach ($nh in $newHooks) {
+                        $isDup = $existing.hooks | Where-Object { $_.command -eq $nh.command }
+                        if (-not $isDup) {
+                            $existing.hooks += $nh
+                        }
+                    }
+                } else {
+                    $settings.hooks.$eventType += $newEntry
+                }
+            }
+
+            # StatusLine
+            if ($merge.statusLine) {
+                $sl = $merge.statusLine.PSObject.Copy()
+                if ($Target -eq "global") {
+                    $sl.command = $sl.command -replace "\.claude/", "$($env:USERPROFILE -replace '\\','/')/.claude/"
+                }
+                $settings | Add-Member -NotePropertyName "statusLine" -NotePropertyValue $sl -Force
+            }
+        }
+    }
+
+    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile
+    Log "Settings merged: $SettingsFile"
+}
+
+function New-Claudeignore {
+    Log "Generating .claudeignore..."
+
+    if ($DryRun) {
+        Log "  WOULD GENERATE: .claudeignore"
+        return
+    }
+
+    $template = ""
+    if (Test-Path "pubspec.yaml") { $template = "flutter" }
+    elseif (Test-Path "package.json") { $template = "node" }
+    elseif (Test-Path "Cargo.toml") { $template = "rust" }
+    elseif (Test-Path "go.mod") { $template = "go" }
+    elseif ((Test-Path "setup.py") -or (Test-Path "pyproject.toml")) { $template = "python" }
+
+    $content = ""
+    $generalPath = Join-Path $SentinelRoot "templates" "claudeignore" "general.claudeignore"
+    if (Test-Path $generalPath) { $content = Get-Content $generalPath -Raw }
+
+    if ($template) {
+        $specificPath = Join-Path $SentinelRoot "templates" "claudeignore" "$template.claudeignore"
+        if (Test-Path $specificPath) {
+            $content += "`n`n# $template-specific`n"
+            $content += Get-Content $specificPath -Raw
+        }
+    }
+
+    if ($content) {
+        if (Test-Path ".claudeignore") {
+            Add-Content ".claudeignore" "`n# Added by cc-sentinel`n$content"
+            Log "  Appended to existing .claudeignore"
+        } else {
+            $content | Set-Content ".claudeignore"
+            Log "  Created .claudeignore"
+        }
+    }
+}
+
+function Update-Gitignore {
+    if (Test-Path ".git") {
+        $gitignore = if (Test-Path ".gitignore") { Get-Content ".gitignore" -Raw } else { "" }
+        if ($gitignore -notmatch "verification_findings/") {
+            if ($DryRun) {
+                Log "  WOULD ADD: verification_findings/ to .gitignore"
+            } else {
+                Add-Content ".gitignore" "`n# cc-sentinel working directory`nverification_findings/"
+                Log "  Added verification_findings/ to .gitignore"
+            }
+        }
+    }
+}
+
+# =====================================================================
+# MAIN
+# =====================================================================
+
+Log "cc-sentinel installer (Windows)"
+Log "Target: $Target ($ClaudeDir)"
+Log "Modules: $Modules"
+if ($DryRun) { Log "DRY RUN - no files will be modified" }
+
+Write-Host ""
+
+# Ensure core is always included
+if ($Modules -notmatch "core") { $Modules = "core,$Modules" }
+
+# Install each module
+$modArray = $Modules -split "," | ForEach-Object { $_.Trim() }
+foreach ($mod in $modArray) {
+    switch ($mod) {
+        "context-awareness" { Install-ContextAwareness }
+        "notification" { Install-Notification }
+        default { Install-Module $mod }
+    }
+}
+
+Write-Host ""
+Merge-Settings
+New-Claudeignore
+Update-Gitignore
+
+# Create verification_findings
+if ($Modules -match "verification" -and -not $DryRun) {
+    New-Item -ItemType Directory -Path "verification_findings/_pending" -Force | Out-Null
+    Log "Created verification_findings/ directory"
+}
+
+Write-Host ""
+Log "Installation complete!"
+Log "Run /self-test to verify your installation."
