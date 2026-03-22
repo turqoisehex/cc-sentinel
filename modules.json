@@ -35,7 +35,9 @@
         "tests": [
           "test_anti_deferral.sh",
           "test_session_orient.sh",
-          "test_agent_file_reminder.sh"
+          "test_agent_file_reminder.sh",
+          "test_pre_compact.sh",
+          "test_post_compact.sh"
         ]
       },
       "settings_merge": {
@@ -232,7 +234,9 @@
         ],
         "tests": [
           "test_channel_commit.sh",
-          "test_wait_for_results.sh"
+          "test_wait_for_results.sh",
+          "test_safe_commit.sh",
+          "test_auto_format.sh"
         ]
       },
       "settings_merge": {
@@ -361,6 +365,9 @@
           "flash.ps1",
           "flash-linux.sh",
           "flash-macos.sh"
+        ],
+        "tests": [
+          "test_notification.sh"
         ]
       },
       "install_note": "Special handler: files live at module root. Installer selects platform-appropriate script.",
