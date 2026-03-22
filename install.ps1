@@ -219,7 +219,12 @@ function Merge-Settings {
     if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
     if (-not (Test-Path $SettingsFile)) { '{}' | Set-Content $SettingsFile }
 
-    $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
+    try {
+        $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
+    } catch {
+        Write-Error "ERROR: $SettingsFile contains invalid JSON. Please fix or delete the file and re-run the installer."
+        exit 1
+    }
     $manifest = Get-Content (Join-Path $SentinelRoot "modules.json") -Raw | ConvertFrom-Json
 
     if (-not $settings.hooks) {

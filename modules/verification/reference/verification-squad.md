@@ -114,7 +114,7 @@ Claimed, found, searched
 - Verify every instance updated — not just the ones the work product mentions
 - Check implementation matches surrounding code style (naming, structure, error handling)
 
-**Step 10 — Pre-commit diff scan (step numbers reference `.claude/reference/spec-to-code-verification.md`):**
+**Step 10 — Pre-commit diff scan (step numbers reference `.claude/reference/spec-verification.md`):**
 - Review staged changes for out-of-scope file modifications
 - Flag any file changed that is not mentioned in the work product or task scope
 

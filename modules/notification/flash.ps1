@@ -1,3 +1,6 @@
+# Drain stdin (CC pipes JSON to hooks; prevents caller blocking)
+try { [Console]::In.ReadToEnd() | Out-Null } catch {}
+
 # R2D2-style sounds (simplified)
 
 function Boop { [console]::beep((Get-Random -Min 400 -Max 800), (Get-Random -Min 80 -Max 150)) }

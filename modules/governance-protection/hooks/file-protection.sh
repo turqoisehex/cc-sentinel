@@ -16,7 +16,7 @@ fi
 
 # Load protected files list — check project-local first, then global
 # Project-local: <project_root>/protected-files.txt or <project_root>/.claude/protected-files.txt
-# Global fallback: ~/.claude/hooks/enforcement/protected-files.txt
+# Global fallback: ~/.claude/protected-files.txt
 PROTECTED_FILES_LIST=""
 
 # Derive project directory from the file being edited.

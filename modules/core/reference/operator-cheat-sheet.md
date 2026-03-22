@@ -86,6 +86,16 @@ Each channel pair is isolated: Opus N dispatches to `_pending/chN/`, Sonnet N wa
 
 ---
 
+## Terminology
+
+| Term | Meaning |
+|------|---------|
+| **TaskCreate** | Claude Code's built-in task tracking tool. Commands use "TaskCreate every step" to mean: create a checklist of tasks and mark them in_progress → completed as you go. |
+| **CT** | CURRENT_TASK.md — the session state file. |
+| **Squad** | The 5-agent verification squad (mechanical, adversarial, completeness, dependency, cold reader). |
+
+---
+
 ## Governance Edits
 
 Protected files: CLAUDE.md, slash commands, agents, rules.

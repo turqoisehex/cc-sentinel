@@ -232,8 +232,12 @@ install_context_awareness() {
     fi
     if [[ -f "$config_target" ]]; then
       _SENTINEL_BAR_STYLE="$BAR_STYLE" "$PYTHON" -c "
-import json, os
-with open('$config_target') as f: c = json.load(f)
+import json, os, sys
+try:
+    with open('$config_target') as f: c = json.load(f)
+except json.JSONDecodeError:
+    print('WARNING: $config_target contains invalid JSON -- skipping bar_style update.', file=sys.stderr)
+    sys.exit(0)
 c['bar_style'] = os.environ.get('_SENTINEL_BAR_STYLE', 'auto')
 with open('$config_target', 'w') as f: json.dump(c, f, indent=2)
 " 2>/dev/null || true
@@ -311,8 +315,13 @@ with open(os.path.join(sentinel_root, "modules.json")) as f:
     manifest = json.load(f)
 
 # Read existing settings
-with open(settings_file) as f:
-    settings = json.load(f)
+try:
+    with open(settings_file) as f:
+        settings = json.load(f)
+except json.JSONDecodeError:
+    print(f"ERROR: {settings_file} contains invalid JSON.", file=sys.stderr)
+    print("Please fix or delete the file and re-run the installer.", file=sys.stderr)
+    sys.exit(1)
 
 if "hooks" not in settings:
     settings["hooks"] = {}

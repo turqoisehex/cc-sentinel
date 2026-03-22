@@ -25,9 +25,9 @@ For each hook: check the command path exists as a file on disk. PASS if register
 
 Check that `.claude/commands/` contains all expected command files for installed modules:
 
-- **Core:** `self-test.md`
+- **Core:** `self-test.md`, `cold.md`, `cleanup.md`, `status.md`
 - **Verification:** `squad.md`, `grill.md`
-- **Sprint Pipeline:** `1.md` through `5.md`, `audit.md`, `design.md`, `build.md`, `perfect.md`, `finalize.md`, `cold.md`, `cleanup.md`, `opus.md`, `sonnet.md`, `status.md`, `rewrite.md`
+- **Sprint Pipeline:** `1.md` through `5.md`, `audit.md`, `design.md`, `build.md`, `perfect.md`, `finalize.md`, `opus.md`, `sonnet.md`, `rewrite.md`, `spawn.md`
 - **Governance Protection:** `mistake.md`, `prune-rules.md`
 
 ### 3. Reference files

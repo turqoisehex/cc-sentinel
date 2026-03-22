@@ -13,7 +13,7 @@ Claude Code is powerful out of the box. But long, autonomous sessions surface re
 | **False completion** | Claude claims a task is done without verifying | Bugs discovered in production, not development | Stop hook blocks completion claims without verification squad evidence on disk. |
 | **Governance drift** | Claude edits its own rules, CLAUDE.md, or config files mid-session | Guardrails silently disabled | File-protection hook blocks writes to protected files. Override requires explicit authorization marker. |
 | **Silent compaction** | Context window fills with no warning; state is lost before it can be saved | Unrecoverable mid-task failure | Visual status bar + 5 graduated warnings at 50/65/75/85/92%. |
-| **Commit quality** | Large diffs committed without review; tests skipped; formatting inconsistent | Technical debt accumulates per-session | Every commit gated: two adversarial agents review the diff, tests auto-run, formatter auto-runs. |
+| **Commit quality** | Large diffs committed without review; tests skipped; formatting inconsistent | Technical debt accumulates per-session | Code commits gated: two adversarial agents review the diff, tests auto-run, formatter auto-runs. Doc-only and config changes pass through lightweight checks. |
 | **Agent amnesia** | Subagents start with no knowledge of project conventions or current task state | Agents produce work that contradicts the session | Agent-file-reminder hook injects context. Channel system coordinates parallel agents via file signals. |
 
 cc-sentinel solves these with **hooks that enforce automatically** -- not rules that rely on Claude choosing to follow them.
@@ -136,7 +136,7 @@ Commands: `/squad`, `/grill` (iterative self-challenge)
 
 ### Commit Enforcement
 
-Every commit is gated: tests must pass, formatting must be clean, and two verification agents review the diff before it lands.
+Code commits are gated: tests must pass, formatting must be clean, and two verification agents review the diff before it lands. Documentation-only and config changes pass through lightweight checks without full agent review.
 
 | Component | What It Does |
 |---|---|
@@ -266,11 +266,11 @@ cc-sentinel/
   install.ps1            # Windows installer
   modules.json           # Module manifest (metadata, dependencies, hook registration)
   modules/
-    core/                # Required -- hooks, templates, reference
+    core/                # Required -- hooks, templates, /cold, /cleanup, /status
     context-awareness/   # Status bar meter, graduated warnings
     verification/        # 5-agent squad, /squad, /grill
     commit-enforcement/  # safe-commit, auto-format, channel routing
-    sprint-pipeline/     # /1-/5 workflow, /cold, /cleanup
+    sprint-pipeline/     # /1-/5 workflow, /spawn multi-session
     governance-protection/ # file-protection, /mistake, /prune-rules
     notification/        # Platform-native desktop alerts
   templates/
