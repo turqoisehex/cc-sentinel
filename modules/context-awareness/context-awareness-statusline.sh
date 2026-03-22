@@ -42,6 +42,7 @@ if [[ -n "$CONFIG_FILE" ]]; then
     (.statusline.color_normal // "37"),
     (.statusline.color_warning // "31"),
     (.statusline.warning_indicator // ""),
+    (.statusline.bar_style // "auto"),
     (.repeat_mode // "once_per_tier_reset_on_compaction"),
     ((.thresholds // []) | @json)
   ' "$CONFIG_FILE" | tr -d '\r')
@@ -53,8 +54,9 @@ if [[ -n "$CONFIG_FILE" ]]; then
   COLOR_NORMAL="${CONFIG_VALUES[5]}"
   COLOR_WARNING="${CONFIG_VALUES[6]}"
   WARNING_INDICATOR="${CONFIG_VALUES[7]}"
-  REPEAT_MODE="${CONFIG_VALUES[8]}"
-  THRESHOLDS_JSON="${CONFIG_VALUES[9]}"
+  BAR_STYLE="${CONFIG_VALUES[8]}"
+  REPEAT_MODE="${CONFIG_VALUES[9]}"
+  THRESHOLDS_JSON="${CONFIG_VALUES[10]}"
 else
   # Defaults if no config file
   FLAG_DIR="/tmp"
@@ -65,9 +67,25 @@ else
   COLOR_NORMAL="37"
   COLOR_WARNING="31"
   WARNING_INDICATOR=""
+  BAR_STYLE="auto"
   REPEAT_MODE="once_per_tier_reset_on_compaction"
   THRESHOLDS_JSON="[]"
 fi
+
+# Apply bar_style override
+if [[ "$BAR_STYLE" == "ascii" ]]; then
+  BAR_FILLED="#"
+  BAR_EMPTY="-"
+elif [[ "$BAR_STYLE" == "auto" ]]; then
+  # Test if terminal can render Unicode by checking locale
+  if [[ "${LANG:-}" == *UTF* || "${LANG:-}" == *utf* || "${LC_ALL:-}" == *UTF* || "${LC_ALL:-}" == *utf* ]]; then
+    : # Keep Unicode defaults
+  else
+    BAR_FILLED="#"
+    BAR_EMPTY="-"
+  fi
+fi
+# bar_style=unicode: keep config values as-is (Unicode is the default)
 
 FIRED_FILE="${FLAG_DIR}/.cc-ctx-fired-${SESSION_ID}"
 TRIGGER_FILE="${FLAG_DIR}/.cc-ctx-trigger-${SESSION_ID}"

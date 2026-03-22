@@ -347,7 +347,7 @@ while ($changed) {
         $modDef = $manifest.modules.$mod
         if ($modDef -and $modDef.dependencies) {
             foreach ($dep in $modDef.dependencies) {
-                if ($Modules -notmatch [regex]::Escape($dep)) {
+                if (($Modules -split "," | ForEach-Object { $_.Trim() }) -notcontains $dep) {
                     $Modules = "$dep,$Modules"
                     $changed = $true
                     Log "  Auto-adding dependency: $dep (required by $mod)"

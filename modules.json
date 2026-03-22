@@ -14,10 +14,19 @@
           "post-compact-reorient.sh",
           "agent-file-reminder.sh"
         ],
-        "commands": ["self-test.md"],
-        "templates": ["current-task-template.md", "channel-template.md"],
-        "reference": ["operator-cheat-sheet.md"],
-        "claude-md": ["claude-md-rules.md"]
+        "commands": [
+          "self-test.md"
+        ],
+        "templates": [
+          "current-task-template.md",
+          "channel-template.md"
+        ],
+        "reference": [
+          "operator-cheat-sheet.md"
+        ],
+        "claude-md": [
+          "claude-md-rules.md"
+        ]
       },
       "settings_merge": {
         "hooks": {
@@ -79,7 +88,9 @@
       "name": "Context Awareness",
       "description": "Visual context window meter, graduated warnings, compaction reset",
       "required": false,
-      "dependencies": ["core"],
+      "dependencies": [
+        "core"
+      ],
       "platform": {
         "windows": {
           "source": "bundled",
@@ -101,7 +112,9 @@
           "context-awareness-reset.sh",
           "config.json"
         ],
-        "skills": ["configure-context-awareness"]
+        "skills": [
+          "configure-context-awareness"
+        ]
       },
       "install_note": "Special handler: files live at module root, not in scripts/. Installer copies to .claude/cc-context-awareness/.",
       "settings_merge": {
@@ -141,12 +154,23 @@
       "name": "Verification",
       "description": "5-agent verification squad, adversarial self-check, completion gate",
       "required": false,
-      "dependencies": ["core"],
+      "dependencies": [
+        "core"
+      ],
       "files": {
-        "hooks": ["stop-task-check.sh"],
-        "commands": ["squad.md", "grill.md"],
-        "reference": ["verification-squad.md"],
-        "skills": ["grill"]
+        "hooks": [
+          "stop-task-check.sh"
+        ],
+        "commands": [
+          "squad.md",
+          "grill.md"
+        ],
+        "reference": [
+          "verification-squad.md"
+        ],
+        "skills": [
+          "grill"
+        ]
       },
       "settings_merge": {
         "hooks": {
@@ -169,18 +193,33 @@
       "name": "Commit Enforcement",
       "description": "Per-commit verification, test gating, multi-channel coordination",
       "required": false,
-      "dependencies": ["core", "verification"],
+      "dependencies": [
+        "core",
+        "verification"
+      ],
       "files": {
-        "hooks": ["safe-commit.sh", "auto-format.sh"],
-        "scripts": ["channel_commit.sh", "wait_for_results.sh", "wait_for_work.sh"],
-        "agents": ["commit-adversarial.md", "commit-cold-reader.md"],
-        "reference": ["channel-routing.md"]
+        "hooks": [
+          "safe-commit.sh",
+          "auto-format.sh"
+        ],
+        "scripts": [
+          "channel_commit.sh",
+          "wait_for_results.sh",
+          "wait_for_work.sh"
+        ],
+        "agents": [
+          "commit-adversarial.md",
+          "commit-cold-reader.md"
+        ],
+        "reference": [
+          "channel-routing.md"
+        ]
       },
       "settings_merge": {
         "hooks": {
           "PostToolUse": [
             {
-              "matcher": "",
+              "matcher": "Write|Edit|MultiEdit",
               "hooks": [
                 {
                   "type": "command",
@@ -197,15 +236,32 @@
       "name": "Sprint Pipeline",
       "description": "Structured workflow: audit, design, build, perfect, finalize",
       "required": false,
-      "dependencies": ["core", "verification"],
+      "dependencies": [
+        "core",
+        "verification"
+      ],
       "files": {
         "commands": [
-          "1.md", "2.md", "3.md", "4.md", "5.md",
-          "audit.md", "design.md", "build.md", "perfect.md", "finalize.md",
-          "cold.md", "cleanup.md", "opus.md", "sonnet.md", "status.md", "rewrite.md"
+          "1.md",
+          "2.md",
+          "3.md",
+          "4.md",
+          "5.md",
+          "audit.md",
+          "design.md",
+          "build.md",
+          "perfect.md",
+          "finalize.md",
+          "cold.md",
+          "cleanup.md",
+          "opus.md",
+          "sonnet.md",
+          "status.md",
+          "rewrite.md"
         ],
-        "reference": ["spec-verification.md"],
-        "agents": ["code-simplifier.md"]
+        "reference": [
+          "spec-verification.md"
+        ]
       },
       "settings_merge": {},
       "recommended_plugins": [
@@ -222,11 +278,20 @@
       "name": "Governance Protection",
       "description": "Protected files, correction capture, rule maintenance",
       "required": false,
-      "dependencies": ["core"],
+      "dependencies": [
+        "core"
+      ],
       "files": {
-        "hooks": ["file-protection.sh"],
-        "commands": ["mistake.md", "prune-rules.md"],
-        "config": ["protected-files.txt"]
+        "hooks": [
+          "file-protection.sh"
+        ],
+        "commands": [
+          "mistake.md",
+          "prune-rules.md"
+        ],
+        "config": [
+          "protected-files.txt"
+        ]
       },
       "settings_merge": {
         "hooks": {
@@ -249,14 +314,26 @@
       "name": "Notification",
       "description": "Desktop alerts when CC completes or needs input",
       "required": false,
-      "dependencies": ["core"],
+      "dependencies": [
+        "core"
+      ],
       "platform": {
-        "windows": { "script": "flash.ps1" },
-        "linux": { "script": "flash-linux.sh" },
-        "darwin": { "script": "flash-macos.sh" }
+        "windows": {
+          "script": "flash.ps1"
+        },
+        "linux": {
+          "script": "flash-linux.sh"
+        },
+        "darwin": {
+          "script": "flash-macos.sh"
+        }
       },
       "files": {
-        "root": ["flash.ps1", "flash-linux.sh", "flash-macos.sh"]
+        "root": [
+          "flash.ps1",
+          "flash-linux.sh",
+          "flash-macos.sh"
+        ]
       },
       "install_note": "Special handler: files live at module root. Installer selects platform-appropriate script.",
       "settings_merge": {

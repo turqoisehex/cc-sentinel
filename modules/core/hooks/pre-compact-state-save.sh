@@ -43,7 +43,7 @@ NL=$'\n'
 if [[ "$HAS_TASK" == "true" ]]; then
   MSG="COMPACTION IMMINENT (trigger: ${TRIGGER}). MANDATORY: Update your channel CT file (CURRENT_TASK_chN.md if channeled, or CURRENT_TASK.md if unchanneled) NOW with: (1) Which plan step you just completed, (2) Which step is next, (3) Any uncommitted changes — describe them precisely, (4) Key decisions made this session, (5) Anything a fresh session needs that is not already in the file, (6) AGENT IDS AND OUTPUT FILES — list every background agent still running, its purpose, and the file path it is writing to (agent IDs do NOT survive compaction — the output file paths are the only way the next session can find results). (7) MEMORY.md — if any facts changed this session (counts, file paths, decisions, patterns), update MEMORY.md now. Stale memory causes bad decisions in future sessions. Then commit via scripts/channel_commit.sh (or git commit if commit-enforcement is not installed). A fresh session will read ONLY CLAUDE.md, MEMORY.md, and the CT files below — everything else is lost.${NL}${NL}Current CT files for reference (update yours, do not start from scratch):${NL}${TASK_CONTENT}"
 else
-  MSG="COMPACTION IMMINENT (trigger: ${TRIGGER}). Write current work state to the project state file (HANDOFF.md if none exists). Include: what was done, what remains, decisions made, current approach, uncommitted changes. A fresh session will have ZERO context from this session."
+  MSG="COMPACTION IMMINENT (trigger: ${TRIGGER}). Write current work state to CURRENT_TASK.md (create it from the template if it does not exist). Include: what was done, what remains, decisions made, current approach, uncommitted changes. A fresh session will have ZERO context from this session."
 fi
 
 # Escape for JSON using jq

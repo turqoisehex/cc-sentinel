@@ -6,7 +6,7 @@
 
 ## Procedure
 
-**Abbreviations:** BACKLOG=`PROJECT_BACKLOG.md`, PLAN=`IMPLEMENTATION_PLAN.md`, CT=your channel CT file (or `CURRENT_TASK.md` if unchanneled).
+**Abbreviations:** CT=your channel CT file (or `CURRENT_TASK.md` if unchanneled). BACKLOG=your project backlog or sprint checklist (if you use one). PLAN=your implementation plan (if you use one).
 
 ### Step 0: Gate checks and task setup
 
@@ -41,21 +41,21 @@ tasks:
     signal_file: verification_findings/cold_prep_result[_chN].md
     files:
       - CURRENT_TASK_chN.md
-      - PROJECT_BACKLOG.md
-      - IMPLEMENTATION_PLAN.md
+      - "<your backlog file, if any>"
+      - "<your plan file, if any>"
   - name: transcript-orphan
     signal_file: verification_findings/transcript_orphan_result[_chN].md
     files:
       - CURRENT_TASK_chN.md
-      - PROJECT_BACKLOG.md
-      - IMPLEMENTATION_PLAN.md
+      - "<your backlog file, if any>"
+      - "<your plan file, if any>"
 ---
 ```
 
 > **Cold-start preparation.** Read these files completely — no skimming:
 > 1. `CURRENT_TASK_chN.md` (CT — the channel file, not the shared index) when channeled; `CURRENT_TASK.md` when unchanneled
-> 2. `PROJECT_BACKLOG.md` (SC)
-> 3. `IMPLEMENTATION_PLAN.md` (CIP)
+> 2. Your project backlog file (if you maintain one � e.g., `BACKLOG.md`, `TODO.md`, or a sprint checklist)
+> 3. Your implementation plan file (if you maintain one � e.g., `PLAN.md`, `IMPLEMENTATION_PLAN.md`)
 >
 > Since the session is ending, no further work will be completed. Classify each item by its current tracking state, not by whether it was "active."
 >
@@ -72,7 +72,7 @@ tasks:
 >
 > Orphan = failure. Zero orphans is the target. Also grep every file path referenced in CT to verify it exists on disk.
 >
-> **Placement guidance for SC/CIP writes:** When writing items to backlog, add them under the current sprint's section (find the sprint number in CT's header). When writing to plan, add under the relevant feature area or create a "Deferred from Sprint N" section if no area fits. Match the surrounding document's format (checkboxes for backlog, bullet descriptions for CIP).
+> **Placement guidance for backlog/plan writes:** When writing items to backlog, add them under the current sprint's section (find the sprint number in CT's header). When writing to plan, add under the relevant feature area or create a "Deferred from Sprint N" section if no area fits. Match the surrounding document's format (checkboxes for backlog, bullet descriptions for CIP).
 >
 > **B. Cold-start quality pass on CT.** Update CT so a zero-context session can execute every item. For each plan step verify:
 > 1. Self-contained context — no "as discussed" or "per earlier decision." State the decision inline.
@@ -95,7 +95,7 @@ tasks:
 > ```
 > COLD_PREP_COMPLETE
 > Orphans found and resolved: N
-> Incomplete items written to SC/CIP: N
+> Incomplete items written to backlog/plan: N
 > Stale references fixed: N
 > CT quality gaps fixed: N
 > Cross-doc discrepancies fixed: N
@@ -114,8 +114,8 @@ tasks:
 >
 > For each extracted item, check whether it is captured in at least one of:
 > 1. `CURRENT_TASK.md` (CT)
-> 2. `PROJECT_BACKLOG.md` (SC)
-> 3. `IMPLEMENTATION_PLAN.md` (CIP)
+> 2. Your project backlog file (if you maintain one � e.g., `BACKLOG.md`, `TODO.md`, or a sprint checklist)
+> 3. Your implementation plan file (if you maintain one � e.g., `PLAN.md`, `IMPLEMENTATION_PLAN.md`)
 >
 > Classify each item:
 >
@@ -143,7 +143,7 @@ When both results appear, read them. Unresolvable issues → add to CT as flagge
 
 ### Step 2: Grill
 
-Read both agent result files and CT. For each grill question, verify checkable answers with grep/read. Fix CT problems directly; for SC/CIP problems, add flagged items to CT (e.g., "FIX IN SC: [description]") — do NOT read SC/CIP in parent.
+Read both agent result files and CT. For each grill question, verify checkable answers with grep/read. Fix CT problems directly; for backlog/plan problems, add flagged items to CT (e.g., "FIX IN SC: [description]") — do NOT read backlog/plan in parent.
 
 1. **"Where does this break?"** — Different day, sprint phase, or post-compaction start. What assumptions are baked in?
 2. **"What have I not checked?"** — Zero stale references? Recent commits (`git log --oneline -3`) reflected in CT?
@@ -155,7 +155,7 @@ Read both agent result files and CT. For each grill question, verify checkable a
 If CT, backlog, or plan were modified, commit. If all three are clean, skip — no empty commits.
 
 ```bash
-bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md PROJECT_BACKLOG.md IMPLEMENTATION_PLAN.md" -m "cold: state files cold-start ready" --skip-squad
+bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md <backlog-file> <plan-file>" -m "cold: state files cold-start ready" --skip-squad
 ```
 
 `--skip-squad` — per-commit agents provide sufficient coverage for state-file-only changes.

@@ -37,7 +37,7 @@ Delete session artifacts. **Only YOUR channel's artifacts** — never touch othe
 
 **Unchanneled:** If other channels active (check Active Channels in `CURRENT_TASK.md`), do NOT delete `_pending/`. Clean only: `_staging/*`, `squad_sonnet/`, `squad_opus/`, `cold_prep_result.md`, `transcript_orphan_result.md`.
 
-**Do NOT delete:** `/perfect`, spec-to-code, or transcript decision results (sprint records). Files referenced in CT or SC. When in doubt, keep it.
+**Do NOT delete:** `/perfect`, spec-to-code, or transcript decision results (sprint records). Files referenced in CT or your project backlog. When in doubt, keep it.
 
 Commit only if tracked files were deleted (squad dirs and `_pending/` are gitignored):
 ```bash
@@ -46,7 +46,7 @@ bash scripts/channel_commit.sh [--channel N] --files "<deleted tracked files>" -
 
 ## Step 5: Document Remaining Work
 
-For each incomplete item: ensure CT has enough context for zero-context execution (no "as discussed" — state decisions inline, include file paths, criteria, dependencies). If an item may be missing from SC/CIP, add `FLAG-FOR-NEXT-SESSION: verify [item] in SC/CIP` to CT. Capture any unwritten design decisions to the relevant file now.
+For each incomplete item: ensure CT has enough context for zero-context execution (no "as discussed" — state decisions inline, include file paths, criteria, dependencies). If an item may be missing from your backlog or plan, add `FLAG-FOR-NEXT-SESSION: verify [item] in backlog/plan` to CT. Capture any unwritten design decisions to the relevant file now.
 
 ## Step 6: Update or Clear Channel
 

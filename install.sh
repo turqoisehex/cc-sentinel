@@ -53,6 +53,16 @@ fi
 
 SCRIPTS_DIR="scripts"
 
+# --- Verify prerequisites ---
+if ! command -v jq &>/dev/null; then
+  echo ""
+  log "ERROR: jq is required but not found."
+  log "All cc-sentinel hooks use jq for JSON parsing."
+  log "Install it: https://jqlang.github.io/jq/download/"
+  echo ""
+  exit 1
+fi
+
 # --- Helper functions ---
 log() { echo "[cc-sentinel] $*"; }
 copy_file() {
@@ -186,10 +196,10 @@ install_context_awareness() {
       config_target="${CLAUDE_DIR}/cc-context-awareness/config.json"
     fi
     if [[ -f "$config_target" ]] && command -v python3 &>/dev/null; then
-      python3 -c "
-import json
+      _SENTINEL_BAR_STYLE="$BAR_STYLE" python3 -c "
+import json, os
 with open('$config_target') as f: c = json.load(f)
-c['bar_style'] = '$BAR_STYLE'
+c['bar_style'] = os.environ.get('_SENTINEL_BAR_STYLE', 'auto')
 with open('$config_target', 'w') as f: json.dump(c, f, indent=2)
 " 2>/dev/null || true
     fi
@@ -428,16 +438,15 @@ resolve_deps() {
     IFS=',' read -ra check_array <<< "$resolved"
     for mod in "${check_array[@]}"; do
       mod=$(echo "$mod" | tr -d ' ')
-      if command -v jq &>/dev/null; then
-        deps=$(jq -r ".modules[\"$mod\"].dependencies[]? // empty" "$manifest" 2>/dev/null)
-        for dep in $deps; do
-          if ! echo ",$resolved," | grep -q ",$dep,"; then
-            resolved="$dep,$resolved"
-            changed="true"
-            log "  Auto-adding dependency: $dep (required by $mod)"
-          fi
-        done
-      fi
+      deps=$(jq -r ".modules[\"$mod\"].dependencies[]? // empty" "$manifest" 2>/dev/null)
+      for dep in $deps; do
+        if ! echo ",$resolved," | grep -q ",$dep,"; then
+          resolved="$dep,$resolved"
+          changed="true"
+          log "  Auto-adding dependency: $dep (required by $mod)"
+        fi
+      done
+
     done
   done
   MODULES="$resolved"

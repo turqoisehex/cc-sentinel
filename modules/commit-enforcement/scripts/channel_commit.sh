@@ -274,7 +274,19 @@ COMMIT_ARGS=(-m "$MESSAGE" --local-verify --skip-tests)
 
 [[ -n "$CHANNEL" ]] && export SENTINEL_CHANNEL="$CHANNEL"
 COMMIT_EXIT=0
-bash .claude/hooks/safe-commit.sh --internal "${COMMIT_ARGS[@]}" || COMMIT_EXIT=$?
+# Resolve safe-commit.sh: project-local first, then global
+SAFE_COMMIT=""
+for candidate in ".claude/hooks/safe-commit.sh" "${HOME}/.claude/hooks/safe-commit.sh"; do
+  if [[ -f "$candidate" ]]; then
+    SAFE_COMMIT="$candidate"
+    break
+  fi
+done
+if [[ -z "$SAFE_COMMIT" ]]; then
+  echo "ERROR: safe-commit.sh not found in .claude/hooks/ or ~/.claude/hooks/" >&2
+  exit 1
+fi
+bash "$SAFE_COMMIT" --internal "${COMMIT_ARGS[@]}" || COMMIT_EXIT=$?
 
 rm -f "$DIFF_FILE" "$COMMIT_ACTIVE_FILE"
 release_lock
