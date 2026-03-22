@@ -517,17 +517,19 @@ done
 
 echo ""
 
-# For global installs, rewrite script paths in command .md files
+# For global installs, rewrite script paths in command and reference .md files
 if [[ "$TARGET" == "global" && "$DRY_RUN" != "true" ]]; then
   log "Rewriting script paths for global install..."
-  for cmd_file in "${CLAUDE_DIR}/commands"/*.md; do
-    [[ ! -f "$cmd_file" ]] && continue
-    if grep -q 'bash scripts/' "$cmd_file" 2>/dev/null; then
-      # Portable sed -i (BSD vs GNU)
-      tmp_cmd="${cmd_file}.tmp"
-      sed "s|bash scripts/|bash ~/.claude/scripts/|g" "$cmd_file" > "$tmp_cmd" && mv "$tmp_cmd" "$cmd_file"
-      log "  Updated paths in: $(basename "$cmd_file")"
-    fi
+  for md_dir in "${CLAUDE_DIR}/commands" "${CLAUDE_DIR}/reference"; do
+    for md_file in "${md_dir}"/*.md; do
+      [[ ! -f "$md_file" ]] && continue
+      if grep -q 'bash scripts/' "$md_file" 2>/dev/null; then
+        # Portable sed -i (BSD vs GNU)
+        tmp_file="${md_file}.tmp"
+        sed "s|bash scripts/|bash ~/.claude/scripts/|g" "$md_file" > "$tmp_file" && mv "$tmp_file" "$md_file"
+        log "  Updated paths in: $(basename "$md_file")"
+      fi
+    done
   done
 fi
 

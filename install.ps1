@@ -182,7 +182,10 @@ function Install-ContextAwareness {
         $configPath = Join-Path $caTarget "config.json"
         if (Test-Path $configPath) {
             $config = Get-Content $configPath | ConvertFrom-Json
-            $config | Add-Member -NotePropertyName "bar_style" -NotePropertyValue $BarStyle -Force
+            if (-not $config.statusline) {
+                $config | Add-Member -NotePropertyName "statusline" -NotePropertyValue @{} -Force
+            }
+            $config.statusline | Add-Member -NotePropertyName "bar_style" -NotePropertyValue $BarStyle -Force
             $config | ConvertTo-Json -Depth 10 | Set-Content $configPath
         }
     }
@@ -409,17 +412,19 @@ foreach ($mod in $modArray) {
     }
 }
 
-# For global installs, rewrite script paths in command .md files
+# For global installs, rewrite script paths in command and reference .md files
 if ($Target -eq "global" -and -not $DryRun) {
     Log "Rewriting script paths for global install..."
-    $cmdsPath = Join-Path $ClaudeDir "commands"
-    if (Test-Path $cmdsPath) {
-        Get-ChildItem $cmdsPath -Filter "*.md" | ForEach-Object {
-            $content = Get-Content $_.FullName -Raw
-            if ($content -match "bash scripts/") {
-                $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
-                $content | Set-Content $_.FullName -NoNewline
-                Log "  Updated paths in: $($_.Name)"
+    foreach ($subdir in @("commands", "reference")) {
+        $mdPath = Join-Path $ClaudeDir $subdir
+        if (Test-Path $mdPath) {
+            Get-ChildItem $mdPath -Filter "*.md" | ForEach-Object {
+                $content = Get-Content $_.FullName -Raw
+                if ($content -match "bash scripts/") {
+                    $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
+                    $content | Set-Content $_.FullName -NoNewline
+                    Log "  Updated paths in: $($_.Name)"
+                }
             }
         }
     }
