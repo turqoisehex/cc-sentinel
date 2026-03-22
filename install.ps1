@@ -14,6 +14,9 @@ param(
 
     [string]$BarStyle = "auto",
 
+    [ValidateSet("bundled", "canonical")]
+    [string]$ContextSource = "bundled",
+
     [switch]$DryRun
 )
 

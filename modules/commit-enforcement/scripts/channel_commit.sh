@@ -192,7 +192,7 @@ check_heartbeat() {
   [[ ! -f "$hb_file" ]] && echo "WARNING: No Sonnet heartbeat. Use --local-verify or start /sonnet." >&2 && return
   local now hb_time age
   now=$(date +%s)
-  hb_time=$(stat -c %Y "$hb_file" 2>/dev/null || echo 0)
+  hb_time=$(stat -c %Y "$hb_file" 2>/dev/null || stat -f %m "$hb_file" 2>/dev/null || echo 0)
   age=$((now - hb_time))
   (( age > 30 )) && echo "WARNING: Sonnet heartbeat stale (${age}s)." >&2
 }

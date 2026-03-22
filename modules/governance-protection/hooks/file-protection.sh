@@ -44,7 +44,7 @@ PROJECT_DIR="$(find_project_dir "$FIRST_FILE")"
 for candidate in \
   "${PROJECT_DIR}/protected-files.txt" \
   "${PROJECT_DIR}/.claude/protected-files.txt" \
-  "${HOME}/.claude/hooks/enforcement/protected-files.txt"; do
+  "${HOME}/.claude/hooks/protected-files.txt"; do
   if [[ -f "$candidate" ]]; then
     PROTECTED_FILES_LIST="$candidate"
     break

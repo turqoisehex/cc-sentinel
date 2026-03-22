@@ -138,7 +138,7 @@ install_module() {
       [[ ! -f "$f" ]] && continue
       # Capitalize for project root
       local dest_name
-      dest_name=$(basename "$f" | sed 's/-/_/g' | sed 's/\b\(.\)/\U\1/g;s/_/ /g;s/ /_/g')
+      dest_name=$(basename "$f" | tr '-' '_')
       copy_file "$f" "$dest_name"
     done
   fi
@@ -226,6 +226,10 @@ install_notification() {
     Darwin*)
       copy_file "$module_dir/flash-macos.sh" "${CLAUDE_DIR}/hooks/flash-notification.sh"
       [[ "$DRY_RUN" != "true" ]] && chmod +x "${CLAUDE_DIR}/hooks/flash-notification.sh"
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      copy_file "$module_dir/flash.ps1" "${CLAUDE_DIR}/hooks/flash.ps1"
+      log "  Windows notification: flash.ps1"
       ;;
     *)
       log "  WARNING: Unknown OS for notification. Skipping."

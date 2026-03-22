@@ -212,7 +212,7 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   STALE_FILES=""
   ANY_FRESH="false"
   for tf in "${ACTIVE_FILES[@]}"; do
-    FILE_MTIME=$(stat -c %Y "$tf" 2>/dev/null) || continue
+    FILE_MTIME=$(stat -c %Y "$tf" 2>/dev/null || stat -f %m "$tf" 2>/dev/null) || continue
     FILE_MTIME=$(echo "$FILE_MTIME" | tr -d '\r')
     DIFF=$((NOW - FILE_MTIME)) || continue
     if [[ "$DIFF" -lt 120 ]]; then

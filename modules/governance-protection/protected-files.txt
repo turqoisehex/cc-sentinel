@@ -1,7 +1,6 @@
 # Protected Files
 # List files that require GOVERNANCE-EDIT-AUTHORIZED marker to modify.
-# One path per line. Supports glob patterns.
-#
-# Example:
-# CLAUDE.md
-# .claude/rules/*.md
+# One filename per line. Matched against basename of edited file.
+# Lines starting with # are comments.
+CLAUDE.md
+settings.json

@@ -41,7 +41,7 @@ Install these 5 modules? (Y/n)
 **In any Claude Code session:**
 
 ```
-Install https://github.com/anthropics/cc-sentinel
+Install https://github.com/turqoisehex/cc-sentinel
 ```
 
 Claude Code reads the repo's CLAUDE.md, which contains an interactive installer. It will:
@@ -57,7 +57,7 @@ Claude Code reads the repo's CLAUDE.md, which contains an interactive installer.
 
 ```bash
 # Clone
-git clone https://github.com/anthropics/cc-sentinel.git ~/.claude/cc-sentinel
+git clone https://github.com/turqoisehex/cc-sentinel.git ~/.claude/cc-sentinel
 
 # Install to current project (recommended)
 bash ~/.claude/cc-sentinel/install.sh --modules "core,context-awareness,verification" --target project
@@ -192,8 +192,8 @@ Install only what you need. Dependencies are resolved automatically:
 core (required)
   +-- context-awareness
   +-- verification
-  |     +-- commit-enforcement
-  +-- sprint-pipeline (requires verification)
+  +-- commit-enforcement (requires core + verification)
+  +-- sprint-pipeline (requires core + verification)
   +-- governance-protection
   +-- notification
 ```
@@ -204,12 +204,11 @@ The installer generates a `.claudeignore` file tuned to your project type (Flutt
 
 ### Protected Files
 
-Edit `protected-files.txt` to customize which files are protected from mid-session edits:
+By default, `CLAUDE.md` and `settings.json` are protected. Edit `protected-files.txt` to customize:
 
 ```
 CLAUDE.md
 settings.json
-modules.json
 ```
 
 ## Architecture
@@ -260,7 +259,7 @@ Remove its files from `.claude/` and its hook entries from `.claude/settings.jso
 Yes. cc-sentinel hooks and plugins coexist. The sprint-pipeline module recommends complementary plugins but does not require them.
 
 **What about performance?**
-Hooks add 5-15ms per tool call (shell startup + jq parse). Context awareness adds a status line update. Neither is perceptible during normal use.
+Most hooks add 5-15ms per tool call (shell startup + jq parse). The auto-format hook runs only on file writes and formats only the changed file. Context awareness adds a status line update. None are perceptible during normal use.
 
 **Can I use this with a team?**
 Yes. Project install (`.claude/`) commits to your repo, so the whole team gets the same governance. Add `.claude/` to version control.
