@@ -111,6 +111,15 @@ function Install-Module($moduleName) {
         }
     }
 
+    # Tools (go to ~/.claude/tools/)
+    $toolsDir = Join-Path $moduleDir "tools"
+    if (Test-Path $toolsDir) {
+        $toolsDest = Join-Path $env:USERPROFILE ".claude" "tools"
+        Get-ChildItem $toolsDir -File | ForEach-Object {
+            Copy-FileChecked $_.FullName (Join-Path $toolsDest $_.Name)
+        }
+    }
+
     # Skills
     $skillsDir = Join-Path $moduleDir "skills"
     if (Test-Path $skillsDir) {

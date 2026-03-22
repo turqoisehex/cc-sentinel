@@ -92,6 +92,16 @@ if echo "$LAST_MSG" | grep -qiE "(agent|agents).*(still running|running|pending|
   exit 0
 fi
 
+# --- BYPASS: Sonnet listener sessions ---
+# Listeners are stateless service loops with no work to lose. The CT staleness
+# check is designed for Opus sessions that hold conversation state. Listeners
+# must NOT touch CT files (sonnet.md hard rule), so blocking them forces a
+# rule violation. Detect by their unique "Watching _pending/" output pattern.
+if echo "$LAST_MSG" | grep -qiE "Watching _pending/" 2>/dev/null; then
+  echo "  -> ALLOW (Sonnet listener session)" >> "$LOGFILE" 2>/dev/null
+  exit 0
+fi
+
 # Completion language patterns
 COMPLETION_PATTERNS="(all (items |steps |tasks |work )?(are |is )?(done|complete)|work is (complete|done|finished)|sprint is (complete|done)|task is (complete|done)|everything.s (done|complete)|implementation.* complete|ship.ready|what.s next|what should we|shall we move on|ready to move|what would you like)"
 

@@ -260,7 +260,14 @@
           "finalize.md",
           "opus.md",
           "sonnet.md",
-          "rewrite.md"
+          "rewrite.md",
+          "spawn.md"
+        ],
+        "tools": [
+          "spawn.py"
+        ],
+        "tests": [
+          "test_spawn.py"
         ],
         "reference": [
           "spec-verification.md"

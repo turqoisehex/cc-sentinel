@@ -138,6 +138,16 @@ install_module() {
     done
   fi
 
+  # Tools (go to ~/.claude/tools/)
+  if [[ -d "$module_dir/tools" ]]; then
+    for f in "$module_dir"/tools/*; do
+      [[ ! -f "$f" ]] && continue
+      local tools_dir="${HOME}/.claude/tools"
+      copy_file "$f" "${tools_dir}/$(basename "$f")"
+      [[ "$DRY_RUN" != "true" ]] && chmod +x "${tools_dir}/$(basename "$f")" 2>/dev/null || true
+    done
+  fi
+
   # Skills
   if [[ -d "$module_dir/skills" ]]; then
     for skill_dir in "$module_dir"/skills/*/; do
