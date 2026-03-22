@@ -136,10 +136,7 @@ install_module() {
   if [[ -d "$module_dir/templates" ]]; then
     for f in "$module_dir"/templates/*.md; do
       [[ ! -f "$f" ]] && continue
-      # Capitalize for project root
-      local dest_name
-      dest_name=$(basename "$f" | tr '-' '_')
-      copy_file "$f" "$dest_name"
+      copy_file "$f" "$(basename "$f")"
     done
   fi
 
