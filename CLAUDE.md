@@ -64,17 +64,19 @@ Let the user select. Auto-include dependencies (e.g., Sprint Pipeline requires C
 
 ### Step 5: Run Installer
 
-Determine the correct installer command based on OS:
+Determine the correct installer command based on OS. Use the full path to the installer scripts in this repository (the directory containing this CLAUDE.md file):
 
 **Windows:**
 ```powershell
-powershell -File install.ps1 -Modules "<selected>" -Target "<target>"
+powershell -File "<this-repo-path>/install.ps1" -Modules "<selected>" -Target "<target>"
 ```
 
 **macOS/Linux:**
 ```bash
-bash install.sh --modules "<selected>" --target "<target>"
+bash "<this-repo-path>/install.sh" --modules "<selected>" --target "<target>"
 ```
+
+Replace `<this-repo-path>` with the absolute path to this cloned repository.
 
 If Context Awareness is selected AND the OS is macOS or Linux, ask:
 "For context-awareness, would you like to use the bundled version or install from the canonical repository (sdi2200262/cc-context-awareness)? The bundled version works on all platforms. The canonical version is maintained by the original author."
