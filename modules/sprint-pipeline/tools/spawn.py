@@ -869,8 +869,7 @@ class Spawner:
         """Check if project has channel infrastructure."""
         p = pathlib.Path(project_dir)
         return (
-            (p / "CURRENT_TASK_CHANNEL_TEMPLATE.md").exists()
-            or (p / "channel-template.md").exists()
+            (p / "channel-template.md").exists()
             or (p / ".claude" / "reference" / "channel-routing.md").exists()
         )
 
@@ -880,7 +879,7 @@ class Spawner:
         p = pathlib.Path(project_dir)
 
         # Channel template
-        template = p / "CURRENT_TASK_CHANNEL_TEMPLATE.md"
+        template = p / "channel-template.md"
         if not template.exists():
             template.write_text(
                 "# CURRENT TASK\n\n"

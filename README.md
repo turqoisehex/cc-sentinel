@@ -110,7 +110,7 @@ context [████████████░░░░░░░░] 62%
 Thresholds trigger automatic reminders:
 - **50%** -- "Documenting as you go?"
 - **65%** -- "Could a fresh session resume from your state files?"
-- **75%** -- "Wrap up current unit of work."
+- **75%** -- "Invoke /cold for cold-start preparation."
 - **85%** -- "State files current. Commit if at a natural boundary."
 - **92%** -- "Auto-compaction imminent. State files must be complete."
 
@@ -212,12 +212,13 @@ Desktop alerts when Claude Code completes a task or needs your input. Platform-n
 
 After installation, run `/self-test` to validate your setup. It checks:
 
-- All selected module files are present in the expected locations
-- Hooks are registered correctly in settings.json
-- Required tools (`jq`, `bash`) are available
-- Protected files list exists and is readable
-- CURRENT_TASK.md template is in place
-- Context awareness config is valid (if installed)
+- Hooks are registered in settings.json AND their files exist on disk
+- Command files are present for each installed module
+- Reference files are present for each installed module
+- Templates exist (CURRENT_TASK.md or channel-template.md)
+- CLAUDE.md contains cc-sentinel behavioral rules
+- Working directory (`verification_findings/`) exists and is gitignored
+- Skills are installed for applicable modules
 
 If anything fails, `/self-test` reports exactly what's wrong and how to fix it.
 
@@ -355,11 +356,21 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 | Completion loops | ralph-loop plugin (re-feed until done) | Stop hook + verification evidence gate + anti-deferral hook (three independent mechanisms) |
 | Permission model | Pre-approved allow list (manual) | Same + file-protection hook for governance files + authorization marker protocol |
 
+## Platform Support
+
+| Platform | Status | Notes |
+|---|---|---|
+| **macOS** | Full support | Native bash, jq via Homebrew |
+| **Linux** | Full support | Native bash, jq via package manager |
+| **Windows** | Full support | Requires Git Bash (`bash` from Git for Windows). All hooks, installers, and context-awareness tested on Windows. The bundled context-awareness module is the only known Windows-compatible version. |
+
+Both installers (`install.sh` for Unix, `install.ps1` for Windows) check prerequisites (`jq`, `bash`) before proceeding. Windows hooks handle CRLF normalization automatically via `tr -d '\r'` on jq output.
+
 ## Requirements
 
 - Claude Code CLI
-- Bash (Git Bash on Windows)
-- `jq` (used by hooks for JSON parsing -- installer checks this prerequisite)
+- Bash (Git Bash on Windows -- installer verifies this)
+- `jq` (used by hooks for JSON parsing -- installer verifies this)
 - Python 3 (used by installer for settings.json merge on Unix)
 
 ## FAQ

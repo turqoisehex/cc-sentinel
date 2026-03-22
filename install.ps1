@@ -35,6 +35,16 @@ if (-not $jqPath) {
     exit 1
 }
 
+$bashPath = Get-Command bash -ErrorAction SilentlyContinue
+if (-not $bashPath) {
+    Write-Host ""
+    Write-Host "[cc-sentinel] ERROR: bash is required but not found." -ForegroundColor Red
+    Write-Host "[cc-sentinel] All cc-sentinel hooks require bash (Git Bash on Windows)."
+    Write-Host "[cc-sentinel] Install Git for Windows: https://git-scm.com/download/win"
+    Write-Host ""
+    exit 1
+}
+
 # --- Determine target directories ---
 if ($Target -eq "global") {
     $ClaudeDir = Join-Path $env:USERPROFILE ".claude"

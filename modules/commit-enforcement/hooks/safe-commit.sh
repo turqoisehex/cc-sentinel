@@ -22,6 +22,15 @@ if [[ "${1:-}" != "--internal" ]]; then
 fi
 shift  # remove --internal from args
 
+# Resolve wait_for_results.sh path (handles project vs global installs)
+WAIT_SCRIPT="scripts/wait_for_results.sh"
+if [[ ! -f "$WAIT_SCRIPT" ]]; then
+  _HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  if [[ -f "${_HOOK_DIR}/../scripts/wait_for_results.sh" ]]; then
+    WAIT_SCRIPT="${_HOOK_DIR}/../scripts/wait_for_results.sh"
+  fi
+fi
+
 # Usage (internal): bash safe-commit.sh --internal [-m "message"] [--skip-squad] [--local-verify] [--skip-tests]
 
 # --- Parse flags ---
@@ -68,7 +77,7 @@ if [[ -n "$STAGED_FOR_CHECKS" ]]; then
         SONNET_VERIFY="false"
       else
         echo "Waiting for Sonnet verification results..." >&2
-        bash scripts/wait_for_results.sh --timeout 300 \
+        bash "$WAIT_SCRIPT" --timeout 300 \
           "verification_findings/commit_check${CH_SUFFIX}.md" \
           "verification_findings/commit_cold_read${CH_SUFFIX}.md"
         WAIT_EXIT=$?

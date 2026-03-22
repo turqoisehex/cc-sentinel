@@ -10,7 +10,7 @@ Set this session's channel identity. Adapts to project infrastructure.
 
 2. **If channel infrastructure exists** (cc-sentinel / governance project):
    a. Check Active Channels in `CURRENT_TASK.md`. If `$ARGUMENTS` already listed, warn: "Channel $ARGUMENTS already active — another session may own it."
-   b. If `CURRENT_TASK_ch$ARGUMENTS.md` missing, create from whichever template file exists (`CURRENT_TASK_CHANNEL_TEMPLATE.md` or `channel-template.md`):
+   b. If `CURRENT_TASK_ch$ARGUMENTS.md` missing, create from `channel-template.md`:
       - Set `**Channel:** $ARGUMENTS`
       - Move any "Unchanneled Work" content from shared index into the new file.
    c. Add/update Active Channels table in `CURRENT_TASK.md`.
