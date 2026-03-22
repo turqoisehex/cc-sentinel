@@ -121,7 +121,7 @@ function Install-Module($moduleName) {
     # Config files
     $protectedFiles = Join-Path $moduleDir "protected-files.txt"
     if (Test-Path $protectedFiles) {
-        Copy-FileChecked $protectedFiles (Join-Path $ClaudeDir "hooks" "protected-files.txt")
+        Copy-FileChecked $protectedFiles (Join-Path $ClaudeDir "protected-files.txt")
     }
 
     # claude-md rules

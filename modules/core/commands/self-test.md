@@ -42,7 +42,7 @@ Check `.claude/reference/` for expected files:
 ### 4. Templates
 
 Check project root for:
-- `CURRENT_TASK.md` or `CURRENT_TASK_TEMPLATE.md` — at least one must exist
+- `CURRENT_TASK.md` or `current-task-template.md` — at least one must exist
 
 ### 5. CLAUDE.md rules
 

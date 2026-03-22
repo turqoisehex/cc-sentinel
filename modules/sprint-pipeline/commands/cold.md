@@ -6,7 +6,7 @@
 
 ## Procedure
 
-**Abbreviations:** SC=`SPRINT_CHECKLIST.md`, CIP=`COMPREHENSIVE_IMPLEMENTATION_PLAN.md`, CT=your channel CT file (or `CURRENT_TASK.md` if unchanneled).
+**Abbreviations:** BACKLOG=`PROJECT_BACKLOG.md`, PLAN=`IMPLEMENTATION_PLAN.md`, CT=your channel CT file (or `CURRENT_TASK.md` if unchanneled).
 
 ### Step 0: Gate checks and task setup
 
@@ -16,7 +16,7 @@
 
 ### Step 1: Delegate cold-start preparation to Sonnet
 
-Do NOT read SC or CIP in parent — delegate to Sonnet. Identify session transcript (do NOT use `ls -t` — parallel sessions corrupt mtime):
+Do NOT read backlog or plan in parent — delegate to Sonnet. Identify session transcript (do NOT use `ls -t` — parallel sessions corrupt mtime):
 ```bash
 SESSION_ID=$(tail -1 ~/.claude/history.jsonl | sed 's/.*"sessionId":"\([^"]*\)".*/\1/')
 # Validate extraction succeeded (should be UUID-like, not full JSON)
@@ -41,21 +41,21 @@ tasks:
     signal_file: verification_findings/cold_prep_result[_chN].md
     files:
       - CURRENT_TASK_chN.md
-      - SPRINT_CHECKLIST.md
-      - COMPREHENSIVE_IMPLEMENTATION_PLAN.md
+      - PROJECT_BACKLOG.md
+      - IMPLEMENTATION_PLAN.md
   - name: transcript-orphan
     signal_file: verification_findings/transcript_orphan_result[_chN].md
     files:
       - CURRENT_TASK_chN.md
-      - SPRINT_CHECKLIST.md
-      - COMPREHENSIVE_IMPLEMENTATION_PLAN.md
+      - PROJECT_BACKLOG.md
+      - IMPLEMENTATION_PLAN.md
 ---
 ```
 
 > **Cold-start preparation.** Read these files completely — no skimming:
 > 1. `CURRENT_TASK_chN.md` (CT — the channel file, not the shared index) when channeled; `CURRENT_TASK.md` when unchanneled
-> 2. `SPRINT_CHECKLIST.md` (SC)
-> 3. `COMPREHENSIVE_IMPLEMENTATION_PLAN.md` (CIP)
+> 2. `PROJECT_BACKLOG.md` (SC)
+> 3. `IMPLEMENTATION_PLAN.md` (CIP)
 >
 > Since the session is ending, no further work will be completed. Classify each item by its current tracking state, not by whether it was "active."
 >
@@ -63,16 +63,16 @@ tasks:
 >
 > | Classification | Meaning | Action |
 > |---|---|---|
-> | **Incomplete** | Was active but will NOT be completed (the session is ending) | Write to BOTH SC and CIP now. Keep in CT with status and context for next session. |
-> | **Permanent-home** | Already tracked in BOTH SC and CIP with matching detail | Verify by grep in both files. If truly present in both, no action needed. |
-> | **Partial-home** | Tracked in SC but not CIP, or CIP but not SC | Write to the missing document now. |
-> | **Orphan** | Not in SC, not in CIP | Write to BOTH SC AND CIP now. |
+> | **Incomplete** | Was active but will NOT be completed (the session is ending) | Write to BOTH backlog and plan now. Keep in CT with status and context for next session. |
+> | **Permanent-home** | Already tracked in BOTH backlog and plan with matching detail | Verify by grep in both files. If truly present in both, no action needed. |
+> | **Partial-home** | Tracked in backlog but not plan, or plan but not backlog | Write to the missing document now. |
+> | **Orphan** | Not in backlog, not in plan | Write to BOTH backlog AND plan now. |
 > | **Done** | Completed and verified | Must be in Completed Steps section of CT with a one-line summary (e.g., "Step 3: implemented X — verified by test"). If not, add it. |
-> | **Dead** | Explicitly dropped with rationale | Remove from CT. If rationale is worth preserving, note it in the relevant spec or SC. |
+> | **Dead** | Explicitly dropped with rationale | Remove from CT. If rationale is worth preserving, note it in the relevant spec or backlog. |
 >
 > Orphan = failure. Zero orphans is the target. Also grep every file path referenced in CT to verify it exists on disk.
 >
-> **Placement guidance for SC/CIP writes:** When writing items to SC, add them under the current sprint's section (find the sprint number in CT's header). When writing to CIP, add under the relevant feature area or create a "Deferred from Sprint N" section if no area fits. Match the surrounding document's format (checkboxes for SC, bullet descriptions for CIP).
+> **Placement guidance for SC/CIP writes:** When writing items to backlog, add them under the current sprint's section (find the sprint number in CT's header). When writing to plan, add under the relevant feature area or create a "Deferred from Sprint N" section if no area fits. Match the surrounding document's format (checkboxes for backlog, bullet descriptions for CIP).
 >
 > **B. Cold-start quality pass on CT.** Update CT so a zero-context session can execute every item. For each plan step verify:
 > 1. Self-contained context — no "as discussed" or "per earlier decision." State the decision inline.
@@ -86,9 +86,9 @@ tasks:
 > Litmus test: re-read CT as if you have never seen this project. Any "what does this mean?" = a gap to fix.
 >
 > **C. Cross-document consistency.** Catalog all discrepancies first, then fix all:
-> - CT → SC: every active/deferred CT item has a corresponding entry in SC. If a CT item is a sub-bullet of a step already tracked in SC, verify the parent item's SC entry covers it. If unsure whether something is a sub-step or standalone, create a top-level SC entry.
-> - SC → CT: every "in progress" SC item either appears in CT or has deferral rationale noted in SC next to the item.
-> - CT → CIP: multi-sprint items exist in CIP.
+> - CT → backlog: every active/deferred CT item has a corresponding entry in backlog. If a CT item is a sub-bullet of a step already tracked in backlog, verify the parent item's backlog entry covers it. If unsure whether something is a sub-step or standalone, create a top-level backlog entry.
+> - backlog → CT: every "in progress" backlog item either appears in CT or has deferral rationale noted in backlog next to the item.
+> - CT → plan: multi-sprint items exist in plan.
 > - File references → disk: every path in CT exists (glob/grep).
 >
 > **D. Write results to `verification_findings/cold_prep_result[_chN].md`** with this format:
@@ -114,16 +114,16 @@ tasks:
 >
 > For each extracted item, check whether it is captured in at least one of:
 > 1. `CURRENT_TASK.md` (CT)
-> 2. `SPRINT_CHECKLIST.md` (SC)
-> 3. `COMPREHENSIVE_IMPLEMENTATION_PLAN.md` (CIP)
+> 2. `PROJECT_BACKLOG.md` (SC)
+> 3. `IMPLEMENTATION_PLAN.md` (CIP)
 >
 > Classify each item:
 >
 > | Classification | Meaning | Action |
 > |---|---|---|
-> | **Captured** | Present in CT, SC, or CIP with sufficient detail | No action. Note where it lives. |
+> | **Captured** | Present in CT, backlog, or plan with sufficient detail | No action. Note where it lives. |
 > | **Partial** | Referenced but missing key context (e.g., decision recorded but rationale omitted) | Add missing detail to the document where it already appears. |
-> | **Dropped** | Not in any document | Write to CT as a new action item or decision. If it's multi-sprint scope, also write to CIP. If it's current-sprint scope, also write to SC. |
+> | **Dropped** | Not in any document | Write to CT as a new action item or decision. If it's multi-sprint scope, also write to plan. If it's current-sprint scope, also write to backlog. |
 >
 > Dropped = failure. The whole point of this scan is to catch things the session discussed that never made it to disk.
 >
@@ -152,10 +152,10 @@ Read both agent result files and CT. For each grill question, verify checkable a
 
 ### Step 3: Commit
 
-If CT, SC, or CIP were modified, commit. If all three are clean, skip — no empty commits.
+If CT, backlog, or plan were modified, commit. If all three are clean, skip — no empty commits.
 
 ```bash
-bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md SPRINT_CHECKLIST.md COMPREHENSIVE_IMPLEMENTATION_PLAN.md" -m "cold: state files cold-start ready" --skip-squad
+bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md PROJECT_BACKLOG.md IMPLEMENTATION_PLAN.md" -m "cold: state files cold-start ready" --skip-squad
 ```
 
 `--skip-squad` — per-commit agents provide sufficient coverage for state-file-only changes.

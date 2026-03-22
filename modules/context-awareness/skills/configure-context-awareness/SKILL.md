@@ -116,10 +116,7 @@ Which Claude Code hook event triggers the context injection.
 | `"PostToolUse"` | Fires after every tool call inside the agentic loop. |
 | `"UserPromptSubmit"` | Fires once per user prompt. No mid-loop coverage. |
 
-Changing this value also requires re-running the installer to update `settings.json`:
-```bash
-./install.sh --hook-event PostToolUse
-```
+Changing this value requires manually updating the hook event type in `.claude/settings.json`.
 
 ### `flag_dir` (string)
 

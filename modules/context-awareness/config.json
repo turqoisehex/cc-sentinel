@@ -34,7 +34,7 @@
     "bar_empty": "\u2591",
     "format": "context {bar} {percentage}%",
     "color_normal": "37",
-    "color_warning": "33",
+    "color_warning": "31",
     "warning_indicator": "",
     "bar_style": "auto"
   },

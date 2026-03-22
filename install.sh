@@ -145,7 +145,7 @@ install_module() {
 
   # Config files
   if [[ -d "$module_dir" ]] && [[ -f "$module_dir/protected-files.txt" ]]; then
-    copy_file "$module_dir/protected-files.txt" "${CLAUDE_DIR}/hooks/protected-files.txt"
+    copy_file "$module_dir/protected-files.txt" "${CLAUDE_DIR}/protected-files.txt"
   fi
 
   # claude-md rules
