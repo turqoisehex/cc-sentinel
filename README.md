@@ -148,6 +148,8 @@ Code commits are gated: tests must pass, formatting must be clean, and two verif
 
 Multi-framework auto-detection: the commit hooks detect your project type from manifest files (`package.json`, `Cargo.toml`, `go.mod`, `pubspec.yaml`, `pyproject.toml`, `Makefile`) and run the appropriate test suite and formatter.
 
+**Single-terminal mode:** Works without a Sonnet listener. When no Sonnet heartbeat is detected, the system automatically falls back to local verification — no 5-minute hang, no manual flags needed.
+
 Also supports **multi-channel coordination** for parallel Opus/Sonnet workflows via `SENTINEL_CHANNEL` environment variable.
 
 ### Sprint Pipeline
