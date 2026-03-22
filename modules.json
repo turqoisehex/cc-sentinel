@@ -15,7 +15,10 @@
           "agent-file-reminder.sh"
         ],
         "commands": [
-          "self-test.md"
+          "self-test.md",
+          "cold.md",
+          "cleanup.md",
+          "status.md"
         ],
         "templates": [
           "current-task-template.md",
@@ -253,11 +256,8 @@
           "build.md",
           "perfect.md",
           "finalize.md",
-          "cold.md",
-          "cleanup.md",
           "opus.md",
           "sonnet.md",
-          "status.md",
           "rewrite.md"
         ],
         "reference": [
