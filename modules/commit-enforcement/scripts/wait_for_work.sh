@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -u
 # Blocks INDEFINITELY until a .md file appears in _pending/ (or _pending/chN/).
 # Returns the filename. No timeout — exits ONLY when work arrives.
 # Usage: bash scripts/wait_for_work.sh [--channel N]

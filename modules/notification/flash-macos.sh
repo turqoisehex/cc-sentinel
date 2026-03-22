@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -u
 # flash-macos.sh — Desktop notification when CC completes or needs input
 # Hook events: Stop, Notification
 

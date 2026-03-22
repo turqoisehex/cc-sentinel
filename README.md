@@ -111,7 +111,7 @@ Thresholds trigger automatic reminders:
 - **50%** -- "Documenting as you go?"
 - **65%** -- "Could a fresh session resume from your state files?"
 - **75%** -- "Invoke /cold for cold-start preparation."
-- **85%** -- "State files current. Commit if at a natural boundary."
+- **85%** -- "Commit all changes. State files must be current."
 - **92%** -- "Auto-compaction imminent. State files must be complete."
 
 Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the locale does not indicate UTF-8.
@@ -206,7 +206,7 @@ Desktop alerts when Claude Code completes a task or needs your input. Platform-n
 
 - **macOS** -- osascript notification + terminal bell
 - **Linux** -- notify-send (libnotify) + terminal bell
-- **Windows** -- FlashWindowEx taskbar flash + console beeps (no external dependencies)
+- **Windows** -- FlashWindowEx taskbar flash + console beeps (uses .NET, pre-installed on Windows 10+; targets Windows Terminal)
 
 ## Self-Test
 
@@ -215,7 +215,7 @@ After installation, run `/self-test` to validate your setup. It checks:
 - Hooks are registered in settings.json AND their files exist on disk
 - Command files are present for each installed module
 - Reference files are present for each installed module
-- Templates exist (CURRENT_TASK.md or channel-template.md)
+- Templates exist (CURRENT_TASK.md or current-task-template.md)
 - CLAUDE.md contains cc-sentinel behavioral rules
 - Working directory (`verification_findings/`) exists and is gitignored
 - Skills are installed for applicable modules
@@ -243,8 +243,8 @@ Install only what you need. Dependencies are resolved automatically:
 core (required)
   +-- context-awareness
   +-- verification
-  |     +-- commit-enforcement
-  |     +-- sprint-pipeline (also requires commit-enforcement)
+  |     +-- commit-enforcement (requires verification)
+  |           +-- sprint-pipeline (requires all above)
   +-- governance-protection
   +-- notification
 ```
@@ -385,7 +385,7 @@ Remove its files from `.claude/` and its hook entries from `.claude/settings.jso
 Yes. cc-sentinel hooks and plugins coexist. The sprint-pipeline module recommends complementary plugins but does not require them.
 
 **What about performance?**
-Most hooks add 5-15ms per tool call (shell startup + jq parse). The auto-format hook runs only on file writes and formats only the changed file. Context awareness adds a status line update. None are perceptible during normal use.
+Most hooks add 5-15ms per tool call on macOS/Linux (shell startup + jq parse). Windows (Git Bash) overhead is higher but still sub-second. The auto-format hook runs only on file writes and formats only the changed file. Context awareness adds a status line update. None are perceptible during normal use.
 
 **Can I use this with a team?**
 Yes. Project install (`.claude/`) commits to your repo, so the whole team gets the same governance. Add `.claude/` to version control.

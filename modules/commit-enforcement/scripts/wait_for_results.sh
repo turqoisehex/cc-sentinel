@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -u
 # Blocks until ALL specified files exist. Used by Opus to wait for Sonnet results.
 # Usage: bash scripts/wait_for_results.sh [--timeout N] file1.md [file2.md ...]
 TIMEOUT=3600
