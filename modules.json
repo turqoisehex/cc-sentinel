@@ -175,6 +175,9 @@
         ],
         "skills": [
           "grill"
+        ],
+        "tests": [
+          "test_stop_task_check.sh"
         ]
       },
       "settings_merge": {
@@ -218,6 +221,9 @@
         ],
         "reference": [
           "channel-routing.md"
+        ],
+        "tests": [
+          "test_channel_commit.sh"
         ]
       },
       "settings_merge": {
