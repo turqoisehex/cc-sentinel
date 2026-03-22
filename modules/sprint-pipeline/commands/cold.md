@@ -54,8 +54,8 @@ tasks:
 
 > **Cold-start preparation.** Read these files completely â€” no skimming:
 > 1. `CURRENT_TASK_chN.md` (CT â€” the channel file, not the shared index) when channeled; `CURRENT_TASK.md` when unchanneled
-> 2. Your project backlog file (if you maintain one — e.g., `BACKLOG.md`, `TODO.md`, or a sprint checklist)
-> 3. Your implementation plan file (if you maintain one — e.g., `PLAN.md`, `IMPLEMENTATION_PLAN.md`)
+> 2. Your project backlog file (if you maintain one â€” e.g., `BACKLOG.md`, `TODO.md`, or a sprint checklist)
+> 3. Your implementation plan file (if you maintain one â€” e.g., `PLAN.md`, `IMPLEMENTATION_PLAN.md`)
 >
 > Since the session is ending, no further work will be completed. Classify each item by its current tracking state, not by whether it was "active."
 >
@@ -114,8 +114,8 @@ tasks:
 >
 > For each extracted item, check whether it is captured in at least one of:
 > 1. `CURRENT_TASK.md` (CT)
-> 2. Your project backlog file (if you maintain one — e.g., `BACKLOG.md`, `TODO.md`, or a sprint checklist)
-> 3. Your implementation plan file (if you maintain one — e.g., `PLAN.md`, `IMPLEMENTATION_PLAN.md`)
+> 2. Your project backlog file (if you maintain one â€” e.g., `BACKLOG.md`, `TODO.md`, or a sprint checklist)
+> 3. Your implementation plan file (if you maintain one â€” e.g., `PLAN.md`, `IMPLEMENTATION_PLAN.md`)
 >
 > Classify each item:
 >

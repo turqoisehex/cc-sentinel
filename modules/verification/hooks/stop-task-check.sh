@@ -6,7 +6,8 @@
 # Only blocks when all conditions are explicitly met.
 set -u
 
-LOGFILE="/tmp/stop-hook-debug-$$.log"
+LOGFILE="${SENTINEL_DEBUG_LOG:-/dev/null}"
+[[ -n "${SENTINEL_DEBUG:-}" ]] && LOGFILE="/tmp/stop-hook-debug-$$.log"
 
 # Read hook input from stdin
 INPUT="$(cat)" || exit 0

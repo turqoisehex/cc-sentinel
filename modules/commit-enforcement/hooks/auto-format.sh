@@ -3,6 +3,7 @@
 # Hook event: PostToolUse (matched to Write/Edit/MultiEdit only via settings.json)
 # Called after file edits to auto-format changed code.
 # Never blocks — exits 0 even if formatter fails.
+set -u
 
 # Only act on file-writing tools
 INPUT="$(cat)"

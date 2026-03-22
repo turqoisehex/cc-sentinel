@@ -11,8 +11,8 @@ INPUT="$(cat)"
 # Parse all input fields in a single jq call
 read -r SESSION_ID USED_PCT REMAINING_PCT <<< "$(echo "$INPUT" | jq -r '[
   .session_id // "",
-  .context_window.used_percentage // 0,
-  .context_window.remaining_percentage // 100
+  .context_window.used_percentage // 0 | floor,
+  .context_window.remaining_percentage // 100 | floor
 ] | @tsv' | tr -d '\r')"
 
 # Exit early if no session

@@ -25,7 +25,7 @@ while [[ $# -gt 0 ]]; do
       [[ $# -lt 2 ]] && echo "ERROR: $1 requires a value" >&2 && exit 1
       ;;&
     --channel) CHANNEL="$2"; shift 2 ;;
-    --files)   FILES="$2"; shift 2 ;;
+    --files)   IFS=' ' read -ra FILE_ARRAY <<< "$2"; shift 2 ;;
     -m)        MESSAGE="$2"; shift 2 ;;
     --skip-squad)   SKIP_SQUAD="true"; shift ;;
     --local-verify) LOCAL_VERIFY="true"; shift ;;
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -z "$FILES" ]]   && echo "ERROR: --files \"f1 f2\" required" >&2 && exit 1
+[[ ${#FILE_ARRAY[@]} -eq 0 ]] && echo "ERROR: --files \"f1 f2\" required" >&2 && exit 1
 [[ -z "$MESSAGE" ]] && echo "ERROR: -m \"message\" required" >&2 && exit 1
 
 # --- Derived paths ---
@@ -93,7 +93,7 @@ phase1_stage_and_dispatch() {
     local unrelated=""
     for staged_file in $currently_staged; do
       local is_ours="false"
-      for f in $FILES; do
+      for f in "${FILE_ARRAY[@]}"; do
         [[ "$staged_file" == "$f" ]] && is_ours="true" && break
       done
       [[ "$is_ours" == "false" ]] && unrelated="$unrelated $staged_file"
@@ -102,7 +102,7 @@ phase1_stage_and_dispatch() {
   fi
 
   git reset HEAD --quiet 2>/dev/null || true
-  for f in $FILES; do
+  for f in "${FILE_ARRAY[@]}"; do
     if ! git add "$f" 2>/dev/null; then
       echo "ERROR: Failed to stage: $f" >&2
       release_lock
@@ -148,7 +148,7 @@ agents:
 ## Commit Verification
 Hash: ${HASH}
 Message: ${MESSAGE}
-Files: ${FILES}
+Files: ${FILE_ARRAY[*]}
 YAML_EOF
 
   echo "Dispatched to ${dispatch_file} — waiting for results" >&2
@@ -200,7 +200,7 @@ check_heartbeat() {
 # --- Main Flow ---
 HASH=""
 mkdir -p "$PENDING_DIR"
-printf '%s\n' $FILES > "$COMMIT_ACTIVE_FILE"
+printf '%s\n' "${FILE_ARRAY[@]}" > "$COMMIT_ACTIVE_FILE"
 
 ATTEMPT=0
 while (( ATTEMPT < MAX_RETRIES )); do
@@ -230,35 +230,11 @@ while (( ATTEMPT < MAX_RETRIES )); do
   fi
 done
 
-# --- Auto-detect and run tests ---
-TEST_LOG=$(mktemp)
-TEST_RAN="false"
-if [[ -f "pubspec.yaml" ]]; then
-  echo "Running Flutter tests..." >&2; TEST_RAN="true"
-  flutter test > "$TEST_LOG" 2>&1 || { tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
-elif [[ -f "package.json" ]]; then
-  echo "Running npm tests..." >&2; TEST_RAN="true"
-  npm test > "$TEST_LOG" 2>&1 || { tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
-elif [[ -f "Cargo.toml" ]]; then
-  echo "Running cargo tests..." >&2; TEST_RAN="true"
-  cargo test > "$TEST_LOG" 2>&1 || { tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
-elif [[ -f "go.mod" ]]; then
-  echo "Running Go tests..." >&2; TEST_RAN="true"
-  go test ./... > "$TEST_LOG" 2>&1 || { tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
-elif [[ -f "pytest.ini" ]] || [[ -f "setup.py" ]] || [[ -f "pyproject.toml" ]]; then
-  echo "Running pytest..." >&2; TEST_RAN="true"
-  pytest > "$TEST_LOG" 2>&1 || { tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
-elif [[ -f "Makefile" ]] && grep -q "^test:" "Makefile" 2>/dev/null; then
-  echo "Running make test..." >&2; TEST_RAN="true"
-  make test > "$TEST_LOG" 2>&1 || { tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
-fi
-[[ "$TEST_RAN" == "true" ]] && echo "Tests passed." >&2
-rm -f "$TEST_LOG"
-
 # --- Phase 2: Commit ---
+# Tests are owned by safe-commit.sh (single source of truth).
 acquire_lock
 git reset HEAD --quiet 2>/dev/null || true
-for f in $FILES; do
+for f in "${FILE_ARRAY[@]}"; do
   git add "$f" 2>/dev/null || { echo "ERROR: Phase 2 staging failed: $f" >&2; release_lock; exit 1; }
 done
 
@@ -269,7 +245,7 @@ if [[ "$COMMIT_HASH" != "$HASH" ]]; then
   exit 1
 fi
 
-COMMIT_ARGS=(-m "$MESSAGE" --local-verify --skip-tests)
+COMMIT_ARGS=(-m "$MESSAGE" --local-verify)
 [[ "$SKIP_SQUAD" == "true" ]] && COMMIT_ARGS+=(--skip-squad)
 
 [[ -n "$CHANNEL" ]] && export SENTINEL_CHANNEL="$CHANNEL"

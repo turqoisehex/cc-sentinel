@@ -185,7 +185,7 @@ Claude: [Runs verification squad. Produces final report.
 
 Additional commands: `/cold` (cold-start resume), `/cleanup` (session cleanup), `/opus` (channel management), `/sonnet` (Sonnet dispatch), `/status` (progress overview), `/rewrite` (content rewrite pipeline).
 
-Recommends complementary Claude Code plugins: superpowers, context7, feature-dev, pr-review-toolkit.
+Recommends complementary Claude Code plugins: superpowers, context7, feature-dev, pr-review-toolkit, claude-md-management, ralph-loop, claude-code-setup. The installer lists each plugin's purpose and install command -- it does not auto-install them.
 
 ### Governance Protection
 
@@ -202,7 +202,7 @@ Desktop alerts when Claude Code completes a task or needs your input. Platform-n
 
 - **macOS** -- osascript notification + terminal bell
 - **Linux** -- notify-send (libnotify) + terminal bell
-- **Windows** -- FlashWindowEx taskbar flash + R2D2-style console beeps (no external dependencies)
+- **Windows** -- FlashWindowEx taskbar flash + console beeps (no external dependencies)
 
 ## Self-Test
 
@@ -238,8 +238,8 @@ Install only what you need. Dependencies are resolved automatically:
 core (required)
   +-- context-awareness
   +-- verification
-  +-- commit-enforcement (requires core + verification)
-  +-- sprint-pipeline (requires core + verification)
+  |     +-- commit-enforcement
+  |     +-- sprint-pipeline (also requires commit-enforcement)
   +-- governance-protection
   +-- notification
 ```
@@ -348,6 +348,8 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 | Multi-channel coordination | Parallel sessions (independent) | File-signal coordination between orchestrator + executor |
 | Verification depth | 2-layer review (check + challenge) | 5 independent agents + per-commit agents + stop hook gate |
 | Plan enforcement | Plan mode discipline (manual) | /design forces brainstorm, spec, adversarial review, user gate |
+| Completion loops | ralph-loop plugin (re-feed until done) | Stop hook + verification evidence gate + anti-deferral hook (three independent mechanisms) |
+| Permission model | Pre-approved allow list (manual) | Same + file-protection hook for governance files + authorization marker protocol |
 
 ## Requirements
 

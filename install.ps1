@@ -23,6 +23,18 @@ param(
 $ErrorActionPreference = "Stop"
 $SentinelRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# --- Verify prerequisites ---
+$jqPath = Get-Command jq -ErrorAction SilentlyContinue
+if (-not $jqPath) {
+    Write-Host ""
+    Write-Host "[cc-sentinel] ERROR: jq is required but not found." -ForegroundColor Red
+    Write-Host "[cc-sentinel] All cc-sentinel hooks use jq for JSON parsing."
+    Write-Host "[cc-sentinel] Install it: choco install jq  OR  winget install jqlang.jq"
+    Write-Host "[cc-sentinel] Download: https://jqlang.github.io/jq/download/"
+    Write-Host ""
+    exit 1
+}
+
 # --- Determine target directories ---
 if ($Target -eq "global") {
     $ClaudeDir = Join-Path $env:USERPROFILE ".claude"

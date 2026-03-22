@@ -238,7 +238,8 @@
       "required": false,
       "dependencies": [
         "core",
-        "verification"
+        "verification",
+        "commit-enforcement"
       ],
       "files": {
         "commands": [

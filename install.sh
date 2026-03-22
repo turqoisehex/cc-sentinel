@@ -53,6 +53,9 @@ fi
 
 SCRIPTS_DIR="scripts"
 
+# --- Helper functions (defined before use) ---
+log() { echo "[cc-sentinel] $*"; }
+
 # --- Verify prerequisites ---
 if ! command -v jq &>/dev/null; then
   echo ""
@@ -63,8 +66,14 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
-# --- Helper functions ---
-log() { echo "[cc-sentinel] $*"; }
+if ! command -v python3 &>/dev/null && ! command -v python &>/dev/null; then
+  echo ""
+  log "ERROR: Python 3 is required but not found."
+  log "The installer uses Python for settings.json merge."
+  log "Install it: https://www.python.org/downloads/"
+  echo ""
+  exit 1
+fi
 copy_file() {
   local src="$1" dst="$2"
   if [[ "$DRY_RUN" == "true" ]]; then

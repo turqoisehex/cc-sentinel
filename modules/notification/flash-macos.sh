@@ -2,6 +2,9 @@
 # flash-macos.sh — Desktop notification when CC completes or needs input
 # Hook events: Stop, Notification
 
+# Drain stdin (CC pipes JSON to all hooks)
+cat > /dev/null 2>/dev/null &
+
 # Terminal bell
 printf '\a'
 
