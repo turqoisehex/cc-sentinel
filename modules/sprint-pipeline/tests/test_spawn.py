@@ -327,6 +327,36 @@ class TestSetup(unittest.TestCase):
                             self.assertIn("key_sender", result)
                             self.assertEqual(result["missing"], [])
 
+    def test_can_use_tkinter_false_on_macos_subprocess(self):
+        """On macOS with no TTY, _can_use_tkinter returns False (prevents crash)."""
+        from spawn import _can_use_tkinter
+        with patch("spawn.sys") as mock_sys:
+            mock_sys.platform = "darwin"
+            mock_sys.stdout.isatty.return_value = False
+            self.assertFalse(_can_use_tkinter())
+
+    def test_can_use_tkinter_false_on_macos_no_term_program(self):
+        """On macOS with TTY but no TERM_PROGRAM, _can_use_tkinter returns False."""
+        from spawn import _can_use_tkinter
+        with patch("spawn.sys") as mock_sys:
+            mock_sys.platform = "darwin"
+            mock_sys.stdout.isatty.return_value = True
+            with patch.dict(os.environ, {}, clear=True):
+                self.assertFalse(_can_use_tkinter())
+
+    def test_tooltip_disabled_skips_tkinter(self):
+        """SpawnTooltip with _disabled=True never touches tkinter."""
+        from spawn import SpawnTooltip
+        with patch("spawn._can_use_tkinter", return_value=False):
+            tooltip = SpawnTooltip()
+            self.assertTrue(tooltip._disabled)
+            # start/update/close should all be no-ops
+            tooltip.start("test")
+            tooltip.update("test")
+            tooltip.close()
+            # Thread should never have started
+            self.assertFalse(tooltip._thread.is_alive())
+
 
 # -- Task 9: Spawner Orchestration --------------------------------------------
 

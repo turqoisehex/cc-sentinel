@@ -709,6 +709,30 @@ def run_setup(terminal_override=None):
 
 # -- Spawn Tooltip ------------------------------------------------------------
 
+def _can_use_tkinter():
+    """Check if tkinter can safely initialize.
+
+    On macOS, Tk requires the AppKit main thread. Initializing Tk in a
+    background thread (as SpawnTooltip does) triggers an Obj-C
+    NSInternalInconsistencyException that kills the entire process before
+    Python can catch it. Skip Tk when running on macOS in a subprocess
+    (no controlling terminal) or when TERM_PROGRAM suggests a non-GUI
+    context.
+    """
+    if sys.platform == "darwin":
+        # If we're not in a real terminal (e.g. running from CC's Bash tool),
+        # Tk cannot attach to AppKit. Also skip if running in a pipe.
+        if not sys.stdout.isatty():
+            return False
+        if not os.environ.get("TERM_PROGRAM"):
+            return False
+    try:
+        import tkinter  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 class SpawnTooltip:
     """Small always-on-top status window shown during spawn. Runs in a thread."""
 
@@ -717,16 +741,24 @@ class SpawnTooltip:
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._ready = threading.Event()
         self.cancelled = threading.Event()
+        self._disabled = not _can_use_tkinter()
 
     def start(self, text="Spawning..."):
+        if self._disabled:
+            self._ready.set()
+            return
         self._queue.put(("update", text))
         self._thread.start()
         self._ready.wait(timeout=3)
 
     def update(self, text):
+        if self._disabled:
+            return
         self._queue.put(("update", text))
 
     def close(self):
+        if self._disabled:
+            return
         self._queue.put(("close", None))
 
     def _run(self):
@@ -1246,8 +1278,16 @@ def run_setup_gui():
     )
 
     ttk.Label(frame, text="\nSelect terminal:").grid(row=3, column=0, sticky="w")
+    mac_app_paths = {
+        "iterm2": "/Applications/iTerm.app",
+        "terminal.app": "/Applications/Utilities/Terminal.app",
+    }
     priority = TERMINAL_PRIORITY.get(os_name, [])
-    available = ["(auto)"] + [t for t in priority if shutil.which(t)]
+    available = ["(auto)"] + [
+        t for t in priority
+        if (os_name == "darwin" and os.path.isdir(mac_app_paths.get(t, "")))
+        or shutil.which(t)
+    ]
     term_var = tk.StringVar(value=available[0])
     for i, term in enumerate(available):
         ttk.Radiobutton(
@@ -1347,6 +1387,12 @@ def main():
 
     # No args = GUI mode
     if args.mode is None:
+        if not _can_use_tkinter():
+            print("GUI unavailable (no display or running in subprocess).")
+            print("Usage: python spawn.py <mode> <count>")
+            print("       python spawn.py --setup")
+            print("       python spawn.py --check")
+            return 1
         try:
             run_gui()
         except ImportError:
