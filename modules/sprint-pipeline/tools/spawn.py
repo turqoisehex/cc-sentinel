@@ -510,21 +510,34 @@ def detect_display_server():
     return "x11"
 
 
+def _find_mac_app(candidates):
+    """Return the first existing .app bundle path from candidates, or None."""
+    for path in candidates:
+        if os.path.isdir(path):
+            return path
+    return None
+
+
 def detect_terminal():
     """Find the best available terminal using platform priority order."""
     os_name = detect_os()
     priority = TERMINAL_PRIORITY.get(os_name, [])
 
-    # macOS apps are bundles, not executables on PATH
-    mac_app_paths = {
-        "iterm2": "/Applications/iTerm.app",
-        "terminal.app": "/Applications/Utilities/Terminal.app",
+    # macOS apps are bundles, not executables on PATH.
+    # Catalina+ moved built-in apps to /System/Applications/.
+    mac_app_candidates = {
+        "iterm2": ["/Applications/iTerm.app"],
+        "terminal.app": [
+            "/System/Applications/Utilities/Terminal.app",
+            "/Applications/Utilities/Terminal.app",
+        ],
     }
 
     for term_name in priority:
-        if os_name == "darwin" and term_name in mac_app_paths:
-            if os.path.isdir(mac_app_paths[term_name]):
-                return {"name": term_name, "path": mac_app_paths[term_name], "tabs": True}
+        if os_name == "darwin" and term_name in mac_app_candidates:
+            found = _find_mac_app(mac_app_candidates[term_name])
+            if found:
+                return {"name": term_name, "path": found, "tabs": True}
         else:
             path = shutil.which(term_name)
             if path:
@@ -659,7 +672,9 @@ def run_check():
         "key_sender": key_sender,
         "window_activation": win_activation,
         "tkinter": has_tkinter,
-        "ready": bool(terminal["name"]) or display == "wayland",
+        "ready": (bool(terminal["name"]) or display == "wayland")
+                 and key_sender.get("available", False),
+        "accessibility_permission": key_sender.get("accessibility_permission"),
         "missing": missing,
     }
     if warnings:
@@ -1278,14 +1293,17 @@ def run_setup_gui():
     )
 
     ttk.Label(frame, text="\nSelect terminal:").grid(row=3, column=0, sticky="w")
-    mac_app_paths = {
-        "iterm2": "/Applications/iTerm.app",
-        "terminal.app": "/Applications/Utilities/Terminal.app",
+    mac_app_candidates = {
+        "iterm2": ["/Applications/iTerm.app"],
+        "terminal.app": [
+            "/System/Applications/Utilities/Terminal.app",
+            "/Applications/Utilities/Terminal.app",
+        ],
     }
     priority = TERMINAL_PRIORITY.get(os_name, [])
     available = ["(auto)"] + [
         t for t in priority
-        if (os_name == "darwin" and os.path.isdir(mac_app_paths.get(t, "")))
+        if (os_name == "darwin" and _find_mac_app(mac_app_candidates.get(t, [])))
         or shutil.which(t)
     ]
     term_var = tk.StringVar(value=available[0])
@@ -1407,8 +1425,8 @@ def main():
     if args.count < 1:
         parser.error("count must be >= 1")
 
-    # Confirm large counts
-    if args.count > 20:
+    # Confirm large counts (skip if not a TTY — e.g. running from CC)
+    if args.count > 20 and sys.stdin.isatty():
         cfg_data = Config().load().data
         est = Spawner.estimate_time(args.mode, args.count, cfg_data)
         answer = input(
@@ -1426,7 +1444,15 @@ def main():
         run_setup()
     cfg.load()
 
-    driver = get_driver(cfg.get("terminal"))
+    terminal_name = cfg.get("terminal")
+    if not terminal_name:
+        print("No terminal detected. Run: python spawn.py --check")
+        if sys.platform == "darwin":
+            print("Expected Terminal.app at /System/Applications/Utilities/ "
+                  "or /Applications/Utilities/")
+        return 1
+
+    driver = get_driver(terminal_name)
     key_sender = get_key_sender(cfg.get("key_sender"))
 
     if key_sender is None and detect_display_server() != "wayland":

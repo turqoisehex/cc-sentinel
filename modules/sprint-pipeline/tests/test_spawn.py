@@ -306,6 +306,41 @@ class TestSetup(unittest.TestCase):
                 result = detect_terminal()
                 self.assertEqual(result["name"], "konsole")
 
+    def test_detect_terminal_macos_catalina_path(self):
+        """Terminal.app found at /System/Applications/ (Catalina+)."""
+        from spawn import detect_terminal
+        def mock_isdir(path):
+            return path == "/System/Applications/Utilities/Terminal.app"
+        with patch("spawn.sys") as mock_sys:
+            mock_sys.platform = "darwin"
+            with patch("spawn.os.path.isdir", side_effect=mock_isdir):
+                result = detect_terminal()
+                self.assertEqual(result["name"], "terminal.app")
+                self.assertIn("/System/", result["path"])
+
+    def test_detect_terminal_macos_legacy_path(self):
+        """Terminal.app found at /Applications/ (pre-Catalina)."""
+        from spawn import detect_terminal
+        def mock_isdir(path):
+            return path == "/Applications/Utilities/Terminal.app"
+        with patch("spawn.sys") as mock_sys:
+            mock_sys.platform = "darwin"
+            with patch("spawn.os.path.isdir", side_effect=mock_isdir):
+                result = detect_terminal()
+                self.assertEqual(result["name"], "terminal.app")
+
+    def test_detect_terminal_macos_iterm_preferred(self):
+        """iTerm2 is preferred over Terminal.app when both exist."""
+        from spawn import detect_terminal
+        def mock_isdir(path):
+            return path in ("/Applications/iTerm.app",
+                            "/System/Applications/Utilities/Terminal.app")
+        with patch("spawn.sys") as mock_sys:
+            mock_sys.platform = "darwin"
+            with patch("spawn.os.path.isdir", side_effect=mock_isdir):
+                result = detect_terminal()
+                self.assertEqual(result["name"], "iterm2")
+
     def test_check_json_structure(self):
         from spawn import run_check
         with patch("spawn.detect_os", return_value="windows"):
