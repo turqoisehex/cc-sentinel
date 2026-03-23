@@ -1,11 +1,11 @@
 ---
 name: cold
-description: Cold start preparation for context handoff. Makes state files zero-context ready with orphan scans and cross-document consistency checks. Use at 75% context warning or before session end.
+description: Cold start preparation for context handoff. Makes state files zero-context ready with orphan scans and cross-document consistency checks. Use before session end or when context is high (85%+).
 ---
 
 # /cold — Cold Start Preparation
 
-**Trigger:** Run at 75% context warning or before session end. Makes CT cold-start ready for a zero-context session.
+**Trigger:** Run before session end or when context is high (85%+). Makes CT cold-start ready for a zero-context session.
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 

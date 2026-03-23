@@ -13,7 +13,7 @@
     {
       "percent": 75,
       "level": "preparation",
-      "message": "Context window is at {percentage}% ({remaining}% remaining). Invoke /cold now. This will prepare state files for a cold-start handoff. Do not ask the user for permission -- invoke the skill immediately and continue working."
+      "message": "Context at {percentage}% ({remaining}% remaining). DOCUMENTATION CHECKPOINT — keep working at full quality. Do not rush, compress, or cut corners. Self-check: (1) Is your channel state file current? (2) Are decisions from this conversation written to files? (3) Are agent results on disk, not just in context? Work continues at the same pace and rigor. Only files and commits survive compaction."
     },
     {
       "percent": 85,
@@ -34,9 +34,8 @@
     "bar_empty": "\u2591",
     "format": "context {bar} {percentage}%",
     "color_normal": "37",
-    "color_warning": "31",
-    "warning_indicator": "",
-    "bar_style": "auto"
+    "color_warning": "33",
+    "warning_indicator": ""
   },
   "hook_event": "PreToolUse",
   "flag_dir": "/tmp"

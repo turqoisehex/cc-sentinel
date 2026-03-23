@@ -20,7 +20,7 @@ Check triggers BEFORE starting work. Detect and invoke automatically — never a
 | Completed unit of work, before claiming done | `/grill` |
 | Subsystem needs ground-up rewrite | `/rewrite` |
 | Caught mistake (user, verification, hook) | `/mistake` |
-| Context at 75% or session ending | `/cold` |
+| Session ending or context critically high | `/cold` |
 | Launch multiple CC sessions | `/spawn` |
 | Quick orientation check | `/status` |
 

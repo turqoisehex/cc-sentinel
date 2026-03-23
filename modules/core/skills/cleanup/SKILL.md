@@ -1,11 +1,11 @@
 ---
 name: cleanup
-description: End-of-session housekeeping. Inventories state, commits work, cleans artifacts, documents remaining work. Use when ending a session normally with context below 75%. Lighter than /cold and /finalize.
+description: End-of-session housekeeping. Inventories state, commits work, cleans artifacts, documents remaining work. Use when ending a session normally with plenty of context remaining. Lighter than /cold and /finalize.
 ---
 
 # /cleanup — End-of-Session Housekeeping
 
-Lighter than `/5` (sprint close) and `/cold` (context dying). Run when session ends normally with context <75%. If context >75%, use `/cold`. **No new work** — /cleanup documents and tidies only. Exception: marking items done that verification proves are actually done.
+Lighter than `/5` (sprint close) and `/cold` (context dying). Run when session ends normally with plenty of context remaining. If context is high (85%+), use `/cold`. **No new work** — /cleanup documents and tidies only. Exception: marking items done that verification proves are actually done.
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 

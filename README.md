@@ -112,7 +112,7 @@ context [████████████░░░░░░░░] 62%
 Thresholds trigger automatic reminders:
 - **50%** -- "Documenting as you go?"
 - **65%** -- "Could a fresh session resume from your state files?"
-- **75%** -- "Invoke /cold for cold-start preparation."
+- **75%** -- "Documentation checkpoint. Keep working at full quality."
 - **85%** -- "Commit all changes. State files must be current."
 - **92%** -- "Auto-compaction imminent. State files must be complete."
 
