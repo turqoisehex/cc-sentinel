@@ -35,19 +35,21 @@ fi
 # Safe from false positives:
 #   "user deferred X"     — has "user" before "deferred"
 #   "previously deferred" — past-tense documentation
-#   "anti-deferral"       — the hook's own name (in comments)
+#   "deferred loading"    — technical term (no punctuation after)
 
 # Tier 1: Explicit postponement — CC pushing work to a later time
 PUNT="future (sprint|pass|work|task|session|effort|iteration)"
 PUNT="$PUNT|next sprint|later sprint|defer to sprint|defer this"
 PUNT="$PUNT|handle this later|address this later|tackle later"
 PUNT="$PUNT|out of scope for now|separate (pass|effort|session) needed"
-PUNT="$PUNT|deferred [—(]|deferred as |deferred to "
+# Split em-dash and paren — [—(] bracket fails under LC_ALL=C (multibyte)
+PUNT="$PUNT|deferred —|deferred [(]|deferred as |deferred to "
 PUNT="$PUNT|TODO.*(later|future|someday|eventually)"
 PUNT="$PUNT|revisit in a future|we can revisit"
 
 # Tier 2: Soft minimization — CC downplaying severity to avoid fixing
 HEDGE="not urgent|not critical|minor issue|low priority"
+# Dot in as.is is intentional wildcard — matches as-is, as is, as.is
 HEDGE="$HEDGE|acceptable as.is|good enough for now|can wait"
 HEDGE="$HEDGE|when we have more data|once we have more"
 
