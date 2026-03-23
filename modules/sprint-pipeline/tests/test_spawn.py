@@ -618,6 +618,27 @@ class TestCLI(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parser.parse_args(["invalid", "3"])
 
+    @patch("sys.argv", ["spawn.py", "opus", "25"])
+    @patch("sys.stdin")
+    @patch("spawn.Config")
+    @patch("spawn.Spawner")
+    def test_large_count_skips_prompt_when_no_tty(self, mock_spawner_cls, mock_cfg_cls, mock_stdin):
+        """Large count (>20) should not prompt when stdin is not a TTY (F10)."""
+        mock_stdin.isatty.return_value = False
+        mock_cfg = MagicMock()
+        mock_cfg.exists.return_value = True
+        mock_cfg.load.return_value = mock_cfg
+        mock_cfg.data = {}
+        mock_cfg_cls.return_value = mock_cfg
+        mock_spawner = MagicMock()
+        mock_spawner.run.return_value = 0
+        mock_spawner_cls.return_value = mock_spawner
+        from spawn import main
+        with patch("spawn._can_use_tkinter", return_value=False):
+            with patch("builtins.input") as mock_input:
+                main()
+                mock_input.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
