@@ -116,6 +116,8 @@ Thresholds trigger automatic reminders:
 - **85%** -- "Commit all changes. State files must be current."
 - **92%** -- "Auto-compaction imminent. State files must be complete."
 
+This benefits **Claude Code itself** as much as the user. Without context awareness, Claude has no way to know how full its context window is — it cannot sense compaction approaching. The graduated warnings give Claude actionable signals to save state, wrap up work units, and prepare for compaction before it happens. The user gets visibility too, but the primary consumer is Claude's own decision-making.
+
 Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the locale does not indicate UTF-8.
 
 **Windows support:** cc-sentinel includes the only known Windows-compatible version of cc-context-awareness. On macOS/Linux, you can choose between the bundled version or the [canonical repository](https://github.com/sdi2200262/cc-context-awareness).
@@ -367,6 +369,14 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 | **Windows** | Full support | Requires [Git Bash](https://git-scm.com/downloads/win) and `jq` (`winget install jqlang.jq`). All hooks, installers, and context-awareness tested on Windows. The bundled context-awareness module is the only known Windows-compatible version. |
 
 Both installers (`install.sh` for Unix, `install.ps1` for Windows) check prerequisites (`jq`, `bash`) before proceeding. Windows hooks handle CRLF normalization automatically via `tr -d '\r'` on jq output.
+
+### Tested On
+
+| Platform | Version | Architecture |
+|---|---|---|
+| macOS | 15.2 Sequoia | x86_64 |
+| Linux | Mint 22.3 | x86_64 |
+| Windows | 10 Pro 10.0.19045 | x86_64 |
 
 ## Requirements
 
