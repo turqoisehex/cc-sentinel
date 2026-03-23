@@ -617,7 +617,7 @@ fi
 if [[ "$MISSING_SKILLS" -eq 0 ]]; then
   log "  All commands have matching skills"
 else
-  log "  $MISSING_SKILLS command(s) missing skills — CC won't auto-invoke these until session restart"
+  log "  $MISSING_SKILLS command(s) missing skills — auto-generate may have failed. Re-run install or create skills manually."
 fi
 
 echo ""

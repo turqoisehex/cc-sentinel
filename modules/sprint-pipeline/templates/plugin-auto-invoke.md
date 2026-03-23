@@ -17,6 +17,8 @@ Check triggers BEFORE starting work. Detect and invoke automatically — never a
 | Major feature pre-merge | `superpowers:requesting-code-review` |
 | Receiving code review feedback | `superpowers:receiving-code-review` |
 | Post-implementation quality pass | `/perfect` (alias `/4`) |
+| Completed unit of work, before claiming done | `/grill` |
+| Subsystem needs ground-up rewrite | `/rewrite` |
 | Caught mistake (user, verification, hook) | `/mistake` |
 | Context at 75% or session ending | `/cold` |
 | Launch multiple CC sessions | `/spawn` |

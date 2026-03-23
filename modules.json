@@ -20,6 +20,12 @@
           "cleanup.md",
           "status.md"
         ],
+        "skills": [
+          "cleanup",
+          "cold",
+          "self-test",
+          "status"
+        ],
         "templates": [
           "current-task-template.md",
           "channel-template.md",
@@ -184,7 +190,8 @@
           "verification-squad.md"
         ],
         "skills": [
-          "grill"
+          "grill",
+          "squad"
         ],
         "tests": [
           "test_stop_task_check.sh"
@@ -282,6 +289,22 @@
           "rewrite.md",
           "spawn.md"
         ],
+        "skills": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "audit",
+          "build",
+          "design",
+          "finalize",
+          "opus",
+          "perfect",
+          "rewrite",
+          "sonnet",
+          "spawn"
+        ],
         "tools": [
           "spawn.py"
         ],
@@ -317,6 +340,10 @@
         "commands": [
           "mistake.md",
           "prune-rules.md"
+        ],
+        "skills": [
+          "mistake",
+          "prune-rules"
         ],
         "config": [
           "protected-files.txt"

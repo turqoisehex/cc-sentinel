@@ -15,7 +15,7 @@ Only pause when: (1) waiting for agents, (2) a design decision genuinely blocks 
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-**Step 0:** Before any other work, TaskCreate every step in CT (not this command). Mark in_progress->completed.
+**Step 0:** Before any other work, TaskCreate every step in CT. Mark in_progress->completed.
 
 ## Procedure
 
