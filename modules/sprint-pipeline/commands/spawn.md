@@ -42,7 +42,7 @@ To avoid the extra delay per session, set `project_dir` in `~/.claude/tools/spaw
 The `startup_delay` setting (default: 5s) controls how long spawn waits after launching `claude` before typing commands. If sessions fail to configure, increase this value:
 
 ```bash
-python ~/.claude/tools/spawn.py --setup  # re-detect + write config
+python3 ~/.claude/tools/spawn.py --setup  # re-detect + write config
 ```
 
 Or edit `~/.claude/tools/spawn.json` directly: `"startup_delay": 8`

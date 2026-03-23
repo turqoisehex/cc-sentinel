@@ -56,11 +56,19 @@ Check that `verification_findings/` is listed in `.gitignore` (if this is a git 
 
 ### 7. Skills
 
-Check that installed skills exist:
-- **Context Awareness:** `.claude/skills/configure-context-awareness/SKILL.md`
-- **Verification:** `.claude/skills/grill/SKILL.md`
+Check that installed skills exist in `.claude/skills/<name>/SKILL.md`:
 
-### 8. Summary
+- **Core:** `cleanup`, `cold`, `self-test`, `status`
+- **Context Awareness:** `configure-context-awareness`
+- **Verification:** `grill`, `squad`
+- **Sprint Pipeline:** `1`, `2`, `3`, `4`, `5`, `audit`, `design`, `build`, `perfect`, `finalize`, `opus`, `sonnet`, `rewrite`, `spawn`
+- **Governance Protection:** `mistake`, `prune-rules`
+
+### 8. Auto-invoke rules
+
+Check `.claude/rules/plugin-auto-invoke.md` exists. PASS if present, FAIL if missing.
+
+### 9. Summary
 
 Print a summary table:
 
@@ -74,6 +82,7 @@ cc-sentinel self-test results:
   CLAUDE.md rules:      [PASS/FAIL]
   Working directory:    [PASS/FAIL]
   Skills:               [N/M PASS]
+  Auto-invoke rules:    [PASS/FAIL]
 
   Overall: [PASS/FAIL] ([total] checks, [passed] passed, [failed] failed)
 ```

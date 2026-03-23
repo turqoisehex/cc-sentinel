@@ -6,7 +6,7 @@
 ## Manual Verification
 
 ### Skills
-- [ ] Count skill directories: `ls -d modules/*/skills/*/` → 22 directories
+- [ ] Count skill directories: `ls -d modules/*/skills/*/` → 23 directories (22 from commands + configure-context-awareness)
 - [ ] All skills have YAML frontmatter: `for f in modules/*/skills/*/SKILL.md; do head -1 "$f"; done` → all show `---`
 - [ ] Numeric aliases redirect: `cat modules/sprint-pipeline/skills/1/SKILL.md` → contains "Alias for"
 - [ ] Content skills have substance: `wc -l modules/sprint-pipeline/skills/opus/SKILL.md` → 30+ lines
