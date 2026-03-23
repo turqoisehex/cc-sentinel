@@ -43,6 +43,16 @@ TERMINAL_PRIORITY = {
     "darwin": ["iterm2", "terminal.app"],
 }
 
+# macOS apps are bundles, not executables on PATH.
+# Catalina+ moved built-in apps to /System/Applications/.
+MAC_APP_CANDIDATES = {
+    "iterm2": ["/Applications/iTerm.app"],
+    "terminal.app": [
+        "/System/Applications/Utilities/Terminal.app",
+        "/Applications/Utilities/Terminal.app",
+    ],
+}
+
 
 # -- Config -------------------------------------------------------------------
 
@@ -523,19 +533,9 @@ def detect_terminal():
     os_name = detect_os()
     priority = TERMINAL_PRIORITY.get(os_name, [])
 
-    # macOS apps are bundles, not executables on PATH.
-    # Catalina+ moved built-in apps to /System/Applications/.
-    mac_app_candidates = {
-        "iterm2": ["/Applications/iTerm.app"],
-        "terminal.app": [
-            "/System/Applications/Utilities/Terminal.app",
-            "/Applications/Utilities/Terminal.app",
-        ],
-    }
-
     for term_name in priority:
-        if os_name == "darwin" and term_name in mac_app_candidates:
-            found = _find_mac_app(mac_app_candidates[term_name])
+        if os_name == "darwin" and term_name in MAC_APP_CANDIDATES:
+            found = _find_mac_app(MAC_APP_CANDIDATES[term_name])
             if found:
                 return {"name": term_name, "path": found, "tabs": True}
         else:
@@ -673,7 +673,7 @@ def run_check():
         "window_activation": win_activation,
         "tkinter": has_tkinter,
         "ready": (bool(terminal["name"]) or display == "wayland")
-                 and key_sender.get("available", False),
+                 and (key_sender.get("available", False) or display == "wayland"),
         "accessibility_permission": key_sender.get("accessibility_permission"),
         "missing": missing,
     }
@@ -737,7 +737,7 @@ def _can_use_tkinter():
     if sys.platform == "darwin":
         # If we're not in a real terminal (e.g. running from CC's Bash tool),
         # Tk cannot attach to AppKit. Also skip if running in a pipe.
-        if not sys.stdout.isatty():
+        if not getattr(sys.stdin, "isatty", lambda: False)():
             return False
         if not os.environ.get("TERM_PROGRAM"):
             return False
@@ -851,7 +851,8 @@ class Spawner:
     @staticmethod
     def build_plan(mode, count):
         """Build list of session dicts: [{model, index, window, first}]."""
-        models = ["opus", "sonnet"] if mode == "duo" else [mode]
+        # Sonnet first in duo: listener starts before Opus checks for it
+        models = ["sonnet", "opus"] if mode == "duo" else [mode]
         plan = []
         for model in models:
             for i in range(1, count + 1):
@@ -1293,17 +1294,10 @@ def run_setup_gui():
     )
 
     ttk.Label(frame, text="\nSelect terminal:").grid(row=3, column=0, sticky="w")
-    mac_app_candidates = {
-        "iterm2": ["/Applications/iTerm.app"],
-        "terminal.app": [
-            "/System/Applications/Utilities/Terminal.app",
-            "/Applications/Utilities/Terminal.app",
-        ],
-    }
     priority = TERMINAL_PRIORITY.get(os_name, [])
     available = ["(auto)"] + [
         t for t in priority
-        if (os_name == "darwin" and _find_mac_app(mac_app_candidates.get(t, [])))
+        if (os_name == "darwin" and _find_mac_app(MAC_APP_CANDIDATES.get(t, [])))
         or shutil.which(t)
     ]
     term_var = tk.StringVar(value=available[0])

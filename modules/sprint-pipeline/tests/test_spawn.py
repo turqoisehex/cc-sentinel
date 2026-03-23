@@ -362,12 +362,46 @@ class TestSetup(unittest.TestCase):
                             self.assertIn("key_sender", result)
                             self.assertEqual(result["missing"], [])
 
+    def test_check_ready_on_wayland_without_key_sender(self):
+        """Wayland is ready even without key_sender (manual command mode)."""
+        from spawn import run_check
+        with patch("spawn.detect_os", return_value="linux"):
+            with patch("spawn.detect_display_server", return_value="wayland"):
+                with patch("spawn.detect_terminal", return_value={
+                    "name": "gnome-terminal", "path": "/usr/bin/gnome-terminal", "tabs": True
+                }):
+                    with patch("spawn.detect_key_sender", return_value={
+                        "method": "none", "available": False, "reason": "wayland"
+                    }):
+                        with patch("spawn.detect_window_activation", return_value={
+                            "method": "none", "available": False
+                        }):
+                            result = run_check()
+                            self.assertTrue(result["ready"])
+
+    def test_check_not_ready_without_key_sender(self):
+        """Not ready when terminal exists but key_sender unavailable (non-Wayland)."""
+        from spawn import run_check
+        with patch("spawn.detect_os", return_value="linux"):
+            with patch("spawn.detect_display_server", return_value="x11"):
+                with patch("spawn.detect_terminal", return_value={
+                    "name": "xterm", "path": "/usr/bin/xterm", "tabs": False
+                }):
+                    with patch("spawn.detect_key_sender", return_value={
+                        "method": "none", "available": False
+                    }):
+                        with patch("spawn.detect_window_activation", return_value={
+                            "method": "none", "available": False
+                        }):
+                            result = run_check()
+                            self.assertFalse(result["ready"])
+
     def test_can_use_tkinter_false_on_macos_subprocess(self):
-        """On macOS with no TTY, _can_use_tkinter returns False (prevents crash)."""
+        """On macOS with no TTY on stdin, _can_use_tkinter returns False."""
         from spawn import _can_use_tkinter
         with patch("spawn.sys") as mock_sys:
             mock_sys.platform = "darwin"
-            mock_sys.stdout.isatty.return_value = False
+            mock_sys.stdin.isatty.return_value = False
             self.assertFalse(_can_use_tkinter())
 
     def test_can_use_tkinter_false_on_macos_no_term_program(self):
@@ -375,7 +409,7 @@ class TestSetup(unittest.TestCase):
         from spawn import _can_use_tkinter
         with patch("spawn.sys") as mock_sys:
             mock_sys.platform = "darwin"
-            mock_sys.stdout.isatty.return_value = True
+            mock_sys.stdin.isatty.return_value = True
             with patch.dict(os.environ, {}, clear=True):
                 self.assertFalse(_can_use_tkinter())
 
@@ -407,15 +441,16 @@ class TestSpawner(unittest.TestCase):
             self.assertEqual(session["window"], "opus")
 
     def test_build_plan_duo_2(self):
+        """Duo mode: Sonnet launches first so listener is ready for Opus."""
         from spawn import Spawner
         plan = Spawner.build_plan("duo", 2)
-        self.assertEqual(len(plan), 4)  # 2 opus + 2 sonnet
-        # First 2 are opus
-        self.assertEqual(plan[0]["model"], "opus")
-        self.assertEqual(plan[1]["model"], "opus")
-        # Last 2 are sonnet
-        self.assertEqual(plan[2]["model"], "sonnet")
-        self.assertEqual(plan[3]["model"], "sonnet")
+        self.assertEqual(len(plan), 4)  # 2 sonnet + 2 opus
+        # First 2 are sonnet (listener starts first)
+        self.assertEqual(plan[0]["model"], "sonnet")
+        self.assertEqual(plan[1]["model"], "sonnet")
+        # Last 2 are opus
+        self.assertEqual(plan[2]["model"], "opus")
+        self.assertEqual(plan[3]["model"], "opus")
         # Indices restart per model
         self.assertEqual(plan[2]["index"], 1)
 
