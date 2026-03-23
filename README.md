@@ -48,6 +48,8 @@ If Claude Code can do it, cc-sentinel can govern it.
 
 ## Installation
 
+**Prerequisites:** `jq` and `python3` must be installed first. See [Requirements](#requirements) for per-platform install commands.
+
 **In any Claude Code session:**
 
 ```
@@ -360,18 +362,22 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 
 | Platform | Status | Notes |
 |---|---|---|
-| **macOS** | Full support | Native bash, jq via Homebrew |
-| **Linux** | Full support | Native bash, jq via package manager |
-| **Windows** | Full support | Requires Git Bash (`bash` from Git for Windows). All hooks, installers, and context-awareness tested on Windows. The bundled context-awareness module is the only known Windows-compatible version. |
+| **macOS** | Full support | Native bash, Python 3 built-in. Install jq via [Homebrew](https://brew.sh): `brew install jq` |
+| **Linux** | Full support | Native bash. Install jq via package manager: `apt install jq` / `dnf install jq` |
+| **Windows** | Full support | Requires [Git Bash](https://git-scm.com/downloads/win) and `jq` (`winget install jqlang.jq`). All hooks, installers, and context-awareness tested on Windows. The bundled context-awareness module is the only known Windows-compatible version. |
 
 Both installers (`install.sh` for Unix, `install.ps1` for Windows) check prerequisites (`jq`, `bash`) before proceeding. Windows hooks handle CRLF normalization automatically via `tr -d '\r'` on jq output.
 
 ## Requirements
 
-- Claude Code CLI
-- Bash (Git Bash on Windows -- installer verifies this)
-- `jq` (used by hooks for JSON parsing -- installer verifies this)
-- Python 3 (used by installer for settings.json merge on Unix)
+- **Claude Code CLI** -- `npm install -g @anthropic-ai/claude-code` (requires Node.js 18+)
+- **Bash** -- Built-in on macOS/Linux. Windows requires Git Bash (from [Git for Windows](https://git-scm.com/downloads/win)). The installer verifies this.
+- **jq** -- Used by all hooks for JSON parsing. The installer verifies this and exits with install instructions if missing.
+  - macOS: `brew install jq` (requires [Homebrew](https://brew.sh): `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`)
+  - Linux: `sudo apt install jq` / `sudo dnf install jq` / `sudo pacman -S jq`
+  - Windows: `winget install jqlang.jq` or `choco install jq`
+- **Python 3** -- Used by the installer for settings.json merge. Built-in on macOS (since Catalina) and most Linux distros. Windows: [python.org/downloads](https://www.python.org/downloads/)
+- **Git** -- Required for commit enforcement and the installer's git-aware features
 
 ## FAQ
 

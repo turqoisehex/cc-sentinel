@@ -1,8 +1,34 @@
 # cc-sentinel — Mac First-Session Experience
 
-You're a Mac user who just discovered Claude Code and heard about cc-sentinel. You have CC installed (`npm install -g @anthropic-ai/claude-code`) and jq (`brew install jq`). You want to get sentinel running globally so every project benefits, and you want to see what it actually does.
+You're a Mac user who just discovered Claude Code and heard about cc-sentinel. You want to get sentinel running globally so every project benefits, and you want to see what it actually does.
 
-**Before pasting:** Make sure you have `jq` and `python3` installed. Open a terminal, `cd` to any git project you're actively working on (or create a throwaway one with `mkdir ~/test-project && cd ~/test-project && git init && echo "# Test" > README.md && git add -A && git commit -m "init"`). Then launch `claude` and paste everything below.
+**Before pasting into Claude Code, run these in your Mac terminal:**
+
+```bash
+# 1. Install Homebrew (if you don't have it — skip if `brew --version` works)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Follow the "Next steps" it prints to add brew to your PATH
+
+# 2. Install jq (required — all cc-sentinel hooks use it for JSON parsing)
+brew install jq
+
+# 3. Verify prerequisites
+jq --version        # should print jq-1.x
+python3 --version   # should print Python 3.x (built-in since macOS Catalina)
+git --version       # should print git 2.x
+
+# 4. Install Claude Code (if you haven't already)
+npm install -g @anthropic-ai/claude-code
+
+# 5. cd to a git project (or create a throwaway one)
+mkdir -p ~/test-project && cd ~/test-project
+git init && echo "# Test" > README.md && git add -A && git commit -m "init"
+
+# 6. Launch Claude Code
+claude
+```
+
+Now paste everything below into the Claude Code session.
 
 ---
 
