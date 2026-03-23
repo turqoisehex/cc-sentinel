@@ -113,6 +113,33 @@ Replace `DELAY` with the integer value from the user's answer.
 
 Then run `python3 ~/.claude/tools/spawn.py --setup` to auto-detect terminal and key sender.
 
+### Step 5c: Review .claudeignore
+
+After the installer runs, tell the user:
+
+"**`.claudeignore` controls what Claude can see.** It works like `.gitignore` — matching files are excluded from Claude's context window. This matters because context is finite: every binary, build artifact, or media file Claude loads is space that could hold your actual code.
+
+Based on your [detected project type] project, the installer created `.claudeignore` with these exclusions:"
+
+Show the contents of the generated .claudeignore file.
+
+"**Options:**
+A) Keep this list (recommended for most projects)
+B) Expand it — add common media/binary types (*.m4a, *.wav, *.sqlite, *.db, *.woff, *.ttf)
+C) I'll customize it myself — just tell me where the file is
+D) Something specific — tell me what patterns to add or remove"
+
+If user picks A: proceed.
+If user picks B: append `*.m4a`, `*.wav`, `*.ogg`, `*.flac`, `*.aac`, `*.sqlite`, `*.db`, `*.woff`, `*.woff2`, `*.ttf`, `*.otf` to the `.claudeignore` file.
+If user picks C: say "Edit `.claudeignore` in your project root any time. It uses the same syntax as `.gitignore`."
+If user picks D: make the requested changes.
+
+**For global installs (`--target global`):** Skip `.claudeignore` generation. Instead say:
+
+"`.claudeignore` is a project-level file — it doesn't have a global equivalent. For global file exclusions, you can add `deny` rules to `~/.claude/settings.json`. Would you like me to add common binary exclusions as deny rules? (Y/n)"
+
+If yes, add deny rules like `"Read(*.mp3)"`, `"Read(*.mp4)"`, `"Read(*.zip)"`, etc. to the deny array in `~/.claude/settings.json`.
+
 ### Step 6: Inject CLAUDE.md Rules
 
 After the installer completes, read `modules/core/claude-md-rules.md` and inject its contents into the user's CLAUDE.md:

@@ -13,6 +13,7 @@ TARGET=""
 BAR_STYLE="auto"
 CONTEXT_SOURCE="bundled"
 DRY_RUN="false"
+INJECT_RULES="false"
 SENTINEL_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
@@ -22,6 +23,7 @@ while [[ $# -gt 0 ]]; do
     --bar-style) BAR_STYLE="$2"; shift 2 ;;
     --context-source) CONTEXT_SOURCE="$2"; shift 2 ;;
     --dry-run) DRY_RUN="true"; shift ;;
+    --inject-rules) INJECT_RULES="true"; shift ;;
     --help|-h)
       echo "Usage: bash install.sh --modules \"core,verification,...\" --target project|global [options]"
       echo ""
@@ -30,6 +32,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --target <type>         project (local .claude/) or global (~/.claude/)"
       echo "  --bar-style <style>     unicode, ascii, or auto (default: auto)"
       echo "  --context-source <src>  bundled or canonical (default: bundled)"
+      echo "  --inject-rules          Inject behavioral rules into CLAUDE.md"
       echo "  --dry-run               Show what would be installed without doing it"
       exit 0
       ;;
@@ -463,10 +466,14 @@ generate_claudeignore() {
 
   if [[ -n "$claudeignore" ]]; then
     if [[ -f ".claudeignore" ]]; then
-      log "  .claudeignore already exists — appending new entries"
-      echo "" >> .claudeignore
-      echo "# Added by cc-sentinel" >> .claudeignore
-      echo "$claudeignore" >> .claudeignore
+      if grep -q "Added by cc-sentinel" .claudeignore 2>/dev/null; then
+        log "  .claudeignore already has cc-sentinel entries — skipping"
+      else
+        log "  .claudeignore already exists — appending new entries"
+        echo "" >> .claudeignore
+        echo "# Added by cc-sentinel" >> .claudeignore
+        echo "$claudeignore" >> .claudeignore
+      fi
     else
       echo "$claudeignore" > .claudeignore
       log "  Created .claudeignore"
@@ -487,6 +494,52 @@ update_gitignore() {
         log "  Added verification_findings/ to .gitignore"
       fi
     fi
+  fi
+}
+
+# --- Inject CLAUDE.md rules ---
+inject_claude_rules() {
+  local rules_file="${SENTINEL_ROOT}/modules/core/claude-md-rules.md"
+  [[ ! -f "$rules_file" ]] && return
+
+  local target_claude
+  if [[ "$TARGET" == "global" ]]; then
+    target_claude="${HOME}/.claude/CLAUDE.md"
+  else
+    target_claude="CLAUDE.md"
+  fi
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log "  WOULD INJECT: cc-sentinel rules into $target_claude"
+    return
+  fi
+
+  if [[ -f "$target_claude" ]] && grep -q "cc-sentinel rules start" "$target_claude" 2>/dev/null; then
+    log "  cc-sentinel rules already present in $target_claude — skipping"
+    return
+  fi
+
+  local rules_content
+  rules_content=$(cat "$rules_file")
+
+  if [[ -f "$target_claude" ]]; then
+    {
+      echo ""
+      echo "<!-- cc-sentinel rules start -->"
+      echo "$rules_content"
+      echo "<!-- cc-sentinel rules end -->"
+    } >> "$target_claude"
+    log "  Injected cc-sentinel rules into existing $target_claude"
+  else
+    mkdir -p "$(dirname "$target_claude")"
+    {
+      echo "# CLAUDE.md"
+      echo ""
+      echo "<!-- cc-sentinel rules start -->"
+      echo "$rules_content"
+      echo "<!-- cc-sentinel rules end -->"
+    } > "$target_claude"
+    log "  Created $target_claude with cc-sentinel rules"
   fi
 }
 
@@ -589,6 +642,11 @@ merge_settings
 
 # Generate .claudeignore
 generate_claudeignore
+
+# Inject CLAUDE.md rules (if requested)
+if [[ "$INJECT_RULES" == "true" ]]; then
+  inject_claude_rules
+fi
 
 # Update .gitignore
 update_gitignore

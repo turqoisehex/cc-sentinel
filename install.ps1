@@ -145,10 +145,37 @@ function Install-Module($moduleName) {
         }
     }
 
+    # Auto-generate skills from commands (for any command without a hand-crafted skill)
+    if (Test-Path $cmdsDir) {
+        Get-ChildItem $cmdsDir -Filter "*.md" | ForEach-Object {
+            $cmdName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+            $skillFile = Join-Path $ClaudeDir "skills" $cmdName "SKILL.md"
+            if (-not (Test-Path $skillFile)) {
+                # Extract description from first heading: # /name — Description
+                $cmdContent = Get-Content $_.FullName -Raw
+                $description = ""
+                if ($cmdContent -match "^#\s+[^\n]*?—\s*(.+)") {
+                    $description = $Matches[1].Trim()
+                } elseif ($cmdContent -match "^#\s+(.+)") {
+                    $description = $Matches[1].Trim()
+                }
+                $skillContent = "---`nname: $cmdName`ndescription: $description`n---`n`n$cmdContent"
+                if (-not $DryRun) {
+                    $skillDir = Join-Path $ClaudeDir "skills" $cmdName
+                    if (-not (Test-Path $skillDir)) { New-Item -ItemType Directory -Path $skillDir -Force | Out-Null }
+                    $skillContent | Set-Content $skillFile -NoNewline
+                    Log "  Auto-generated skill: $cmdName/SKILL.md"
+                } else {
+                    Log "  WOULD AUTO-GENERATE skill: $cmdName/SKILL.md"
+                }
+            }
+        }
+    }
+
     # Templates
     $templatesDir = Join-Path $moduleDir "templates"
     if (Test-Path $templatesDir) {
-        $rulesTemplates = @("design-invariants.md", "terminology.md")
+        $rulesTemplates = @("design-invariants.md", "terminology.md", "plugin-auto-invoke.md")
         Get-ChildItem $templatesDir -Filter "*.md" | ForEach-Object {
             if ($rulesTemplates -contains $_.Name) {
                 $dest = Join-Path $ClaudeDir "rules" $_.Name
@@ -355,8 +382,13 @@ function New-Claudeignore {
 
     if ($content) {
         if (Test-Path ".claudeignore") {
-            Add-Content ".claudeignore" "`n# Added by cc-sentinel`n$content"
-            Log "  Appended to existing .claudeignore"
+            $existing = Get-Content ".claudeignore" -Raw
+            if ($existing -match "Added by cc-sentinel") {
+                Log "  .claudeignore already has cc-sentinel entries — skipping"
+            } else {
+                Add-Content ".claudeignore" "`n# Added by cc-sentinel`n$content"
+                Log "  Appended to existing .claudeignore"
+            }
         } else {
             $content | Set-Content ".claudeignore"
             Log "  Created .claudeignore"
@@ -441,6 +473,22 @@ if ($Target -eq "global" -and -not $DryRun) {
             }
         }
     }
+
+    # Also rewrite paths in skill files
+    $skillsPath = Join-Path $ClaudeDir "skills"
+    if (Test-Path $skillsPath) {
+        Get-ChildItem $skillsPath -Directory | ForEach-Object {
+            $skillFile = Join-Path $_.FullName "SKILL.md"
+            if (Test-Path $skillFile) {
+                $content = Get-Content $skillFile -Raw
+                if ($content -match "bash scripts/") {
+                    $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
+                    $content | Set-Content $skillFile -NoNewline
+                    Log "  Updated paths in: skills/$($_.Name)/SKILL.md"
+                }
+            }
+        }
+    }
 }
 
 Write-Host ""
@@ -452,6 +500,25 @@ Update-Gitignore
 if ($Modules -match "verification" -and -not $DryRun) {
     New-Item -ItemType Directory -Path "verification_findings/_pending" -Force | Out-Null
     Log "Created verification_findings/ directory"
+}
+
+# Verify all commands have matching skills
+$missingSkills = 0
+$commandsPath = Join-Path $ClaudeDir "commands"
+if (Test-Path $commandsPath) {
+    Get-ChildItem $commandsPath -Filter "*.md" | ForEach-Object {
+        $cmdName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+        $skillFile = Join-Path $ClaudeDir "skills" $cmdName "SKILL.md"
+        if (-not (Test-Path $skillFile)) {
+            Log "  WARNING: command '$cmdName' has no matching skill at skills/$cmdName/SKILL.md"
+            $missingSkills++
+        }
+    }
+}
+if ($missingSkills -eq 0) {
+    Log "All commands have matching skills"
+} else {
+    Log "$missingSkills command(s) missing skills"
 }
 
 Write-Host ""
