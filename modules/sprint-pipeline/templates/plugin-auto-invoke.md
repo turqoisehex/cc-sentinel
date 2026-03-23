@@ -18,7 +18,6 @@ Check triggers BEFORE starting work. Detect and invoke automatically — never a
 | Receiving code review feedback | `superpowers:receiving-code-review` |
 | Post-implementation quality pass | `/perfect` (alias `/4`) |
 | Caught mistake (user, verification, hook) | `/mistake` |
-| Session ending normally, context <75% | `/cleanup` |
 | Context at 75% or session ending | `/cold` |
 | Launch multiple CC sessions | `/spawn` |
 | Quick orientation check | `/status` |
@@ -31,4 +30,4 @@ Opus orchestrates, Sonnet executes. Delegate mechanical work (lint, search, test
 
 ### Do NOT auto-invoke
 
-`superpowers:writing-skills` (explicit only), `superpowers:using-superpowers` (this file replaces it), `/cleanup` only when user requests end-of-session (not automatic).
+`superpowers:writing-skills` (explicit only), `superpowers:using-superpowers` (this file replaces it), `/cleanup` (manual end-of-session only).

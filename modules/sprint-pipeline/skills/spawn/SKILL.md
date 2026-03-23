@@ -19,7 +19,7 @@ If `$ARGUMENTS` is empty, run `--check` to show environment status. If spawn.jso
 
 - **opus N** — N Opus sessions in one terminal window (tabs)
 - **sonnet N** — N Sonnet sessions in one terminal window (tabs)
-- **duo N** — N Sonnet + N Opus in separate named windows (Sonnet launches first so listener is ready for Opus)
+- **duo N** — N Sonnet + N Opus in separate named windows (Sonnet launches first). Creates channel infrastructure if missing.
 
 ## Cross-Platform Support
 

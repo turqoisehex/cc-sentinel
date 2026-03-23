@@ -508,13 +508,16 @@ class TestSpawner(unittest.TestCase):
 
     def test_time_estimate_single(self):
         from spawn import Spawner
-        import tempfile
+        import tempfile, shutil
         tmpdir = tempfile.mkdtemp()
-        cfg = {"tab_init_delay": 2, "startup_delay": 5, "command_delay": 3,
-               "project_dir": tmpdir}
-        # project_dir has no .claude/settings.json, so trust_extra = 3
-        # N * (2 + 0.5 + 5 + 3 + 3*2) = N * 16.5
-        self.assertAlmostEqual(Spawner.estimate_time("opus", 3, cfg), 49.5)
+        try:
+            cfg = {"tab_init_delay": 2, "startup_delay": 5, "command_delay": 3,
+                   "project_dir": tmpdir}
+            # project_dir has no .claude/settings.json, so trust_extra = 3
+            # N * (2 + 0.5 + 5 + 3 + 3*2) = N * 16.5
+            self.assertAlmostEqual(Spawner.estimate_time("opus", 3, cfg), 49.5)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_dry_run_output(self):
         from spawn import Spawner
