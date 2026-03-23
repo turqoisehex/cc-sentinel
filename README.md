@@ -48,7 +48,7 @@ If Claude Code can do it, cc-sentinel can govern it.
 
 ## Installation
 
-**Prerequisites:** `jq` and `python3` must be installed first. See [Requirements](#requirements) for per-platform install commands.
+**Prerequisites:** Node.js, Git, jq, and Python 3. See [Platform Setup](#platform-setup) for one-command install per platform.
 
 **In any Claude Code session:**
 
@@ -361,15 +361,65 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 | Completion loops | ralph-loop plugin (re-feed until done) | Stop hook + verification evidence gate + anti-deferral hook (three independent mechanisms) |
 | Permission model | Pre-approved allow list (manual) | Same + file-protection hook for governance files + authorization marker protocol |
 
-## Platform Support
+## Platform Setup
 
-| Platform | Status | Notes |
-|---|---|---|
-| **macOS** | Full support | Native bash, Python 3 built-in. Install jq via [Homebrew](https://brew.sh): `brew install jq` |
-| **Linux** | Full support | Native bash. Install jq via package manager: `apt install jq` / `dnf install jq` |
-| **Windows** | Full support | Requires [Git Bash](https://git-scm.com/downloads/win) and `jq` (`winget install jqlang.jq`). All hooks, installers, and context-awareness tested on Windows. The bundled context-awareness module is the only known Windows-compatible version. |
+cc-sentinel needs Claude Code, Git, bash, jq, and Python 3. Most platforms have some of these already. The commands below install everything missing.
 
-Both installers (`install.sh` for Unix, `install.ps1` for Windows) check prerequisites (`jq`, `bash`) before proceeding. Windows hooks handle CRLF normalization automatically via `tr -d '\r'` on jq output.
+### Windows
+
+Fresh Windows machine -- one command installs all prerequisites:
+
+```powershell
+winget install Git.Git jqlang.jq Python.Python.3.12 OpenJS.NodeJS.LTS
+```
+
+**Close and reopen your terminal after this** (PATH updates require a new session), then:
+
+```powershell
+npm install -g @anthropic-ai/claude-code
+```
+
+This gives you: Git Bash (provides bash), jq, Python 3, Node.js (provides npm), and Claude Code. Windows Terminal is pre-installed on Windows 10 1903+ and Windows 11.
+
+If you already have some of these, winget skips what's already installed. To check what you have: `winget list Git.Git jqlang.jq Python.Python.3.12 OpenJS.NodeJS.LTS`.
+
+### macOS
+
+Install [Homebrew](https://brew.sh) if you don't have it, then:
+
+```bash
+brew install node jq python3 git && npm install -g @anthropic-ai/claude-code
+```
+
+macOS Catalina+ includes Python 3 and Git, so `brew install node jq` may be all you need. Check first: `node -v && jq --version && python3 -V && git --version`.
+
+### Linux (Debian/Ubuntu)
+
+```bash
+sudo apt update && sudo apt install -y nodejs npm jq python3 git && npm install -g @anthropic-ai/claude-code
+```
+
+For Node.js 18+ (required by Claude Code), you may need the [NodeSource repository](https://github.com/nodesource/distributions#installation-instructions) if your distro ships an older version:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt install -y nodejs
+```
+
+### Linux (Fedora/RHEL)
+
+```bash
+sudo dnf install -y nodejs npm jq python3 git && npm install -g @anthropic-ai/claude-code
+```
+
+### Linux (Arch)
+
+```bash
+sudo pacman -S nodejs npm jq python git && npm install -g @anthropic-ai/claude-code
+```
+
+### Verify Prerequisites
+
+The cc-sentinel installer checks for `jq`, `python3`, and `bash` before proceeding and exits with specific install instructions if anything is missing. After installing cc-sentinel, run `/self-test` to validate everything is wired up.
 
 ### Tested On
 
@@ -379,16 +429,7 @@ Both installers (`install.sh` for Unix, `install.ps1` for Windows) check prerequ
 | Linux | Mint 22.3 | x86_64 |
 | Windows | 10 Pro 10.0.19045 | x86_64 |
 
-## Requirements
-
-- **Claude Code CLI** -- `npm install -g @anthropic-ai/claude-code` (requires Node.js 18+)
-- **Bash** -- Built-in on macOS/Linux. Windows requires Git Bash (from [Git for Windows](https://git-scm.com/downloads/win)). The installer verifies this.
-- **jq** -- Used by all hooks for JSON parsing. The installer verifies this and exits with install instructions if missing.
-  - macOS: `brew install jq` (requires [Homebrew](https://brew.sh): `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`)
-  - Linux: `sudo apt install jq` / `sudo dnf install jq` / `sudo pacman -S jq`
-  - Windows: `winget install jqlang.jq` or `choco install jq`
-- **Python 3** -- Used by the installer for settings.json merge. Built-in on macOS (since Catalina) and most Linux distros. Windows: [python.org/downloads](https://www.python.org/downloads/)
-- **Git** -- Required for commit enforcement and the installer's git-aware features
+Both installers (`install.sh` for Unix, `install.ps1` for Windows) handle platform differences automatically. Windows hooks normalize CRLF via `tr -d '\r'` on jq output. The bundled context-awareness module is the only known Windows-compatible version.
 
 ## FAQ
 
@@ -396,7 +437,7 @@ Both installers (`install.sh` for Unix, `install.ps1` for Windows) check prerequ
 No. cc-sentinel adds rules to your existing CLAUDE.md (with clear delimiters) and registers hooks in settings.json. Your existing configuration is preserved.
 
 **Can I uninstall a module?**
-Remove its files from `.claude/` and its hook entries from `.claude/settings.json`. The installer will add uninstall support in a future version.
+Remove its files from `.claude/` and its hook entries from `.claude/settings.json`. An `--uninstall` flag is planned.
 
 **Does this work with Claude Code plugins?**
 Yes. cc-sentinel hooks and plugins coexist. The sprint-pipeline module recommends complementary plugins but does not require them.
