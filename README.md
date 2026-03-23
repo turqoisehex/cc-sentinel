@@ -223,6 +223,7 @@ After installation, run `/self-test` to validate your setup. It checks:
 - CLAUDE.md contains cc-sentinel behavioral rules
 - Working directory (`verification_findings/`) exists and is gitignored
 - Skills are installed for applicable modules
+- Auto-invoke rules are present (`.claude/rules/plugin-auto-invoke.md`)
 
 If anything fails, `/self-test` reports exactly what's wrong and how to fix it.
 
