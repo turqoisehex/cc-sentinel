@@ -169,9 +169,39 @@ install_module() {
     done
   fi
 
+  # Auto-generate skills from commands (fallback for commands without hand-crafted skills)
+  if [[ -d "$module_dir/commands" ]]; then
+    for f in "$module_dir"/commands/*.md; do
+      [[ ! -f "$f" ]] && continue
+      local cmd_name
+      cmd_name=$(basename "$f" .md)
+      local skill_target="${CLAUDE_DIR}/skills/${cmd_name}/SKILL.md"
+      # Skip if hand-crafted skill already installed
+      [[ -f "$skill_target" ]] && continue
+      # Extract description from first heading (# /name — Description)
+      local desc
+      desc=$(head -5 "$f" | grep -m1 '^# /' | sed 's/^# \///' | sed 's/ — /: /' || true)
+      [[ -z "$desc" ]] && desc="$cmd_name command"
+      if [[ "$DRY_RUN" == "true" ]]; then
+        log "  WOULD GENERATE skill: $cmd_name"
+      else
+        mkdir -p "$(dirname "$skill_target")"
+        {
+          echo "---"
+          echo "name: $cmd_name"
+          echo "description: \"$desc\""
+          echo "---"
+          echo ""
+          cat "$f"
+        } > "$skill_target"
+        log "  Generated skill: $cmd_name"
+      fi
+    done
+  fi
+
   # Templates (project root or .claude/rules/ for rule stubs)
   if [[ -d "$module_dir/templates" ]]; then
-    local rules_templates="design-invariants.md terminology.md"
+    local rules_templates="design-invariants.md terminology.md plugin-auto-invoke.md"
     for f in "$module_dir"/templates/*.md; do
       [[ ! -f "$f" ]] && continue
       local bname
@@ -541,6 +571,17 @@ if [[ "$TARGET" == "global" && "$DRY_RUN" != "true" ]]; then
       fi
     done
   done
+  # Also rewrite paths in skill files
+  if [[ -d "${CLAUDE_DIR}/skills" ]]; then
+    for skill_file in "${CLAUDE_DIR}"/skills/*/SKILL.md; do
+      [[ ! -f "$skill_file" ]] && continue
+      if grep -q 'bash scripts/' "$skill_file" 2>/dev/null; then
+        tmp_file="${skill_file}.tmp"
+        sed "s|bash scripts/|bash ~/.claude/scripts/|g" "$skill_file" > "$tmp_file" && mv "$tmp_file" "$skill_file"
+        log "  Updated paths in: skills/$(basename "$(dirname "$skill_file")")/SKILL.md"
+      fi
+    done
+  fi
 fi
 
 # Merge settings
@@ -558,6 +599,25 @@ if echo "$MODULES" | grep -q "verification"; then
     mkdir -p verification_findings/_pending
     log "Created verification_findings/ directory"
   fi
+fi
+
+# Dependency check: verify every command has a matching skill
+log "Verifying command-to-skill coverage..."
+MISSING_SKILLS=0
+if [[ -d "${CLAUDE_DIR}/commands" ]]; then
+  for cmd_file in "${CLAUDE_DIR}/commands"/*.md; do
+    [[ ! -f "$cmd_file" ]] && continue
+    cmd_name=$(basename "$cmd_file" .md)
+    if [[ ! -f "${CLAUDE_DIR}/skills/${cmd_name}/SKILL.md" ]]; then
+      log "  WARNING: Command '$cmd_name' has no matching skill"
+      MISSING_SKILLS=$((MISSING_SKILLS + 1))
+    fi
+  done
+fi
+if [[ "$MISSING_SKILLS" -eq 0 ]]; then
+  log "  All commands have matching skills"
+else
+  log "  $MISSING_SKILLS command(s) missing skills — CC won't auto-invoke these until session restart"
 fi
 
 echo ""
