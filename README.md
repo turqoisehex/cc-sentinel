@@ -367,10 +367,10 @@ cc-sentinel needs Claude Code, Git, bash, jq, and Python 3. Most platforms have 
 
 ### Windows
 
-Fresh Windows machine -- one command installs all prerequisites:
+Fresh Windows 10 machine -- two commands install everything:
 
 ```powershell
-winget install Git.Git jqlang.jq Python.Python.3.12 OpenJS.NodeJS.LTS
+winget install Microsoft.WindowsTerminal Git.Git jqlang.jq Python.Python.3.12 OpenJS.NodeJS.LTS
 ```
 
 **Close and reopen your terminal after this** (PATH updates require a new session), then:
@@ -379,19 +379,22 @@ winget install Git.Git jqlang.jq Python.Python.3.12 OpenJS.NodeJS.LTS
 npm install -g @anthropic-ai/claude-code
 ```
 
-This gives you: Git Bash (provides bash), jq, Python 3, Node.js (provides npm), and Claude Code. Windows Terminal is pre-installed on Windows 10 1903+ and Windows 11.
+This gives you: Windows Terminal, Git Bash (provides bash), jq, Python 3, Node.js (provides npm), and Claude Code.
 
-If you already have some of these, winget skips what's already installed. To check what you have: `winget list Git.Git jqlang.jq Python.Python.3.12 OpenJS.NodeJS.LTS`.
+Windows 11 ships with Windows Terminal, so you can drop `Microsoft.WindowsTerminal` from the command. winget skips packages that are already installed, so including it is harmless.
 
 ### macOS
 
-Install [Homebrew](https://brew.sh) if you don't have it, then:
+Fresh Mac -- install Homebrew first, then everything else:
 
 ```bash
-brew install node jq python3 git && npm install -g @anthropic-ai/claude-code
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install node jq && npm install -g @anthropic-ai/claude-code
 ```
 
-macOS Catalina+ includes Python 3 and Git, so `brew install node jq` may be all you need. Check first: `node -v && jq --version && python3 -V && git --version`.
+macOS Catalina+ includes Python 3, Git, and bash, so only Node.js and jq need to be installed via Homebrew.
+
+If you already have Homebrew, skip the first line. Check what you have: `brew --version && node -v && jq --version`.
 
 ### Linux (Debian/Ubuntu)
 

@@ -340,6 +340,30 @@ run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_empty "'deferred loading' not flagged"
 
+# --- Test 25: Write with 'next session' -> warning ---
+echo ""
+echo "Test 25: Write with 'in the next session' -> triggers warning"
+INPUT=$(build_write_input "Do you want to dispatch R2-R3 in the next session?")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "RULE VIOLATION" "detects 'next session'"
+
+# --- Test 26: Write with 'separate session' -> warning ---
+echo ""
+echo "Test 26: Write with 'separate session' -> triggers warning"
+INPUT=$(build_write_input "We could handle that in a separate session.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "RULE VIOLATION" "detects 'separate session'"
+
+# --- Test 27: Write with 'next conversation' -> warning ---
+echo ""
+echo "Test 27: Write with 'next conversation' -> triggers warning"
+INPUT=$(build_write_input "Pick this up in the next conversation.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "RULE VIOLATION" "detects 'next conversation'"
+
 # ==================== SUMMARY ====================
 
 echo ""
