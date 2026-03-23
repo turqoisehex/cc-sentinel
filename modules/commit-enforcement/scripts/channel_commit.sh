@@ -19,7 +19,7 @@ SKIP_SQUAD="false"
 LOCAL_VERIFY="false"
 MAX_RETRIES=3
 
-_require_value() { [[ $# -lt 2 ]] && echo "ERROR: $1 requires a value" >&2 && exit 1; }
+_require_value() { [[ $# -lt 2 ]] && echo "ERROR: $1 requires a value" >&2 && exit 1; true; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
