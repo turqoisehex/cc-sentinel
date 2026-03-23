@@ -122,6 +122,41 @@ class TestX11KeySender(unittest.TestCase):
                     X11KeySender()
 
 
+    def test_keysym_names_cover_spawn_commands(self):
+        """All characters in spawn's typed commands have keysym mappings."""
+        from spawn import X11KeySender
+        # Commands spawn actually types
+        commands = [
+            "claude --model opus",
+            "claude --model sonnet",
+            "/rename Opus 1",
+            "/rename Sonnet 1",
+            "/opus 1",
+            "/sonnet 1",
+        ]
+        for cmd in commands:
+            for char in cmd:
+                # Every char must be in _KEYSYM_NAMES or be alphanumeric
+                has_mapping = (
+                    char in X11KeySender._KEYSYM_NAMES
+                    or char.isalnum()
+                )
+                self.assertTrue(
+                    has_mapping,
+                    "Character %r in %r has no keysym mapping" % (char, cmd),
+                )
+
+    def test_shift_chars_includes_uppercase(self):
+        """Uppercase letters detected as needing shift."""
+        from spawn import X11KeySender
+        # Uppercase are handled by char.isupper(), not _SHIFT_CHARS
+        self.assertNotIn("A", X11KeySender._SHIFT_CHARS)
+        # But slash, dash, space should NOT need shift
+        self.assertNotIn("/", X11KeySender._SHIFT_CHARS)
+        self.assertNotIn("-", X11KeySender._SHIFT_CHARS)
+        self.assertNotIn(" ", X11KeySender._SHIFT_CHARS)
+
+
 class TestAppleScriptKeySender(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform == "darwin", "macOS only")

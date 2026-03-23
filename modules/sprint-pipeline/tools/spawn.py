@@ -229,6 +229,27 @@ class X11KeySender(KeySender):
                     "Install: sudo apt install libxtst6 (or xdotool)"
                 )
 
+    # XStringToKeysym expects keysym names, not literal chars.
+    # Most alphanumeric chars match their keysym name, but punctuation
+    # and whitespace need explicit mapping.
+    _KEYSYM_NAMES = {
+        " ": b"space", "\t": b"Tab", "\n": b"Return",
+        "-": b"minus", "=": b"equal", "[": b"bracketleft",
+        "]": b"bracketright", "\\": b"backslash", ";": b"semicolon",
+        "'": b"apostrophe", "`": b"grave", ",": b"comma",
+        ".": b"period", "/": b"slash",
+        "~": b"asciitilde", "!": b"exclam", "@": b"at",
+        "#": b"numbersign", "$": b"dollar", "%": b"percent",
+        "^": b"asciicircum", "&": b"ampersand", "*": b"asterisk",
+        "(": b"parenleft", ")": b"parenright", "_": b"underscore",
+        "+": b"plus", "{": b"braceleft", "}": b"braceright",
+        "|": b"bar", ":": b"colon", '"': b"quotedbl",
+        "<": b"less", ">": b"greater", "?": b"question",
+    }
+
+    # Characters that require Shift to produce on a standard US layout.
+    _SHIFT_CHARS = set('~!@#$%^&*()_+{}|:"<>?')
+
     def type_text(self, text):
         if self._use_xdotool:
             subprocess.run(
@@ -236,12 +257,23 @@ class X11KeySender(KeySender):
             )
         else:
             for char in text:
-                keysym = self._x11.XStringToKeysym(char.encode("ascii"))
+                keysym_name = self._KEYSYM_NAMES.get(char)
+                if keysym_name:
+                    keysym = self._x11.XStringToKeysym(keysym_name)
+                else:
+                    keysym = self._x11.XStringToKeysym(char.encode("ascii"))
                 if keysym == 0:
                     continue  # skip unmappable chars
                 keycode = self._x11.XKeysymToKeycode(self._display, keysym)
+                needs_shift = char in self._SHIFT_CHARS or char.isupper()
+                if needs_shift:
+                    shift_keysym = self._x11.XStringToKeysym(b"Shift_L")
+                    shift_keycode = self._x11.XKeysymToKeycode(self._display, shift_keysym)
+                    self._xtst.XTestFakeKeyEvent(self._display, shift_keycode, True, 0)
                 self._xtst.XTestFakeKeyEvent(self._display, keycode, True, 0)
                 self._xtst.XTestFakeKeyEvent(self._display, keycode, False, 0)
+                if needs_shift:
+                    self._xtst.XTestFakeKeyEvent(self._display, shift_keycode, False, 0)
                 self._x11.XFlush(self._display)
                 time.sleep(0.01)
 
