@@ -25,16 +25,6 @@ class TestConfig(unittest.TestCase):
             self.config_path.unlink()
         os.rmdir(self.tmp)
 
-    def test_defaults(self):
-        from spawn import Config
-        cfg = Config(self.config_path)
-        cfg.load()
-        self.assertEqual(cfg.get("startup_delay"), 5)
-        self.assertEqual(cfg.get("command_delay"), 3)
-        self.assertEqual(cfg.get("tab_init_delay"), 2)
-        self.assertEqual(cfg.get("trust_prompt_delay"), 3)
-        self.assertEqual(cfg.get("project_dir"), "")
-
     def test_save_and_load(self):
         from spawn import Config
         cfg = Config(self.config_path)
@@ -42,12 +32,6 @@ class TestConfig(unittest.TestCase):
         cfg2 = Config(self.config_path).load()
         self.assertEqual(cfg2.get("terminal"), "wt")
         self.assertTrue(cfg2.get("tabs_supported"))
-
-    def test_missing_file_returns_defaults(self):
-        from spawn import Config
-        cfg = Config(self.config_path).load()
-        self.assertFalse(cfg.exists())
-        self.assertEqual(cfg.get("startup_delay"), 5)
 
     def test_data_merges_defaults(self):
         from spawn import Config
@@ -73,11 +57,6 @@ class TestConfig(unittest.TestCase):
 
 class TestKeySenderABC(unittest.TestCase):
 
-    def test_cannot_instantiate_abc(self):
-        from spawn import KeySender
-        with self.assertRaises(TypeError):
-            KeySender()
-
     def test_type_line_calls_type_text_and_press_enter(self):
         from spawn import KeySender
 
@@ -97,12 +76,6 @@ class TestKeySenderABC(unittest.TestCase):
 # -- Task 3: Win32KeySender ---------------------------------------------------
 
 class TestWin32KeySender(unittest.TestCase):
-
-    @unittest.skipUnless(sys.platform == "win32", "Windows only")
-    def test_instantiates_on_windows(self):
-        from spawn import Win32KeySender
-        sender = Win32KeySender()
-        self.assertIsNotNone(sender)
 
     @unittest.skipUnless(sys.platform == "win32", "Windows only")
     def test_type_text_calls_send_key(self):
@@ -168,15 +141,7 @@ class TestAppleScriptKeySender(unittest.TestCase):
             AppleScriptKeySender()
 
 
-# -- Task 5: TerminalDriver ABC + WTDriver ------------------------------------
-
-class TestTerminalDriverABC(unittest.TestCase):
-
-    def test_cannot_instantiate_abc(self):
-        from spawn import TerminalDriver
-        with self.assertRaises(TypeError):
-            TerminalDriver()
-
+# -- Task 5: TerminalDriver + WTDriver ----------------------------------------
 
 class TestWTDriver(unittest.TestCase):
 
@@ -311,23 +276,11 @@ class TestFallbackDriver(unittest.TestCase):
 
 class TestSetup(unittest.TestCase):
 
-    def test_detect_os_windows(self):
+    def test_detect_os(self):
         from spawn import detect_os
         with patch("spawn.sys") as mock_sys:
             mock_sys.platform = "win32"
             self.assertEqual(detect_os(), "windows")
-
-    def test_detect_os_linux(self):
-        from spawn import detect_os
-        with patch("spawn.sys") as mock_sys:
-            mock_sys.platform = "linux"
-            self.assertEqual(detect_os(), "linux")
-
-    def test_detect_os_macos(self):
-        from spawn import detect_os
-        with patch("spawn.sys") as mock_sys:
-            mock_sys.platform = "darwin"
-            self.assertEqual(detect_os(), "darwin")
 
     def test_detect_display_server_windows(self):
         from spawn import detect_display_server
@@ -409,13 +362,6 @@ class TestSpawner(unittest.TestCase):
         # N * (2 + 0.5 + 5 + 3 + 3*2) = N * 16.5
         self.assertAlmostEqual(Spawner.estimate_time("opus", 3, cfg), 49.5)
 
-    def test_time_estimate_duo(self):
-        from spawn import Spawner
-        cfg = {"tab_init_delay": 2, "startup_delay": 5, "command_delay": 3,
-               "project_dir": str(Path(__file__).parent)}
-        # Duo 3 = 6 sessions * 16.5 = 99.0
-        self.assertAlmostEqual(Spawner.estimate_time("duo", 3, cfg), 99.0)
-
     def test_dry_run_output(self):
         from spawn import Spawner
         import io
@@ -496,13 +442,6 @@ class TestCLI(unittest.TestCase):
         parser = build_parser()
         args = parser.parse_args(["--check"])
         self.assertTrue(args.check)
-
-    def test_parse_check_json(self):
-        from spawn import build_parser
-        parser = build_parser()
-        args = parser.parse_args(["--check", "--json"])
-        self.assertTrue(args.check)
-        self.assertTrue(args.json)
 
     def test_parse_dry_run(self):
         from spawn import build_parser

@@ -36,16 +36,9 @@ I want to install cc-sentinel — I heard it governs Claude Code sessions to pre
 
 ### 1. Clone and Install
 
-Clone cc-sentinel and walk me through the conversational installer. I want all 7 modules — give me everything:
-- Core (anti-deferral, compaction hooks, state management)
-- Context Awareness (context window meter)
-- Verification (squad, grill, stop-task-check)
-- Commit Enforcement (adversarial commit review, auto-format)
-- Sprint Pipeline (multi-session orchestration, spawn)
-- Governance Protection (file protection, mistake correction)
-- Notification (bell + macOS notification center)
+Clone cc-sentinel and walk me through the conversational installer. I want all modules — give me everything.
 
-Install globally (`~/.claude/`). For context-awareness, use the bundled version. My machine is fast — 3 second startup delay for spawn is fine.
+Install globally (`~/.claude/`). For context-awareness, use the bundled version.
 
 ```bash
 git clone https://github.com/turqoisehex/cc-sentinel.git /tmp/cc-sentinel
