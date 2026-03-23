@@ -209,7 +209,7 @@ class X11KeySender(KeySender):
 
     def __init__(self):
         if sys.platform != "linux":
-            raise RuntimeError("X11KeySender requires Linux")
+            raise RuntimeError("X11KeySender requires Linux with X11 display")
 
         self._use_xdotool = False
         try:
@@ -261,7 +261,10 @@ class X11KeySender(KeySender):
                 if keysym_name:
                     keysym = self._x11.XStringToKeysym(keysym_name)
                 else:
-                    keysym = self._x11.XStringToKeysym(char.encode("ascii"))
+                    try:
+                        keysym = self._x11.XStringToKeysym(char.encode("ascii"))
+                    except UnicodeEncodeError:
+                        continue  # skip non-ASCII chars
                 if keysym == 0:
                     continue  # skip unmappable chars
                 keycode = self._x11.XKeysymToKeycode(self._display, keysym)
@@ -772,6 +775,9 @@ def _can_use_tkinter():
         if not getattr(sys.stdin, "isatty", lambda: False)():
             return False
         if not os.environ.get("TERM_PROGRAM"):
+            return False
+        # SSH sessions with TTY+tmux pass the above guards but have no display
+        if os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_TTY"):
             return False
     try:
         import tkinter  # noqa: F401

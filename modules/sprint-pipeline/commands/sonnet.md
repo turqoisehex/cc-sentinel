@@ -4,7 +4,7 @@ Infinite service loop. Wait for work -> execute -> wait again. Never initiate. N
 
 ## Startup
 
-1. **Detect channel infrastructure.** Check if `scripts/wait_for_work.sh` exists AND any of these exist:
+1. **Detect channel infrastructure.** Check if `scripts/wait_for_work.sh` OR `~/.claude/scripts/wait_for_work.sh` exists AND any of these exist:
    - `channel-template.md`
    - `.claude/reference/channel-routing.md`
 

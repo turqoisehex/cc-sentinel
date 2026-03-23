@@ -22,10 +22,11 @@ Set this session's channel identity. Adapts to project infrastructure.
    d. `mkdir -p verification_findings/_pending/ch$ARGUMENTS`
    e. Read `.claude/reference/channel-routing.md` if it exists. Apply for the rest of this session.
    f. **Listener check:** Check `_pending/ch$ARGUMENTS/.heartbeat`. If Sonnet listener is already active, announce it. If not:
-      - Assume Sonnet is launching (spawn duo starts Sonnet first).
-      - Start a background heartbeat watcher: `bash -c 'HB="verification_findings/_pending/ch$ARGUMENTS/.heartbeat"; for i in $(seq 1 60); do [ -f "$HB" ] && echo "Sonnet listener detected on ch$ARGUMENTS" && exit 0; sleep 5; done; echo "WARNING: No Sonnet listener after 5 minutes on ch$ARGUMENTS"' &`
+      - Sonnet may be launching concurrently (spawn duo starts Sonnet first) or may not be running at all.
+      - Start a background heartbeat watcher: `bash -c 'HB="verification_findings/_pending/ch'"$ARGUMENTS"'/.heartbeat"; for i in $(seq 1 60); do [ -f "$HB" ] && echo "Sonnet listener detected on ch'"$ARGUMENTS" && exit 0; sleep 5; done; echo "WARNING: No Sonnet listener after 5 minutes on ch'"$ARGUMENTS"'"' &`
       - Announce: "Waiting for Sonnet listener on ch$ARGUMENTS (background watcher started, 5-minute timeout)."
       - Do NOT block — continue with Opus work immediately. The watcher runs in background and reports when Sonnet arrives.
+      - **If no listener after timeout:** Dispatches queue in `_pending/ch$ARGUMENTS/` for later pickup. Continue with local verification (`--local-verify`) until Sonnet arrives.
    g. **Critical routing (always apply):**
       - Dispatch files -> `verification_findings/_pending/ch$ARGUMENTS/`
       - Result file suffixes -> `_ch$ARGUMENTS` (e.g., `commit_check_ch$ARGUMENTS.md`)

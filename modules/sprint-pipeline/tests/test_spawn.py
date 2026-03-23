@@ -6,7 +6,7 @@ import tempfile
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 # Add tools/ to path so we can import spawn
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
@@ -113,7 +113,7 @@ class TestX11KeySender(unittest.TestCase):
                     self.assertEqual(args[0], "xdotool")
                     self.assertIn("hello", args)
 
-    @unittest.skipIf(sys.platform == "win32", "Not Windows")
+    @unittest.skipUnless(sys.platform == "linux", "Linux only")
     def test_x11_raises_without_deps(self):
         from spawn import X11KeySender
         with patch("spawn.shutil.which", return_value=None):
@@ -448,6 +448,23 @@ class TestSetup(unittest.TestCase):
             with patch.dict(os.environ, {}, clear=True):
                 self.assertFalse(_can_use_tkinter())
 
+    def test_can_use_tkinter_false_on_macos_ssh(self):
+        """On macOS via SSH, _can_use_tkinter returns False even with TTY+TERM_PROGRAM."""
+        from spawn import _can_use_tkinter
+        with patch("spawn.sys") as mock_sys:
+            mock_sys.platform = "darwin"
+            mock_sys.stdin.isatty.return_value = True
+            with patch.dict(os.environ, {"TERM_PROGRAM": "tmux", "SSH_CONNECTION": "1.2.3.4 5678 5.6.7.8 22"}):
+                self.assertFalse(_can_use_tkinter())
+
+    def test_can_use_tkinter_true_on_non_macos(self):
+        """On non-macOS with tkinter available, returns True."""
+        from spawn import _can_use_tkinter
+        with patch("spawn.sys") as mock_sys:
+            mock_sys.platform = "linux"
+            with patch.dict("sys.modules", {"tkinter": MagicMock()}):
+                self.assertTrue(_can_use_tkinter())
+
     def test_tooltip_disabled_skips_tkinter(self):
         """SpawnTooltip with _disabled=True never touches tkinter."""
         from spawn import SpawnTooltip
@@ -458,8 +475,8 @@ class TestSetup(unittest.TestCase):
             tooltip.start("test")
             tooltip.update("test")
             tooltip.close()
-            # Thread should never have started
-            self.assertFalse(tooltip._thread.is_alive())
+            # Thread should never have been started (ident is None iff never started)
+            self.assertIsNone(tooltip._thread.ident)
 
 
 # -- Task 9: Spawner Orchestration --------------------------------------------
@@ -491,8 +508,10 @@ class TestSpawner(unittest.TestCase):
 
     def test_time_estimate_single(self):
         from spawn import Spawner
+        import tempfile
+        tmpdir = tempfile.mkdtemp()
         cfg = {"tab_init_delay": 2, "startup_delay": 5, "command_delay": 3,
-               "project_dir": str(Path(__file__).parent)}
+               "project_dir": tmpdir}
         # project_dir has no .claude/settings.json, so trust_extra = 3
         # N * (2 + 0.5 + 5 + 3 + 3*2) = N * 16.5
         self.assertAlmostEqual(Spawner.estimate_time("opus", 3, cfg), 49.5)

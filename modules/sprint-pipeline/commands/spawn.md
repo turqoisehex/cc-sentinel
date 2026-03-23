@@ -1,23 +1,20 @@
 # /spawn — Launch Multi-Session Environment
 
-Launch multiple Claude Code sessions with model selection, channel routing, and terminal tab management.
+Launch multiple Claude Code sessions. Execute immediately — do not ask for confirmation.
 
-## Usage
+**Run this command now:**
 
 ```bash
-python ~/.claude/tools/spawn.py                      # GUI mode
-python ~/.claude/tools/spawn.py opus 3               # 3 Opus sessions
-python ~/.claude/tools/spawn.py sonnet 2             # 2 Sonnet sessions
-python ~/.claude/tools/spawn.py duo 2                # 2 Opus + 2 Sonnet (separate windows)
-python ~/.claude/tools/spawn.py --check              # Verify dependencies
-python ~/.claude/tools/spawn.py --setup              # Configure terminal/key sender
+python3 ~/.claude/tools/spawn.py $ARGUMENTS
 ```
+
+If `$ARGUMENTS` is empty, run `--check` to show environment status. If spawn.json does not exist, run `--setup` first.
 
 ## Modes
 
 - **opus** — N Opus sessions in one terminal window (tabs)
 - **sonnet** — N Sonnet sessions in one terminal window (tabs)
-- **duo** — N Opus + N Sonnet in separate named windows. Creates channel infrastructure if missing.
+- **duo** — N Sonnet + N Opus in separate named windows (Sonnet launches first). Creates channel infrastructure if missing.
 
 ## Cross-Platform Support
 
