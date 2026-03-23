@@ -276,6 +276,70 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+# --- Test 17: Write with 'future pass' -> warning (new tier 1) ---
+echo ""
+echo "Test 17: Write with 'future pass' -> triggers warning"
+INPUT=$(build_write_input "Command/skill content drift. Separate synchronization future pass needed.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "RULE VIOLATION" "detects 'future pass'"
+
+# --- Test 18: Write with 'separate pass needed' -> warning (new tier 1) ---
+echo ""
+echo "Test 18: Write with 'separate pass needed' -> triggers warning"
+INPUT=$(build_write_input "This requires a separate pass needed to complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "RULE VIOLATION" "detects 'separate pass needed'"
+
+# --- Test 19: Write with 'deferred —' -> warning (new tier 1) ---
+echo ""
+echo "Test 19: Write with 'deferred —' (em dash) -> triggers warning"
+INPUT=$(build_write_input "Status: deferred — known debt from skills migration.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "RULE VIOLATION" "detects 'deferred —'"
+
+# --- Test 20: Write with 'deferred (known)' -> warning (new tier 1) ---
+echo ""
+echo "Test 20: Write with 'deferred (parenthetical)' -> triggers warning"
+INPUT=$(build_write_input "Arrow style inconsistency deferred (cosmetic only).")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "RULE VIOLATION" "detects 'deferred ('"
+
+# --- Test 21: Write with 'future work' -> warning (new tier 1) ---
+echo ""
+echo "Test 21: Write with 'future work' -> triggers warning"
+INPUT=$(build_write_input "Backport items identified as future work.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "RULE VIOLATION" "detects 'future work'"
+
+# --- Test 22: Write with 'previously deferred' -> NO warning (safe) ---
+echo ""
+echo "Test 22: 'previously deferred' -> no warning (historical documentation)"
+INPUT=$(build_write_input "This was previously deferred by the team in Q2.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "'previously deferred' not flagged"
+
+# --- Test 23: Write with 'anti-deferral' -> NO warning (the hook's own name) ---
+echo ""
+echo "Test 23: 'anti-deferral' -> no warning (hook self-reference)"
+INPUT=$(build_write_input "Updated the anti-deferral hook with new patterns.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "'anti-deferral' not flagged"
+
+# --- Test 24: Write with 'deferred loading' -> NO warning (technical term) ---
+echo ""
+echo "Test 24: 'deferred loading pattern' -> no warning (technical term)"
+INPUT=$(build_write_input "Uses a deferred loading pattern for performance.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "'deferred loading' not flagged"
+
 # ==================== SUMMARY ====================
 
 echo ""
