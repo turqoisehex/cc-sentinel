@@ -185,7 +185,12 @@ function Install-Module($moduleName) {
                     Log "  Skipped (exists): $($_.Name)"
                 }
             } else {
-                Copy-FileChecked $_.FullName $_.Name
+                # Non-rules templates: project root for project installs, ~/.claude/templates/ for global
+                if ($Target -eq "global") {
+                    Copy-FileChecked $_.FullName (Join-Path $env:USERPROFILE ".claude" "templates" $_.Name)
+                } else {
+                    Copy-FileChecked $_.FullName $_.Name
+                }
             }
         }
     }
@@ -500,6 +505,23 @@ Update-Gitignore
 if ($Modules -match "verification" -and -not $DryRun) {
     New-Item -ItemType Directory -Path "verification_findings/_pending" -Force | Out-Null
     Log "Created verification_findings/ directory"
+}
+
+# Auto-configure spawn (if sprint-pipeline installed)
+if ($Modules -match "sprint-pipeline") {
+    $spawnPath = Join-Path $env:USERPROFILE ".claude" "tools" "spawn.py"
+    if (Test-Path $spawnPath) {
+        if ($DryRun) {
+            Log "  WOULD RUN: spawn.py --setup"
+        } else {
+            Log "Configuring spawn (auto-detect terminal + key sender)..."
+            try {
+                & python3 $spawnPath --setup 2>$null
+            } catch {
+                Log "  spawn.py --setup failed — run manually: python3 ~/.claude/tools/spawn.py --setup"
+            }
+        }
+    }
 }
 
 # Verify all commands have matching skills

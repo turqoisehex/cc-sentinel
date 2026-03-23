@@ -217,7 +217,12 @@ install_module() {
           log "  Skipped (exists): $bname"
         fi
       else
-        copy_file "$f" "$bname"
+        # Non-rules templates: project root for project installs, ~/.claude/templates/ for global
+        if [[ "$TARGET" == "global" ]]; then
+          copy_file "$f" "${HOME}/.claude/templates/${bname}"
+        else
+          copy_file "$f" "$bname"
+        fi
       fi
     done
   fi
@@ -656,6 +661,18 @@ if echo "$MODULES" | grep -q "verification"; then
   if [[ "$DRY_RUN" != "true" ]]; then
     mkdir -p verification_findings/_pending
     log "Created verification_findings/ directory"
+  fi
+fi
+
+# Auto-configure spawn (if sprint-pipeline installed)
+if echo "$MODULES" | grep -q "sprint-pipeline"; then
+  if [[ -f "${HOME}/.claude/tools/spawn.py" ]]; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      log "  WOULD RUN: spawn.py --setup"
+    else
+      log "Configuring spawn (auto-detect terminal + key sender)..."
+      "$PYTHON" "${HOME}/.claude/tools/spawn.py" --setup 2>/dev/null || log "  spawn.py --setup failed — run manually: python3 ~/.claude/tools/spawn.py --setup"
+    fi
   fi
 fi
 
