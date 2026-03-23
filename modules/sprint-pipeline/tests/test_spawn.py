@@ -29,9 +29,10 @@ class TestConfig(unittest.TestCase):
         from spawn import Config
         cfg = Config(self.config_path)
         cfg.load()
-        self.assertEqual(cfg.get("startup_delay"), 3)
+        self.assertEqual(cfg.get("startup_delay"), 5)
         self.assertEqual(cfg.get("command_delay"), 3)
         self.assertEqual(cfg.get("tab_init_delay"), 2)
+        self.assertEqual(cfg.get("trust_prompt_delay"), 3)
         self.assertEqual(cfg.get("project_dir"), "")
 
     def test_save_and_load(self):
@@ -46,7 +47,7 @@ class TestConfig(unittest.TestCase):
         from spawn import Config
         cfg = Config(self.config_path).load()
         self.assertFalse(cfg.exists())
-        self.assertEqual(cfg.get("startup_delay"), 3)
+        self.assertEqual(cfg.get("startup_delay"), 5)
 
     def test_data_merges_defaults(self):
         from spawn import Config
@@ -55,7 +56,7 @@ class TestConfig(unittest.TestCase):
         cfg2 = Config(self.config_path).load()
         data = cfg2.data
         self.assertEqual(data["terminal"], "konsole")
-        self.assertEqual(data["startup_delay"], 3)  # default preserved
+        self.assertEqual(data["startup_delay"], 5)  # default preserved
 
     def test_creates_parent_dirs(self):
         nested = Path(self.tmp) / "sub" / "dir" / "spawn.json"
@@ -402,21 +403,24 @@ class TestSpawner(unittest.TestCase):
 
     def test_time_estimate_single(self):
         from spawn import Spawner
-        cfg = {"tab_init_delay": 2, "startup_delay": 3, "command_delay": 3}
-        # N * (2 + 0.5 + 3 + 3*2) = N * 11.5
-        self.assertAlmostEqual(Spawner.estimate_time("opus", 3, cfg), 34.5)
+        cfg = {"tab_init_delay": 2, "startup_delay": 5, "command_delay": 3,
+               "project_dir": str(Path(__file__).parent)}
+        # project_dir has no .claude/settings.json, so trust_extra = 3
+        # N * (2 + 0.5 + 5 + 3 + 3*2) = N * 16.5
+        self.assertAlmostEqual(Spawner.estimate_time("opus", 3, cfg), 49.5)
 
     def test_time_estimate_duo(self):
         from spawn import Spawner
-        cfg = {"tab_init_delay": 2, "startup_delay": 3, "command_delay": 3}
-        # Duo 3 = 6 sessions * 11.5 = 69.0
-        self.assertAlmostEqual(Spawner.estimate_time("duo", 3, cfg), 69.0)
+        cfg = {"tab_init_delay": 2, "startup_delay": 5, "command_delay": 3,
+               "project_dir": str(Path(__file__).parent)}
+        # Duo 3 = 6 sessions * 16.5 = 99.0
+        self.assertAlmostEqual(Spawner.estimate_time("duo", 3, cfg), 99.0)
 
     def test_dry_run_output(self):
         from spawn import Spawner
         import io
-        cfg = {"tab_init_delay": 2, "startup_delay": 3, "command_delay": 3,
-               "project_dir": "~/.claude/"}
+        cfg = {"tab_init_delay": 2, "startup_delay": 5, "command_delay": 3,
+               "project_dir": str(Path(__file__).parent)}
         output = io.StringIO()
         Spawner.dry_run("opus", 1, cfg, file=output)
         text = output.getvalue()
@@ -424,7 +428,45 @@ class TestSpawner(unittest.TestCase):
         self.assertIn("claude --model opus", text)
         self.assertIn("/rename Opus 1", text)
         self.assertIn("/opus 1", text)
-        self.assertIn("11.5s", text)
+
+    def test_dry_run_trust_prompt(self):
+        """Dry run shows trust prompt dismissal for untrusted dirs."""
+        from spawn import Spawner
+        import io
+        cfg = {"tab_init_delay": 2, "startup_delay": 5, "command_delay": 3,
+               "trust_prompt_delay": 3,
+               "project_dir": str(Path.home())}
+        output = io.StringIO()
+        Spawner.dry_run("opus", 1, cfg, file=output)
+        text = output.getvalue()
+        self.assertIn("dismiss trust prompt", text)
+
+    def test_needs_trust_prompt_home_dir(self):
+        """Home directory always needs trust prompt."""
+        from spawn import Spawner
+        self.assertTrue(Spawner._needs_trust_prompt(str(Path.home())))
+
+    def test_needs_trust_prompt_trusted_dir(self):
+        """Directory with .claude/settings.json does not need trust prompt."""
+        from spawn import Spawner
+        tmp = tempfile.mkdtemp()
+        try:
+            (Path(tmp) / ".claude").mkdir()
+            (Path(tmp) / ".claude" / "settings.json").write_text("{}")
+            self.assertFalse(Spawner._needs_trust_prompt(tmp))
+        finally:
+            (Path(tmp) / ".claude" / "settings.json").unlink()
+            (Path(tmp) / ".claude").rmdir()
+            os.rmdir(tmp)
+
+    def test_needs_trust_prompt_unknown_dir(self):
+        """Directory without .claude/ needs trust prompt."""
+        from spawn import Spawner
+        tmp = tempfile.mkdtemp()
+        try:
+            self.assertTrue(Spawner._needs_trust_prompt(tmp))
+        finally:
+            os.rmdir(tmp)
 
     def test_wayland_prints_commands(self):
         from spawn import Spawner

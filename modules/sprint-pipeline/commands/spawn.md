@@ -34,6 +34,22 @@ Config file: `~/.claude/tools/spawn.json` (auto-created by `--setup`).
 
 Key settings: `startup_delay` (tune per machine speed), `terminal`, `key_sender`.
 
+## Trust Prompt
+
+When spawn launches CC in a directory without `.claude/settings.json` (including the home directory), CC shows an interactive trust prompt. Spawn automatically dismisses this with an Enter keystroke and waits `trust_prompt_delay` seconds (default: 3) before continuing.
+
+To avoid the extra delay per session, set `project_dir` in `~/.claude/tools/spawn.json` to a project directory that CC has already trusted.
+
+## Startup Delay
+
+The `startup_delay` setting (default: 5s) controls how long spawn waits after launching `claude` before typing commands. If sessions fail to configure, increase this value:
+
+```bash
+python ~/.claude/tools/spawn.py --setup  # re-detect + write config
+```
+
+Or edit `~/.claude/tools/spawn.json` directly: `"startup_delay": 8`
+
 ## Requirements
 
 - Python 3 (stdlib only, no pip dependencies)

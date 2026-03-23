@@ -62,6 +62,14 @@ Based on answers, recommend modules. Always include Core. Show a table:
 
 Let the user select. Auto-include dependencies (e.g., Sprint Pipeline requires Core + Verification + Commit Enforcement).
 
+### Step 4b: Spawn Configuration (if Sprint Pipeline selected)
+
+If Sprint Pipeline was selected, ask:
+
+"The Sprint Pipeline includes `/spawn` for launching multiple Claude Code sessions in parallel. How long does Claude Code take to start on your machine? (This is the delay between launching `claude` and the REPL being ready for input. Default: 5 seconds, fast machines: 3 seconds)"
+
+Store the answer as `spawn_startup_delay`. Default 5 if the user skips or says "default."
+
 ### Step 5: Run Installer
 
 Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, commands, or settings."
@@ -84,6 +92,26 @@ If Context Awareness is selected AND the OS is macOS or Linux, ask:
 "For context-awareness, would you like to use the bundled version or install from the canonical repository (sdi2200262/cc-context-awareness)? The bundled version works on all platforms. The canonical version is maintained by the original author."
 
 Add `--context-source canonical` or `--context-source bundled` accordingly. On Windows, always use bundled (only known working Windows version).
+
+### Step 5b: Configure Spawn (if Sprint Pipeline selected)
+
+If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config:
+
+```bash
+python3 -c "
+import json, pathlib
+p = pathlib.Path.home() / '.claude' / 'tools' / 'spawn.json'
+p.parent.mkdir(parents=True, exist_ok=True)
+cfg = json.loads(p.read_text()) if p.exists() else {}
+cfg['startup_delay'] = DELAY
+p.write_text(json.dumps(cfg, indent=2))
+print('Spawn config written: startup_delay = DELAY')
+"
+```
+
+Replace `DELAY` with the integer value from the user's answer.
+
+Then run `python3 ~/.claude/tools/spawn.py --setup` to auto-detect terminal and key sender.
 
 ### Step 6: Inject CLAUDE.md Rules
 

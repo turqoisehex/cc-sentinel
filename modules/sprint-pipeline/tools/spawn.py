@@ -53,9 +53,10 @@ class Config:
         "terminal": "",
         "tabs_supported": False,
         "key_sender": "",
-        "startup_delay": 3,
+        "startup_delay": 5,
         "command_delay": 3,
         "tab_init_delay": 2,
+        "trust_prompt_delay": 3,
         "project_dir": "",  # empty = use current working directory
     }
 
@@ -638,6 +639,18 @@ def run_check():
             "in each session."
         )
 
+    # Check if project_dir will trigger trust prompt
+    cfg = Config().load()
+    check_project_dir = cfg.get("project_dir", "") or os.getcwd()
+    if Spawner._needs_trust_prompt(check_project_dir):
+        trust_delay = cfg.get("trust_prompt_delay", 3)
+        warnings.append(
+            "project_dir (%s) will trigger Claude Code's trust prompt, "
+            "adding ~%.0fs per session. Set project_dir in "
+            "~/.claude/tools/spawn.json to a trusted project directory "
+            "to avoid this." % (check_project_dir, trust_delay)
+        )
+
     result = {
         "os": os_name,
         "display_server": display,
@@ -672,7 +685,7 @@ def run_setup(terminal_override=None):
     cfg.set("terminal", terminal["name"])
     cfg.set("tabs_supported", terminal["tabs"])
     cfg.set("key_sender", key_sender.get("method", ""))
-    for key in ("startup_delay", "command_delay", "tab_init_delay", "project_dir"):
+    for key in ("startup_delay", "command_delay", "tab_init_delay", "trust_prompt_delay", "project_dir"):
         if key not in cfg._data:
             cfg.set(key, Config.DEFAULTS[key])
     cfg.save()
@@ -804,11 +817,14 @@ class Spawner:
     @staticmethod
     def estimate_time(mode, count, cfg):
         """Estimate total spawn time in seconds."""
+        project_dir = cfg.get("project_dir", "") or os.getcwd()
+        trust_extra = cfg.get("trust_prompt_delay", 3) if Spawner._needs_trust_prompt(project_dir) else 0
         per_session = (
-            cfg["tab_init_delay"]
+            cfg.get("tab_init_delay", 2)
             + 0.5
-            + cfg["startup_delay"]
-            + cfg["command_delay"] * 2
+            + cfg.get("startup_delay", 5)
+            + trust_extra
+            + cfg.get("command_delay", 3) * 2
         )
         total_sessions = count * 2 if mode == "duo" else count
         return total_sessions * per_session
@@ -821,8 +837,10 @@ class Spawner:
         plan = Spawner.build_plan(mode, count)
         project_dir = cfg.get("project_dir", "") or os.getcwd()
         tab_delay = cfg.get("tab_init_delay", 2)
-        startup_delay = cfg.get("startup_delay", 12)
+        startup_delay = cfg.get("startup_delay", 5)
         cmd_delay = cfg.get("command_delay", 3)
+        trust_prompt_delay = cfg.get("trust_prompt_delay", 3)
+        needs_trust = Spawner._needs_trust_prompt(project_dir)
 
         for session in plan:
             model = session["model"]
@@ -839,6 +857,9 @@ class Spawner:
             print("[dry-run] Would sleep 0.5s (post-activate)", file=file)
             print("[dry-run] Would type: claude --model %s" % model, file=file)
             print("[dry-run] Would sleep %.1fs (startup delay)" % startup_delay, file=file)
+            if needs_trust:
+                print("[dry-run] Would type: <Enter> (dismiss trust prompt)", file=file)
+                print("[dry-run] Would sleep %.1fs (trust prompt delay)" % trust_prompt_delay, file=file)
             print("[dry-run] Would type: /rename %s %s" % (model_cap, idx), file=file)
             print("[dry-run] Would sleep %.1fs (command delay)" % cmd_delay, file=file)
             print("[dry-run] Would type: /%s %s" % (model, idx), file=file)
@@ -863,6 +884,22 @@ class Spawner:
             print("    /rename %s %s" % (model_cap, idx), file=file)
             print("    /%s %s" % (model, idx), file=file)
             print(file=file)
+
+    @staticmethod
+    def _needs_trust_prompt(project_dir):
+        """Check if CC will show a trust prompt for this directory.
+
+        CC shows the trust prompt when the directory has no
+        .claude/settings.json (not a trusted project).
+        The home directory can never be marked as trusted.
+        """
+        p = pathlib.Path(project_dir).expanduser().resolve()
+        home = pathlib.Path.home().resolve()
+        if p == home:
+            return True
+        if not (p / ".claude" / "settings.json").exists():
+            return True
+        return False
 
     @staticmethod
     def _has_channel_infra(project_dir):
@@ -930,8 +967,10 @@ class Spawner:
         else:
             project_dir = os.getcwd()
         tab_delay = cfg.get("tab_init_delay", 2)
-        startup_delay = cfg.get("startup_delay", 12)
+        startup_delay = cfg.get("startup_delay", 5)
         cmd_delay = cfg.get("command_delay", 3)
+        trust_prompt_delay = cfg.get("trust_prompt_delay", 3)
+        needs_trust = Spawner._needs_trust_prompt(project_dir)
         total_sessions = len(plan)
         is_wayland = detect_display_server() == "wayland"
 
@@ -1038,6 +1077,14 @@ class Spawner:
                 if cancelled:
                     break
 
+                # Step 6b: Dismiss trust prompt if needed
+                if needs_trust:
+                    tip("%s %d: dismissing trust prompt..." % (model_cap, idx))
+                    key_sender.type_line("")  # Enter to accept trust prompt
+                    wait(trust_prompt_delay)
+                    if cancelled:
+                        break
+
                 # Step 7: Type /rename
                 tip("%s %d: configuring session..." % (model_cap, idx))
                 key_sender.type_line("/rename %s %d" % (model_cap, idx))
@@ -1138,8 +1185,9 @@ def run_gui():
         frame, from_=1, to=20, textvariable=count_var, width=15,
     ).grid(row=1, column=1, pady=5)
 
+    cfg_preload = Config().load()
     ttk.Label(frame, text="Startup delay (s):").grid(row=2, column=0, sticky="w", pady=5)
-    delay_var = tk.StringVar(value="3")
+    delay_var = tk.StringVar(value=str(cfg_preload.get("startup_delay", 5)))
     ttk.Spinbox(
         frame, from_=1, to=60, textvariable=delay_var, width=15,
     ).grid(row=2, column=1, pady=5)
