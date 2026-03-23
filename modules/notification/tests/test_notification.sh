@@ -33,9 +33,22 @@ LAST_EXIT=0
 
 # Run a shell script with optional stdin, using timeout to guarantee no hang.
 # Redirects stderr to /dev/null since bell/notify-send/osascript noise is expected.
+# Uses gtimeout (macOS via coreutils) or timeout (Linux), falls back to plain bash.
+if command -v timeout &>/dev/null; then
+  _TIMEOUT_CMD="timeout"
+elif command -v gtimeout &>/dev/null; then
+  _TIMEOUT_CMD="gtimeout"
+else
+  _TIMEOUT_CMD=""
+fi
+
 run_with_timeout() {
   local script="$1" input="$2"
-  LAST_STDOUT=$(echo "$input" | timeout 5 bash "$script" 2>/dev/null)
+  if [[ -n "$_TIMEOUT_CMD" ]]; then
+    LAST_STDOUT=$(echo "$input" | $_TIMEOUT_CMD 5 bash "$script" 2>/dev/null)
+  else
+    LAST_STDOUT=$(echo "$input" | bash "$script" 2>/dev/null)
+  fi
   LAST_EXIT=$?
 }
 

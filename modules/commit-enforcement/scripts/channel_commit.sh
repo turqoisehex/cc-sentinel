@@ -19,14 +19,13 @@ SKIP_SQUAD="false"
 LOCAL_VERIFY="false"
 MAX_RETRIES=3
 
+_require_value() { [[ $# -lt 2 ]] && echo "ERROR: $1 requires a value" >&2 && exit 1; }
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --channel|--files|-m)
-      [[ $# -lt 2 ]] && echo "ERROR: $1 requires a value" >&2 && exit 1
-      ;;&
-    --channel) CHANNEL="$2"; shift 2 ;;
-    --files)   IFS=' ' read -ra FILE_ARRAY <<< "$2"; shift 2 ;;
-    -m)        MESSAGE="$2"; shift 2 ;;
+    --channel) _require_value "$@"; CHANNEL="$2"; shift 2 ;;
+    --files)   _require_value "$@"; IFS=' ' read -ra FILE_ARRAY <<< "$2"; shift 2 ;;
+    -m)        _require_value "$@"; MESSAGE="$2"; shift 2 ;;
     --skip-squad)   SKIP_SQUAD="true"; shift ;;
     --local-verify) LOCAL_VERIFY="true"; shift ;;
     *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;

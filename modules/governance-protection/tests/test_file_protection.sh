@@ -286,9 +286,10 @@ echo ""
 echo "Test 7: No protected-files.txt -> allow all edits"
 setup_temp
 # Don't create any protected-files.txt
+# Override HOME so global ~/.claude/protected-files.txt isn't found
 create_ct "$PROJECT" "false"
 INPUT=$(build_write_input "$PROJECT/CLAUDE.md")
-run_hook "$INPUT"
+HOME="$TMPDIR_ROOT" run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_empty "no protected-files.txt means no protection"
 teardown_temp
