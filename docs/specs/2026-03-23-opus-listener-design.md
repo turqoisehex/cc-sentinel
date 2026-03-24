@@ -40,7 +40,7 @@ Orchestrator (human in CC terminal)
 | D6 | 15-minute stale threshold (was 300s switch-to-local, 30s warn) | `.active` provides proof-of-work; raise both thresholds — warn at 5 min, switch-to-local at 15 min |
 | D7 | `/opus N` starts background listener | Opus is always receivable from the moment it starts |
 | D8 | Prompt delivery at tool-call boundary (CC runtime assumption) | CC delivers `run_in_background` completions as system messages; Opus finishes current atomic operation before reading. If CC changes this behavior, prompts may arrive mid-operation — the design tolerates this since prompts are additive instructions, not interrupts |
-| D9 | Opus listeners still get stop-hook enforcement | Unlike Sonnet (stateless service loop), Opus holds state and should save it. No change to enforcement logic — `stop-task-check.sh` already fires on every tool call for all sessions. The only update is the pattern exclusion for "Watching..." listener output (Component 6); actual Opus work output is enforced as normal |
+| D9 | Opus listeners still get stop-hook enforcement | Unlike Sonnet (stateless service loop), Opus holds state and should save it. No change to enforcement scope — `stop-task-check.sh` already fires on every tool call for all sessions. The only implementation update is the pattern exclusion for "Watching..." listener output (Component 6); actual Opus work output is enforced as normal |
 
 ## Directory Structure
 
@@ -71,7 +71,7 @@ verification_findings/
       launch_prompt.md
 ```
 
-Both directories are gitignored (sentinel gitignores all of `verification_findings/`; project `.gitignore` entries need updating from `_pending/` to `_pending_sonnet/` + `_pending_opus/`).
+Both directories are gitignored (the cc-sentinel package gitignores all of `verification_findings/`; project `.gitignore` entries need updating from `_pending/` to `_pending_sonnet/` + `_pending_opus/`).
 
 ## Component Changes
 
@@ -86,7 +86,7 @@ Changes:
 - **`--model` flag** (optional, defaults to `sonnet`): selects `_pending_opus/` or `_pending_sonnet/`. All callers should pass it explicitly; the default exists only for backward compatibility during migration. Unknown values → error and exit (no silent fallback).
 - **Oldest-first ordering:** Replace arbitrary glob match with `ls -tr "$PENDING_DIR"/*.md 2>/dev/null | head -1`. Returns oldest mtime first.
 - **`.active` signal:** Before returning the filename, write `.active` containing `<ISO-8601-timestamp> processing <filename>`. Written to `$PENDING_DIR/.active`.
-- Heartbeat mechanism unchanged (background loop, PPID self-termination).
+- Heartbeat mechanism unchanged (background loop that monitors its parent process ID and exits when the listener session dies).
 
 ### 2. `/opus N` command + skill
 
@@ -269,7 +269,7 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 
 **Wakeful propagation (after sentinel):**
 - `scripts/wait_for_work.sh` (add `--model` flag, oldest-first, `.active` write)
-- `scripts/channel_commit.sh` (path rename + threshold update: warn 30→300, switch-to-local 300→900, four-state liveness check)
+- `scripts/channel_commit.sh` (path rename + threshold update: warn 30→300, switch-to-local 300→900, 7-state liveness check)
 - `scripts/claude-hooks/safe-commit.sh` (path rename)
 - `scripts/claude-hooks/stop-task-check.sh` (add listener bypass for `"Watching _pending_(sonnet|opus)/"` — currently absent from Wakeful copy)
 - `.claude/commands/sonnet.md`, `opus.md`, `squad.md`, `1.md`–`5.md`, `cold.md`, `cleanup.md`, and other commands containing `_pending/`
@@ -294,7 +294,7 @@ No transition period or dual-path support. The directories are gitignored (runti
 - All existing tests in `test_safe_commit.sh`, `test_channel_commit.sh`, `test_session_orient.sh`, `test_stop_task_check.sh` must pass after rename
 - New tests for `wait_for_work.sh`: `--model` flag, oldest-first ordering, `.active` write, `.active` overwrite when pre-existing (silently replace)
 - New tests for `channel_commit.sh`: liveness check covering all 7 states from the Liveness States table (fresh+absent, fresh+present, warn-stale+absent, warn-stale+present, stale+present, stale+absent, missing)
-- New tests for `session-orient.sh`: `.active` stale cleanup in both `_pending_sonnet/chN/` and `_pending_opus/chN/` (create `.active` older than 30 min in each, verify both deleted on session start)
+- New tests for `session-orient.sh`: `.active` stale cleanup in both `_pending_sonnet/chN/` and `_pending_opus/chN/` (create `.active` older than 30 min in each, verify both deleted on session start); `.md` stale cleanup in `_pending_opus/chN/` (create `.md` older than 1 hour, verify deleted)
 - Update `test_stop_task_check.sh` fixture: change `"Watching _pending/"` to `"Watching _pending_sonnet/"` (matches new regex `_pending_(sonnet|opus)/`; add second fixture with `"Watching _pending_opus/"` to verify both variants bypass)
 - New test for `spawn.py`: verify both `_pending_sonnet/chN/` and `_pending_opus/chN/` directories are created
 
