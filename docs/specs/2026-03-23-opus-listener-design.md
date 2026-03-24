@@ -123,19 +123,22 @@ Changes:
 - Two existing thresholds change:
   - **Warn threshold** (line 210): `age > 30` → `age > 300` (5 min). Warns but continues.
   - **Switch-to-local threshold** (line 205): `age > 300` → `age > 900` (15 min). Falls back to local verification.
-- Four-state liveness check (new, at existing `check_heartbeat()` call site — determines logging and fallback, not whether to dispatch):
-  - `.active` exists + `.heartbeat` fresh (<15 min) → listener alive, processing `<filename>`. Write prompt to `_pending_sonnet/chN/` anyway — listener picks it up next cycle after finishing current work.
+- Liveness check (new, at existing `check_heartbeat()` call site — determines logging and fallback, not whether to dispatch). All states match the Liveness States table:
+  - `.active` exists + `.heartbeat` fresh (<5 min) → listener alive, processing `<filename>`. Write prompt to `_pending_sonnet/chN/` anyway — listener picks it up next cycle after finishing current work.
+  - `.active` exists + `.heartbeat` warn-stale (5–15 min) → listener busy on long task. Log `.active` contents, dispatch normally.
   - `.active` exists + `.heartbeat` stale (>15 min) → listener may be stuck. Log warning with `.active` contents. Write prompt anyway (if listener recovers it will pick it up), but also fall back to local verification for this dispatch.
-  - `.heartbeat` fresh (<15 min) + no `.active` → listener idle, dispatch normally.
+  - `.heartbeat` fresh (<5 min) + no `.active` → listener idle, dispatch normally.
+  - `.heartbeat` warn-stale (5–15 min) + no `.active` → listener slow or briefly stalled. Warn, dispatch normally.
   - `.heartbeat` stale (>15 min) + no `.active` → listener likely down. Warn, switch to local verification.
+  - `.heartbeat` missing + any `.active` state → listener not started or crashed. Switch to local verification.
 
 ### 5. `session-orient.sh`
 
 **Location:** `modules/core/hooks/session-orient.sh`
 
-Currently cleans stale prompts from `_pending/` and `_pending/ch*/`. Must clean both `_pending_sonnet/` and `_pending_opus/` (and their `ch*/` subdirs), applying the same stale-prompt threshold to both. Also clean stale `.active` files older than 30 minutes — these indicate a crashed session that never cleaned up.
+Currently cleans stale prompts from `_pending/` and `_pending/ch*/` (existing threshold: 1 hour for `.md` files). Must clean both `_pending_sonnet/` and `_pending_opus/` (and their `ch*/` subdirs), applying the same 1-hour stale-prompt threshold to both. Also clean stale `.active` files older than 30 minutes — these indicate a crashed session that never cleaned up.
 
-Note: `session-orient.sh` fires only at SessionStart (hook trigger). Between sessions, a stale `.active` could persist. As a secondary defense, `channel_commit.sh`'s four-state liveness check treats "stale heartbeat + `.active` present" as "listener may be stuck" and falls back to local verification — so a stuck `.active` degrades gracefully rather than blocking indefinitely.
+Note: `session-orient.sh` fires only at SessionStart (hook trigger). Between sessions, a stale `.active` could persist. As a secondary defense, `channel_commit.sh`'s liveness check treats "stale heartbeat + `.active` present" as "listener may be stuck" and falls back to local verification — so a stuck `.active` degrades gracefully rather than blocking indefinitely.
 
 ### 6. `stop-task-check.sh`
 
@@ -177,7 +180,7 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 3. Returns filename to listener (stdout)
 4. Listener processes work
 5. Listener cleanup deletes `.active`
-6. `wait_for_work.sh` re-spawns (fresh heartbeat, no `.active` = idle)
+6. Listener session re-spawns `wait_for_work.sh` in background (fresh heartbeat, no `.active` = idle)
 
 **Collision:** If `.active` already exists when `wait_for_work.sh` writes (e.g., residual from a crash before `session-orient.sh` runs), silently overwrite. The new timestamp + filename is the current truth.
 
@@ -187,8 +190,8 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 
 | `.heartbeat` | `.active` | Interpretation | `channel_commit.sh` action |
 |---|---|---|---|
-| Fresh (<15 min) | Absent | Listener alive, idle | Dispatch normally |
-| Fresh (<15 min) | Present | Listener alive, processing `<filename>` | Write prompt anyway (queued for next cycle) |
+| Fresh (<5 min) | Absent | Listener alive, idle | Dispatch normally |
+| Fresh (<5 min) | Present | Listener alive, processing `<filename>` | Write prompt anyway (queued for next cycle) |
 | Warn-stale (5–15 min) | Absent | Listener slow or briefly stalled | Warn, dispatch normally |
 | Warn-stale (5–15 min) | Present | Listener busy on long task | Log `.active` contents, dispatch normally |
 | Stale (>15 min) | Present | Listener may be stuck | Log warning, dispatch + fall back to local |
@@ -235,7 +238,7 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 - `install.sh` (1)
 - `install.ps1` (1)
 
-**Commands + Skills (documentation — path-only `_pending/` → `_pending_sonnet/` string rename, no behavioral changes; owned by Components 2 and 3 for opus/sonnet files, remainder is mechanical find-and-replace):**
+**Commands + Skills (documentation — path-only `_pending/` → `_pending_sonnet/` string rename, no behavioral changes; owned by Components 2 and 3 for opus/sonnet files, remainder assigned to a single implementation plan task as mechanical find-and-replace across all listed files):**
 - `modules/sprint-pipeline/commands/sonnet.md` (9)
 - `modules/sprint-pipeline/skills/sonnet/SKILL.md` (10)
 - `modules/sprint-pipeline/commands/opus.md` (5)
@@ -290,9 +293,9 @@ No transition period or dual-path support. The directories are gitignored (runti
 
 - All existing tests in `test_safe_commit.sh`, `test_channel_commit.sh`, `test_session_orient.sh`, `test_stop_task_check.sh` must pass after rename
 - New tests for `wait_for_work.sh`: `--model` flag, oldest-first ordering, `.active` write, `.active` overwrite when pre-existing (silently replace)
-- New test for `channel_commit.sh`: four-state liveness check (`.active` present + fresh, `.active` present + stale, fresh heartbeat + no `.active`, stale heartbeat + no `.active`)
-- New test for `session-orient.sh`: `.active` stale cleanup (create `.active` older than 30 min, verify it is deleted on session start)
-- Update `test_stop_task_check.sh` fixture: change `"Watching _pending/"` to `"Watching _pending_sonnet/"` to match new regex pattern
+- New tests for `channel_commit.sh`: liveness check covering all 7 states from the Liveness States table (fresh+absent, fresh+present, warn-stale+absent, warn-stale+present, stale+present, stale+absent, missing)
+- New tests for `session-orient.sh`: `.active` stale cleanup in both `_pending_sonnet/chN/` and `_pending_opus/chN/` (create `.active` older than 30 min in each, verify both deleted on session start)
+- Update `test_stop_task_check.sh` fixture: change `"Watching _pending/"` to `"Watching _pending_sonnet/"` (matches new regex `_pending_(sonnet|opus)/`; add second fixture with `"Watching _pending_opus/"` to verify both variants bypass)
 - New test for `spawn.py`: verify both `_pending_sonnet/chN/` and `_pending_opus/chN/` directories are created
 
 ## Out of Scope
