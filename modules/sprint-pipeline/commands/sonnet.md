@@ -39,7 +39,7 @@ Read the prompt file.
 
 **Parse YAML frontmatter:**
 - `type`: commit-verification | squad | implementation
-- commit-verification/squad: `agents` [{name, output_path}], `diff_hash`, `timeout_seconds`, `diff_path`
+- commit-verification/squad: `agents` [{name, output_path}], `diff_path`. Hash appears in prompt body text, not YAML.
 - implementation: `tasks` [{name, signal_file, files}]. Task details in prompt body, not YAML.
 
 **Channel guard (channeled only):** Verify every `output_path`/`signal_file` contains `ch{N}`. If any fails: write error to every listed path, delete prompt, return to Wait.
@@ -82,7 +82,7 @@ One agent per task -- each has full tool access (Edit, Write, Bash).
 
 ### Cleanup
 
-Delete consumed prompt file. Delete `.active` signal: `rm -f verification_findings/_pending_sonnet/[chN/].active`. Kill heartbeat if needed: `kill $(cat verification_findings/_pending_sonnet/[chN/].heartbeat_pid) 2>/dev/null; rm -f verification_findings/_pending_sonnet/[chN/].heartbeat_pid`. Return to Wait.
+Delete consumed prompt file. Delete `.active` signal: `rm -f verification_findings/_pending_sonnet/[chN/].active`. Return to Wait. (Heartbeat self-terminates via PPID polling — do not kill manually.)
 
 ## Rules
 
