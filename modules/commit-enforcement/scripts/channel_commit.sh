@@ -190,7 +190,7 @@ validate_results() {
 }
 
 # --- Heartbeat + Liveness Check ---
-# Returns 0 = dispatch normally, 1 = switch to local.
+# Returns 0 = dispatch normally, 1 = switch to local (or optimistic dispatch if OPTIMISTIC_DISPATCH set).
 # Sets OPTIMISTIC_DISPATCH="true" when listener may recover (stale + .active).
 # Matches 7-state Liveness States table in opus-listener spec (docs/specs/2026-03-23-opus-listener-design.md).
 OPTIMISTIC_DISPATCH="false"

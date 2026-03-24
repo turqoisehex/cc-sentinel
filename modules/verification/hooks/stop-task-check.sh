@@ -100,7 +100,7 @@ fi
 #
 # Detection is two-tier:
 #   1. Message pattern: the "Watching _pending_..." announce line (fast, exact).
-#   2. Heartbeat probe: a fresh .heartbeat file (<15s) in any _pending_sonnet/ dir
+#   2. Heartbeat probe: a fresh .heartbeat file (<15s) in any _pending_sonnet/ or _pending_opus/ dir
 #      proves a listener is alive. Combined with absence of completion language in
 #      the last message, this identifies a listener that has moved past its announce.
 #
@@ -120,7 +120,9 @@ _listener_heartbeat_fresh() {
   local hb hb_time hb_age now
   now=$(date +%s) || return 1
   for hb in "${PROJECT_DIR}"/verification_findings/_pending_sonnet/.heartbeat \
-            "${PROJECT_DIR}"/verification_findings/_pending_sonnet/ch*/.heartbeat; do
+            "${PROJECT_DIR}"/verification_findings/_pending_sonnet/ch*/.heartbeat \
+            "${PROJECT_DIR}"/verification_findings/_pending_opus/.heartbeat \
+            "${PROJECT_DIR}"/verification_findings/_pending_opus/ch*/.heartbeat; do
     [[ -f "$hb" ]] || continue
     hb_time=$(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb" 2>/dev/null) || continue
     hb_age=$((now - hb_time))
