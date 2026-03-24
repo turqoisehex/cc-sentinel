@@ -41,13 +41,13 @@ Use proper message if changes include completed work. Clean tree → skip.
 
 Delete session artifacts. **Only YOUR channel's artifacts** — never touch other channels' files.
 
-**Channeled:** Delete `verification_findings/_pending/chN/*`, `_staging/*`, `squad_chN_sonnet/`, `squad_chN_opus/`, `cold_prep_result_chN.md`, `transcript_orphan_result_chN.md`.
+**Channeled:** Delete `verification_findings/_pending_sonnet/chN/*`, `_staging/*`, `squad_chN_sonnet/`, `squad_chN_opus/`, `cold_prep_result_chN.md`, `transcript_orphan_result_chN.md`.
 
-**Unchanneled:** If other channels active (check Active Channels in `CURRENT_TASK.md`), do NOT delete `_pending/`. Clean only: `_staging/*`, `squad_sonnet/`, `squad_opus/`, `cold_prep_result.md`, `transcript_orphan_result.md`.
+**Unchanneled:** If other channels active (check Active Channels in `CURRENT_TASK.md`), do NOT delete `_pending_sonnet/`. Clean only: `_staging/*`, `squad_sonnet/`, `squad_opus/`, `cold_prep_result.md`, `transcript_orphan_result.md`.
 
 **Do NOT delete:** `/perfect`, spec-to-code, or transcript decision results (sprint records). Files referenced in CT or your project backlog. When in doubt, keep it.
 
-Commit only if tracked files were deleted (squad dirs and `_pending/` are gitignored). If `scripts/channel_commit.sh` exists:
+Commit only if tracked files were deleted (squad dirs and `_pending_sonnet/` are gitignored). If `scripts/channel_commit.sh` exists:
 ```bash
 bash scripts/channel_commit.sh [--channel N] --files "<deleted tracked files>" -m "cleanup: remove session artifacts" --skip-squad
 ```

@@ -659,7 +659,7 @@ update_gitignore
 # Create verification_findings directory
 if echo "$MODULES" | grep -q "verification"; then
   if [[ "$DRY_RUN" != "true" ]]; then
-    mkdir -p verification_findings/_pending
+    mkdir -p verification_findings/_pending_sonnet verification_findings/_pending_opus
     log "Created verification_findings/ directory"
   fi
 fi

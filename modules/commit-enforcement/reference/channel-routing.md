@@ -19,7 +19,7 @@ Your channel is determined by **session context**, not a file:
 
 ## Routing Rules (when channeled)
 
-1. **Dispatch directory:** `verification_findings/_pending/chN/`
+1. **Dispatch directory:** `verification_findings/_pending_sonnet/chN/`
 2. **Result filenames:** Append `_chN` before extension (e.g., `commit_check_chN.md`)
 3. **Squad directories:** `squad_chN_sonnet/` / `squad_chN_opus/`
 4. **YAML output_path:** Write channeled paths into `agents[].output_path` in prompt frontmatter.

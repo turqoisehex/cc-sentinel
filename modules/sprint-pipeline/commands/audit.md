@@ -41,7 +41,7 @@ Show consolidated findings. Do NOT auto-fix or suggest fixes unless asked. User 
 
 **MANDATORY SONNET DELEGATION.** All three agents are mechanical grep/filesystem verification.
 
-Write single Sonnet prompt to `verification_findings/_pending/[chN/]sprint_start_scan_<timestamp>.md`. Wait: `bash scripts/wait_for_results.sh verification_findings/sprint_start_infrastructure[_chN].md verification_findings/sprint_start_specs[_chN].md verification_findings/sprint_start_deps[_chN].md`.
+Write single Sonnet prompt to `verification_findings/_pending_sonnet/[chN/]sprint_start_scan_<timestamp>.md`. Wait: `bash scripts/wait_for_results.sh verification_findings/sprint_start_infrastructure[_chN].md verification_findings/sprint_start_specs[_chN].md verification_findings/sprint_start_deps[_chN].md`.
 
 - **Agent A — Infrastructure:** Read every sprint-dependent file (engines, providers, schema, services). Report per file: exists/stubbed/missing, line counts, TODO markers. → `verification_findings/sprint_start_infrastructure[_chN].md`.
 - **Agent B — Specs:** Read every referenced spec. Verify content counts, cross-references, terminology consistency against project conventions, no stale headers. → `verification_findings/sprint_start_specs[_chN].md`.
@@ -57,7 +57,7 @@ Include: infrastructure table (what's built, paths, DO NOT REBUILD), spec status
 
 **MANDATORY SONNET DELEGATION.** Fact-checking claims is mechanical.
 
-Write Sonnet prompt to `verification_findings/_pending/[chN/]sprint_gate_<timestamp>.md`. Agent checks every CT claim against disk. Output: `verification_findings/sprint_start_gate[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/sprint_start_gate[_chN].md`. Fix discrepancies immediately.
+Write Sonnet prompt to `verification_findings/_pending_sonnet/[chN/]sprint_gate_<timestamp>.md`. Agent checks every CT claim against disk. Output: `verification_findings/sprint_start_gate[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/sprint_start_gate[_chN].md`. Fix discrepancies immediately.
 
 ### Step 5: Present for user approval
 

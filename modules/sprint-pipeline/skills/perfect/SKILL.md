@@ -13,7 +13,7 @@ description: "Post-implementation quality pass: evaluate, grill loop, verificati
 
 ## Delegation
 
-Steps marked DELEGATE: update CT first, write self-contained prompt to `verification_findings/_pending/[chN/]`, wait via `bash scripts/wait_for_results.sh <paths>`.
+Steps marked DELEGATE: update CT first, write self-contained prompt to `verification_findings/_pending_sonnet/[chN/]`, wait via `bash scripts/wait_for_results.sh <paths>`.
 
 ## Phase 1: Scope and Evaluate
 

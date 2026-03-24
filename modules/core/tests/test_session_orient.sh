@@ -252,9 +252,9 @@ echo ""
 echo "Test 10: Stale pending files cleaned up"
 setup_temp
 create_ct "$PROJECT" "IN PROGRESS"
-mkdir -p "$PROJECT/verification_findings/_pending"
+mkdir -p "$PROJECT/verification_findings/_pending_sonnet"
 # Create a stale .md file (we'll age it)
-STALE_FILE="$PROJECT/verification_findings/_pending/stale_task.md"
+STALE_FILE="$PROJECT/verification_findings/_pending_sonnet/stale_task.md"
 echo "old work" > "$STALE_FILE"
 # Use python with cygpath to set mtime to 2 hours ago (Git Bash on Windows)
 STALE_WIN=$(cygpath -w "$STALE_FILE" 2>/dev/null || echo "$STALE_FILE")

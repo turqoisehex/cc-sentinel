@@ -35,7 +35,7 @@ Quick reference for running CC sessions with cc-sentinel governance.
 ## Two-Terminal Workflow
 
 1. Opus terminal: `/audit` → `/design` → `/build` → `/perfect` → `/finalize`
-2. Sonnet terminal: `/sonnet` (stays active, processes `verification_findings/_pending/`)
+2. Sonnet terminal: `/sonnet` (stays active, processes `verification_findings/_pending_sonnet/`)
 3. Coordination: file signals, shared `CURRENT_TASK.md`, bash wait loops
 
 ## Multi-Channel Workflow
@@ -43,11 +43,11 @@ Quick reference for running CC sessions with cc-sentinel governance.
 For parallel Opus sessions working on different tasks simultaneously:
 
 1. **Terminal 1 (Opus Ch1):** `/opus 1` → work through pipeline
-2. **Terminal 2 (Sonnet Ch1):** `/sonnet 1` (watches `_pending/ch1/` only)
+2. **Terminal 2 (Sonnet Ch1):** `/sonnet 1` (watches `_pending_sonnet/ch1/` only)
 3. **Terminal 3 (Opus Ch2):** `/opus 2` → work through pipeline
-4. **Terminal 4 (Sonnet Ch2):** `/sonnet 2` (watches `_pending/ch2/` only)
+4. **Terminal 4 (Sonnet Ch2):** `/sonnet 2` (watches `_pending_sonnet/ch2/` only)
 
-Each channel pair is isolated: Opus N dispatches to `_pending/chN/`, Sonnet N watches only `_pending/chN/`. Result files get `_chN` suffix. CURRENT_TASK.md uses shared + channel sections.
+Each channel pair is isolated: Opus N dispatches to `_pending_sonnet/chN/`, Sonnet N watches only `_pending_sonnet/chN/`. Result files get `_chN` suffix. CURRENT_TASK.md uses shared + channel sections.
 
 ---
 

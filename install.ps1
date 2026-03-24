@@ -503,7 +503,8 @@ Update-Gitignore
 
 # Create verification_findings
 if ($Modules -match "verification" -and -not $DryRun) {
-    New-Item -ItemType Directory -Path "verification_findings/_pending" -Force | Out-Null
+    New-Item -ItemType Directory -Path "verification_findings/_pending_sonnet" -Force | Out-Null
+    New-Item -ItemType Directory -Path "verification_findings/_pending_opus" -Force | Out-Null
     Log "Created verification_findings/ directory"
 }
 

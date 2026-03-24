@@ -28,7 +28,7 @@ Check triggers BEFORE starting work. Detect and invoke automatically — never a
 
 ### Sonnet Delegation
 
-Opus orchestrates, Sonnet executes. Delegate mechanical work (lint, search, test patterns, enum/schema validation, templates) via `verification_findings/_pending/`. 2+ independent -> parallel agents (`run_in_background: true`).
+Opus orchestrates, Sonnet executes. Delegate mechanical work (lint, search, test patterns, enum/schema validation, templates) via `verification_findings/_pending_sonnet/`. 2+ independent -> parallel agents (`run_in_background: true`).
 
 ### Do NOT auto-invoke
 

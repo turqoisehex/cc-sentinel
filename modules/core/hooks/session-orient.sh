@@ -20,13 +20,20 @@ done
 
 [[ -z "$PROJECT_DIR" ]] && exit 0
 
-# Clean stale prompt files from _pending/ (older than 1 hour)
-if [[ -d "$PROJECT_DIR/verification_findings/_pending" ]]; then
-  find "$PROJECT_DIR/verification_findings/_pending/" -name "*.md" -mmin +60 -delete 2>/dev/null
-fi
-# Also clean stale files from channeled _pending/ subdirectories
-for chdir in "$PROJECT_DIR/verification_findings/_pending"/ch*/; do
-  [[ -d "$chdir" ]] && find "$chdir" -name "*.md" -mmin +60 -delete 2>/dev/null
+# Clean stale prompt files from _pending_sonnet/ and _pending_opus/ (older than 1 hour)
+# Also clean stale .active files (older than 30 minutes — crashed session)
+for pending_base in "_pending_sonnet" "_pending_opus"; do
+  PENDING_PATH="$PROJECT_DIR/verification_findings/$pending_base"
+  if [[ -d "$PENDING_PATH" ]]; then
+    find "$PENDING_PATH/" -name "*.md" -mmin +60 -delete 2>/dev/null
+    find "$PENDING_PATH/" -name ".active" -mmin +30 -delete 2>/dev/null
+  fi
+  for chdir in "$PENDING_PATH"/ch*/; do
+    if [[ -d "$chdir" ]]; then
+      find "$chdir" -name "*.md" -mmin +60 -delete 2>/dev/null
+      find "$chdir" -name ".active" -mmin +30 -delete 2>/dev/null
+    fi
+  done
 done
 
 # Collect active channels from per-channel files

@@ -52,11 +52,11 @@ Required sections: numbered steps with checkboxes + acceptance criteria, key fil
 
 ### Step 5: Phase-gate verification
 
-MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending/[chN/]plan_adversarial_<timestamp>.md`. Checks: plan<->design doc match, classification correctness, missing dependencies.
+MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]plan_adversarial_<timestamp>.md`. Checks: plan<->design doc match, classification correctness, missing dependencies.
 
 ### Step 6: Generate Sonnet prompt (MANDATORY)
 
-For [SONNET] tasks, write dispatch-ready prompt to `verification_findings/_pending/[chN/]sonnet_<feature>_<timestamp>.md`.
+For [SONNET] tasks, write dispatch-ready prompt to `verification_findings/_pending_sonnet/[chN/]sonnet_<feature>_<timestamp>.md`.
 
 YAML frontmatter required:
 ```yaml

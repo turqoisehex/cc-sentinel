@@ -22,7 +22,7 @@ For each step in CT:
    - **`[AGENT]`**: Spawn subagent with step description, acceptance criteria, file paths, targeted context. Reference section headers, not line numbers.
    - **`[OPUS]`**: Execute directly. Requires conversation context or design judgment.
    - **`[PARENT]`**: Execute directly. Orchestration or user-facing decision.
-   - **`[SONNET]`**: Dispatch to `_pending/[chN/]`. Use dispatch file from `/2`. Wait via `wait_for_results.sh` (background). Do NOT execute yourself.
+   - **`[SONNET]`**: Dispatch to `_pending_sonnet/[chN/]`. Use dispatch file from `/2`. Wait via `wait_for_results.sh` (background). Do NOT execute yourself.
 
 3. Update CT — cold-start ready, mark completed steps.
 

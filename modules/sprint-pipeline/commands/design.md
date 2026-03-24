@@ -51,13 +51,13 @@ Anti-lost-in-the-middle: write in segments of ~7 items, count structural element
 
 ### Step 5: Phase-gate verification
 
-MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending/[chN/]plan_adversarial_<timestamp>.md`. Agent writes to `verification_findings/plan_adversarial[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/plan_adversarial[_chN].md` (`run_in_background: true`). Checks: plan↔design doc match, classification correctness, missing dependencies, cross-model dependencies. Fix issues before proceeding.
+MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]plan_adversarial_<timestamp>.md`. Agent writes to `verification_findings/plan_adversarial[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/plan_adversarial[_chN].md` (`run_in_background: true`). Checks: plan↔design doc match, classification correctness, missing dependencies, cross-model dependencies. Fix issues before proceeding.
 
 ### Step 6: Generate Sonnet prompt (MANDATORY)
 
 Always classify. Always generate. If Step 2b found zero [SONNET] tasks, state why and skip.
 
-For [SONNET] tasks, write dispatch-ready prompt to `verification_findings/_pending/[chN/]sonnet_<feature>_<timestamp>.md`. Use `type: implementation` for code tasks, `type: squad` for analysis (see `channel-routing.md` Dispatch Type Selection).
+For [SONNET] tasks, write dispatch-ready prompt to `verification_findings/_pending_sonnet/[chN/]sonnet_<feature>_<timestamp>.md`. Use `type: implementation` for code tasks, `type: squad` for analysis (see `channel-routing.md` Dispatch Type Selection).
 
 YAML frontmatter required:
 ```yaml

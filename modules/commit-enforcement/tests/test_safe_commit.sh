@@ -381,8 +381,8 @@ HASH=$(get_staged_hash)
 create_agent_evidence "$HASH" "_ch5"
 # Create channel-specific squad evidence
 create_squad_evidence "squad_ch5_run1"
-# Create _pending/ch5 dir so Sonnet verify path exists
-mkdir -p "verification_findings/_pending/ch5"
+# Create _pending_sonnet/ch5 dir so Sonnet verify path exists
+mkdir -p "verification_findings/_pending_sonnet/ch5"
 export SENTINEL_CHANNEL=5
 run_hook --internal --skip-tests --local-verify -m "channel 5 commit"
 assert_exit 0 "exits 0 with channel evidence"
@@ -404,7 +404,7 @@ run_hook --internal --skip-tests --local-verify -m "wrong channel"
 RESULT_EXIT=$LAST_EXIT
 unset SENTINEL_CHANNEL
 # The hook looks for commit_check_ch3.md, not commit_check.md
-# Without _pending/ch3 dir, SONNET_VERIFY becomes false and it checks for
+# Without _pending_sonnet/ch3 dir, SONNET_VERIFY becomes false and it checks for
 # verification_findings/commit_check_ch3.md which doesn't exist -> skips in local mode
 # But squad_run1 doesn't match squad_ch3_* glob -> BLOCKED
 assert_exit 1 "exits 1 with non-channel squad evidence"

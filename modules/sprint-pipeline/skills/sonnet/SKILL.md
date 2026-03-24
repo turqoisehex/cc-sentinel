@@ -1,6 +1,6 @@
 ---
 name: sonnet
-description: "Verification listener service loop. Waits for work files in _pending/ directory, executes tasks (commit-verification, squad, implementation), returns to waiting. Infinite loop — never initiates work."
+description: "Verification listener service loop. Waits for work files in _pending_sonnet/ directory, executes tasks (commit-verification, squad, implementation), returns to waiting. Infinite loop — never initiates work."
 ---
 
 # /sonnet — Verification Listener
@@ -21,14 +21,14 @@ Infinite service loop. Wait for work -> execute -> wait again. Never initiate. N
 3. **If channel infrastructure exists** (cc-sentinel / governance project):
 
 If `$ARGUMENTS` provided (e.g., `/sonnet 1`):
-- `mkdir -p verification_findings/_pending/ch$ARGUMENTS`
-- Announce: "Sonnet listener active. Watching _pending/ch$ARGUMENTS/"
+- `mkdir -p verification_findings/_pending_sonnet/ch$ARGUMENTS`
+- Announce: "Sonnet listener active. Watching _pending_sonnet/ch$ARGUMENTS/"
 - Use `bash scripts/wait_for_work.sh --channel $ARGUMENTS` in Wait.
-- Delete consumed prompts from `_pending/ch$ARGUMENTS/` in Cleanup.
+- Delete consumed prompts from `_pending_sonnet/ch$ARGUMENTS/` in Cleanup.
 
 If no argument:
 - `mkdir -p verification_findings/_pending`
-- Announce: "Sonnet listener active. Watching _pending/"
+- Announce: "Sonnet listener active. Watching _pending_sonnet/"
 
 ## Main Loop (channel infrastructure only)
 
@@ -82,12 +82,12 @@ One agent per task -- each has full tool access (Edit, Write, Bash).
 
 - No design decisions -- flag and defer to Opus
 - No files outside task's file list
-- No dispatch prompts to `_pending/` (self-dispatch deadlock)
+- No dispatch prompts to `_pending_sonnet/` (self-dispatch deadlock)
 - No skipping tests/verification specified in prompt
 
 ### Cleanup
 
-Delete consumed prompt file. Kill heartbeat if needed: `kill $(cat verification_findings/_pending/[chN/].heartbeat_pid) 2>/dev/null; rm -f verification_findings/_pending/[chN/].heartbeat_pid`. Return to Wait.
+Delete consumed prompt file. Kill heartbeat if needed: `kill $(cat verification_findings/_pending_sonnet/[chN/].heartbeat_pid) 2>/dev/null; rm -f verification_findings/_pending_sonnet/[chN/].heartbeat_pid`. Return to Wait.
 
 ## Rules
 
@@ -95,7 +95,7 @@ Delete consumed prompt file. Kill heartbeat if needed: `kill $(cat verification_
 - Each prompt is self-contained. Zero context between cycles.
 - Malformed prompt -> write error to every listed path, continue.
 - Never spawn Opus agents. Subagents inherit your model.
-- After compaction: re-read this file, check `_pending/[chN/]` for unprocessed work, resume loop.
+- After compaction: re-read this file, check `_pending_sonnet/[chN/]` for unprocessed work, resume loop.
 - **Never write to CURRENT_TASK files.**
-- **Commit-active guard.** Before writing outside `verification_findings/`, check if `_pending/[chN/].commit_active` exists. If target file is listed, skip write.
+- **Commit-active guard.** Before writing outside `verification_findings/`, check if `_pending_sonnet/[chN/].commit_active` exists. If target file is listed, skip write.
 - **Ignore stop hooks.** Listener sessions are stateless service loops. Terminate manually (Ctrl+C).

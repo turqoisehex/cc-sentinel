@@ -8,7 +8,7 @@
 
 ## Delegation
 
-Steps marked DELEGATE: update `CURRENT_TASK_chN.md` (or `CURRENT_TASK.md` if unchanneled) first, write self-contained prompt to `verification_findings/_pending/[chN/]`, wait via `bash scripts/wait_for_results.sh <paths>`.
+Steps marked DELEGATE: update `CURRENT_TASK_chN.md` (or `CURRENT_TASK.md` if unchanneled) first, write self-contained prompt to `verification_findings/_pending_sonnet/[chN/]`, wait via `bash scripts/wait_for_results.sh <paths>`.
 
 ## Phase 1: Scope and Evaluate
 
@@ -54,8 +54,8 @@ Opus reviews all four → `verification_findings/perfect_simplify_report[_chN].m
 
 **5a** Design → `verification_findings/perfect_rewrite_design[_chN].md`: file structure, data flow, eliminations, preservations, migration strategy. **User gate.**
 
-**5b** DELEGATE build → `_pending/[chN/]perfect_rewrite_<timestamp>.md`. Sonnet: scaffolding/boilerplate. Opus: judgment/domain. `_v2` suffix. TDD. One commit per unit via `channel_commit.sh`.
-**5c** DELEGATE swap → `_pending/[chN/]perfect_swap_<timestamp>.md`. Rename, update imports, delete old. Atomic commit.
+**5b** DELEGATE build → `_pending_sonnet/[chN/]perfect_rewrite_<timestamp>.md`. Sonnet: scaffolding/boilerplate. Opus: judgment/domain. `_v2` suffix. TDD. One commit per unit via `channel_commit.sh`.
+**5c** DELEGATE swap → `_pending_sonnet/[chN/]perfect_swap_<timestamp>.md`. Rename, update imports, delete old. Atomic commit.
 **5d** Same as Step 4 scoped to new code. Output paths `perfect_simplify_v2_*.md`.
 **5e** Prove equivalence: existing behavioral tests pass, new tests pass, no broken callers. Write to `verification_findings/perfect_equivalence[_chN].md`.
 

@@ -1029,15 +1029,18 @@ class Spawner:
                 "1. If `/opus N` was called: you are on channel N.\n"
                 "2. After compaction: read `CURRENT_TASK_chN.md`.\n\n"
                 "## Routing Rules (when channeled)\n\n"
-                "1. Dispatch directory: `verification_findings/_pending/chN/`\n"
+                "1. Dispatch directory: `verification_findings/_pending_sonnet/chN/`\n"
                 "2. Result filenames: append `_chN` before extension.\n"
                 "3. Squad directories: `squad_chN_sonnet/` / `squad_chN_opus/`\n",
                 encoding="utf-8",
             )
 
-        # Pending directories
+        # Pending directories (both Sonnet and Opus inboxes)
         for i in range(1, count + 1):
-            (p / "verification_findings" / "_pending" / ("ch%d" % i)).mkdir(
+            (p / "verification_findings" / "_pending_sonnet" / ("ch%d" % i)).mkdir(
+                parents=True, exist_ok=True,
+            )
+            (p / "verification_findings" / "_pending_opus" / ("ch%d" % i)).mkdir(
                 parents=True, exist_ok=True,
             )
 

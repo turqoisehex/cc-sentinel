@@ -50,7 +50,7 @@ setup_repo() {
   git commit --quiet -m "initial"
 
   # Create verification_findings dir structure
-  mkdir -p verification_findings/_pending
+  mkdir -p verification_findings/_pending_sonnet
 
   # Create a mock safe-commit.sh that just does git commit
   mkdir -p .claude/hooks
@@ -83,7 +83,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 # Read the dispatch file to get the hash
-DISPATCH=$(find verification_findings/_pending -name 'verify_*.md' -print -quit 2>/dev/null)
+DISPATCH=$(find verification_findings/_pending_sonnet -name 'verify_*.md' -print -quit 2>/dev/null)
 HASH=""
 if [[ -n "$DISPATCH" ]] && [[ -f "$DISPATCH" ]]; then
   HASH=$(grep '^Hash: ' "$DISPATCH" 2>/dev/null | awk '{print $2}')
@@ -104,7 +104,7 @@ MOCK_EOF
 
 # Create a fresh heartbeat so the script uses normal dispatch (not local-verify fallback)
 create_heartbeat() {
-  local pending="${1:-verification_findings/_pending}"
+  local pending="${1:-verification_findings/_pending_sonnet}"
   mkdir -p "$pending"
   touch "$pending/.heartbeat"
 }
@@ -321,7 +321,7 @@ echo ""
 echo "Test 9: --channel flag sets channel-specific paths"
 setup_repo
 create_test_file "file_h.txt" "content H"
-create_heartbeat "verification_findings/_pending/ch3"
+create_heartbeat "verification_findings/_pending_sonnet/ch3"
 run_commit --channel 3 --files "file_h.txt" -m "test: channel 3"
 assert_exit 0 "commits successfully with --channel"
 assert_stderr_contains "Phase 1" "executes Phase 1"
@@ -353,7 +353,7 @@ run_commit --files "file_j.txt" -m "test: commit active"
 assert_exit 0 "commits successfully"
 # After completion, .commit_active should be cleaned by trap
 TOTAL=$((TOTAL + 1))
-if [[ ! -f "verification_findings/_pending/.commit_active" ]]; then
+if [[ ! -f "verification_findings/_pending_sonnet/.commit_active" ]]; then
   echo -e "  ${GREEN}PASS${NC}: .commit_active cleaned up after commit"
   PASS=$((PASS + 1))
 else

@@ -39,10 +39,10 @@ done
 # --- Derived paths ---
 if [[ -n "$CHANNEL" ]]; then
   CH_SUFFIX="_ch${CHANNEL}"
-  PENDING_DIR="verification_findings/_pending/ch${CHANNEL}"
+  PENDING_DIR="verification_findings/_pending_sonnet/ch${CHANNEL}"
 else
   CH_SUFFIX=""
-  PENDING_DIR="verification_findings/_pending"
+  PENDING_DIR="verification_findings/_pending_sonnet"
 fi
 CHECK_FILE="verification_findings/commit_check${CH_SUFFIX}.md"
 COLD_READ_FILE="verification_findings/commit_cold_read${CH_SUFFIX}.md"
@@ -189,26 +189,54 @@ validate_results() {
   return 0
 }
 
-# --- Heartbeat Check ---
-# Returns 0 if Sonnet listener is active, 1 if not (caller should fallback).
+# --- Heartbeat + Liveness Check ---
+# Returns 0 = dispatch normally, 1 = switch to local.
+# Sets OPTIMISTIC_DISPATCH="true" when listener may recover (stale + .active).
+# Matches 7-state Liveness States table in opus-listener spec.
+OPTIMISTIC_DISPATCH="false"
+
 check_heartbeat() {
   local hb_file="${PENDING_DIR}/.heartbeat"
+  local active_file="${PENDING_DIR}/.active"
+
+  # State: Missing heartbeat (any .active state) → not started or crashed
   if [[ ! -f "$hb_file" ]]; then
-    echo "WARNING: No Sonnet heartbeat detected — switching to local verification." >&2
+    echo "WARNING: No listener heartbeat detected — switching to local verification." >&2
     echo "  Start /sonnet in a second terminal for full per-commit verification." >&2
     return 1
   fi
-  local now hb_time age
+
+  local now hb_time age active_info=""
   now=$(date +%s)
   hb_time=$(stat -c %Y "$hb_file" 2>/dev/null || stat -f %m "$hb_file" 2>/dev/null || echo 0)
   age=$((now - hb_time))
-  if (( age > 300 )); then
-    echo "WARNING: Sonnet heartbeat stale (${age}s) — switching to local verification." >&2
-    echo "  Start /sonnet in a second terminal for full per-commit verification." >&2
-    return 1
+  [[ -f "$active_file" ]] && active_info=$(cat "$active_file" 2>/dev/null)
+
+  if (( age > 900 )); then
+    # Stale heartbeat (>15 min)
+    if [[ -n "$active_info" ]]; then
+      echo "WARNING: Listener may be stuck (heartbeat ${age}s, active: $active_info) — dispatching + local fallback." >&2
+      OPTIMISTIC_DISPATCH="true"
+      return 1
+    else
+      echo "WARNING: Listener likely down (heartbeat ${age}s) — switching to local verification." >&2
+      return 1
+    fi
+  elif (( age > 300 )); then
+    # Warn-stale heartbeat (5–15 min)
+    if [[ -n "$active_info" ]]; then
+      echo "Listener busy on long task (heartbeat ${age}s, active: $active_info)." >&2
+    else
+      echo "WARNING: Listener slow or briefly stalled (heartbeat ${age}s)." >&2
+    fi
+    return 0
+  else
+    # Fresh heartbeat (<5 min)
+    if [[ -n "$active_info" ]]; then
+      echo "Listener alive, processing: $active_info" >&2
+    fi
+    return 0
   fi
-  (( age > 30 )) && echo "WARNING: Sonnet heartbeat stale (${age}s)." >&2
-  return 0
 }
 
 # --- Main Flow ---
@@ -223,6 +251,27 @@ while (( ATTEMPT < MAX_RETRIES )); do
 
   if [[ "$LOCAL_VERIFY" != "true" ]]; then
     if ! check_heartbeat; then
+      if [[ "$OPTIMISTIC_DISPATCH" == "true" ]]; then
+        # Listener may recover — write dispatch file optimistically
+        mkdir -p "$PENDING_DIR"
+        rm -f "${PENDING_DIR}"/verify_*.md 2>/dev/null || true
+        cat > "${PENDING_DIR}/verify_${HASH}.md" << OPT_EOF
+---
+type: commit-verification
+diff_path: ${DIFF_FILE}
+agents:
+  - name: commit-adversarial
+    output_path: ${CHECK_FILE}
+  - name: commit-cold-reader
+    output_path: ${COLD_READ_FILE}
+---
+## Commit Verification (optimistic — listener may be stuck)
+Hash: ${HASH}
+Message: ${MESSAGE}
+Files: ${FILE_ARRAY[*]}
+OPT_EOF
+        echo "Optimistic dispatch written — proceeding with local verification" >&2
+      fi
       LOCAL_VERIFY="true"
     fi
   fi

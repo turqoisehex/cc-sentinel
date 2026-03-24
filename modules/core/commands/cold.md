@@ -25,7 +25,7 @@ SESSION_JSONL=~/.claude/projects/<PROJECT_SLUG>/${SESSION_ID}.jsonl  # Replace <
 echo "$SESSION_JSONL"
 ```
 
-Write prompt to `verification_findings/_pending/[chN/]cold_prep_<timestamp>.md`. Wait for results:
+Write prompt to `verification_findings/_pending_sonnet/[chN/]cold_prep_<timestamp>.md`. Wait for results:
 ```bash
 rm -f verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md
 ```

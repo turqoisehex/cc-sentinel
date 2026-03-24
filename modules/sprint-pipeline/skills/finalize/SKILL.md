@@ -25,13 +25,13 @@ If Sonnet contributed this sprint: `git log` to identify Sonnet commits. Read ch
 
 ### 3. Decision externalization
 
-DELEGATE via `verification_findings/_pending/[chN/]transcript_mining_<timestamp>.md`. Identify sprint transcripts using `history.jsonl` session IDs filtered by sprint date range. Skip previously-mined transcripts. Output: `verification_findings/transcript_decisions_N[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/transcript_decisions_N[_chN].md` (`run_in_background: true`).
+DELEGATE via `verification_findings/_pending_sonnet/[chN/]transcript_mining_<timestamp>.md`. Identify sprint transcripts using `history.jsonl` session IDs filtered by sprint date range. Skip previously-mined transcripts. Output: `verification_findings/transcript_decisions_N[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/transcript_decisions_N[_chN].md` (`run_in_background: true`).
 
 Opus collects, deduplicates. For each decision: grep work product for evidence. Missing -> write it now.
 
 ### 4. Spec-to-code verification
 
-DELEGATE via `verification_findings/_pending/[chN/]spec_to_code_<timestamp>.md`. Procedure: `.claude/reference/spec-verification.md`. Output: `verification_findings/spec_to_code_report[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/spec_to_code_report[_chN].md` (`run_in_background: true`).
+DELEGATE via `verification_findings/_pending_sonnet/[chN/]spec_to_code_<timestamp>.md`. Procedure: `.claude/reference/spec-verification.md`. Output: `verification_findings/spec_to_code_report[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/spec_to_code_report[_chN].md` (`run_in_background: true`).
 
 ### 5. Accumulated Corrections
 

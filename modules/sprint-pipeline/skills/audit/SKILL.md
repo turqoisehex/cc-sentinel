@@ -44,7 +44,7 @@ Show consolidated findings. Do NOT auto-fix. **User gate.**
 
 ### Step 2: Staleness scan + dependency verification
 
-**MANDATORY SONNET DELEGATION.** Write single Sonnet prompt to `verification_findings/_pending/[chN/]sprint_start_scan_<timestamp>.md`. Three agents:
+**MANDATORY SONNET DELEGATION.** Write single Sonnet prompt to `verification_findings/_pending_sonnet/[chN/]sprint_start_scan_<timestamp>.md`. Three agents:
 
 - **Agent A — Infrastructure:** Read sprint-dependent files. Report: exists/stubbed/missing, line counts, TODO markers.
 - **Agent B — Specs:** Read referenced specs. Verify content counts, cross-references, terminology.

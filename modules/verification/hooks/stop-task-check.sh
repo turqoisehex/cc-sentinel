@@ -96,9 +96,9 @@ fi
 # Listeners are stateless service loops with no work to lose. The CT staleness
 # check is designed for Opus sessions that hold conversation state. Listeners
 # must NOT touch CT files (sonnet.md hard rule), so blocking them forces a
-# rule violation. Detect by their unique "Watching _pending/" output pattern.
-if echo "$LAST_MSG" | grep -qiE "Watching _pending/" 2>/dev/null; then
-  echo "  -> ALLOW (Sonnet listener session)" >> "$LOGFILE" 2>/dev/null
+# rule violation. Detect by their unique "Watching _pending_..." output pattern.
+if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/" 2>/dev/null; then
+  echo "  -> ALLOW (listener session)" >> "$LOGFILE" 2>/dev/null
   exit 0
 fi
 

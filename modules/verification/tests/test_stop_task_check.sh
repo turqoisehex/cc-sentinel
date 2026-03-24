@@ -312,7 +312,7 @@ setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
-INPUT=$(build_input "$PROJECT" "Watching _pending/ for new work...")
+INPUT=$(build_input "$PROJECT" "Watching _pending_sonnet/ for new work...")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_empty "no block (Sonnet listener bypass)"
