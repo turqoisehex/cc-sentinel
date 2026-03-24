@@ -242,7 +242,7 @@ setup_repo
 stage_code_file "deploy.sh" "echo deploy"
 HASH=$(get_staged_hash)
 # Create _pending so SONNET_VERIFY doesn't warn (but set --local-verify to skip wait)
-mkdir -p verification_findings/_pending
+mkdir -p verification_findings/_pending_sonnet
 create_agent_evidence "$HASH"
 # No squad evidence at all -> should still pass because --skip-squad
 run_hook --internal --skip-tests --skip-squad --local-verify -m "skip squad"
@@ -464,7 +464,7 @@ setup_repo
 stage_code_file "server.rs" "fn main() {}"
 HASH=$(get_staged_hash)
 # Only create cold_read, not commit_check
-mkdir -p verification_findings/_pending
+mkdir -p verification_findings/_pending_sonnet
 mkdir -p verification_findings
 printf 'CURRENT_HASH: %s\nVERDICT: PASS\n' "$HASH" > "verification_findings/commit_cold_read.md"
 # Don't create commit_check.md
@@ -482,7 +482,7 @@ stage_code_file "logic.dart" "void logic() {}"
 HASH=$(get_staged_hash)
 # Create agent files with wrong hash
 create_agent_evidence "0000000000000000000000000000000000000000"
-mkdir -p verification_findings/_pending
+mkdir -p verification_findings/_pending_sonnet
 run_hook --internal --skip-tests --skip-squad
 assert_exit 1 "exits 1 with stale hash"
 assert_stderr_contains "COMMIT BLOCKED" "BLOCKED message"
@@ -495,7 +495,7 @@ echo "Test 20: Per-commit VERDICT: FAIL -> BLOCKED"
 setup_repo
 stage_code_file "broken.py" "import os"
 HASH=$(get_staged_hash)
-mkdir -p verification_findings/_pending
+mkdir -p verification_findings/_pending_sonnet
 mkdir -p verification_findings
 printf '%s\nVERDICT: FAIL\n' "$HASH" > "verification_findings/commit_check.md"
 printf '%s\nVERDICT: PASS\n' "$HASH" > "verification_findings/commit_cold_read.md"
@@ -511,7 +511,7 @@ echo "Test 21: Per-commit VERDICT: WARN -> passes"
 setup_repo
 stage_code_file "util.sh" "echo util"
 HASH=$(get_staged_hash)
-mkdir -p verification_findings/_pending
+mkdir -p verification_findings/_pending_sonnet
 mkdir -p verification_findings
 printf '%s\nVERDICT: WARN\n' "$HASH" > "verification_findings/commit_check.md"
 printf '%s\nVERDICT: WARN\n' "$HASH" > "verification_findings/commit_cold_read.md"
@@ -527,7 +527,7 @@ setup_repo
 stage_code_file "api.ts" "export default {}"
 HASH=$(get_staged_hash)
 # Create _pending dir so the hook doesn't warn about missing listener
-mkdir -p verification_findings/_pending
+mkdir -p verification_findings/_pending_sonnet
 # The mock wait_for_results.sh will succeed, but we need agent files
 # pre-created because the mock doesn't create them for this path
 create_agent_evidence "$HASH"

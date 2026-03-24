@@ -72,7 +72,7 @@ if [[ -n "$STAGED_FOR_CHECKS" ]]; then
 
     # Wait for Sonnet verification results if listener is active
     if [[ "$SONNET_VERIFY" == "true" ]]; then
-      if [[ ! -d "verification_findings/_pending${PENDING_SUBDIR}" ]]; then
+      if [[ ! -d "verification_findings/_pending_sonnet${PENDING_SUBDIR}" ]]; then
         echo "WARNING: No Sonnet listener detected. Checking for pre-existing results." >&2
         SONNET_VERIFY="false"
       else

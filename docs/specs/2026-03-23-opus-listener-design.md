@@ -121,8 +121,8 @@ Changes:
 - Path: `_pending_sonnet/chN/.heartbeat` (rename)
 - Dispatch path: write commit-verification prompts to `_pending_sonnet/chN/`
 - Two existing thresholds change:
-  - **Warn threshold** (line 210): `age > 30` → `age > 300` (5 min). Warns but continues.
-  - **Switch-to-local threshold** (line 205): `age > 300` → `age > 900` (15 min). Falls back to local verification.
+  - **Warn threshold**: `age > 300` (5 min). Warns but continues.
+  - **Switch-to-local threshold**: `age > 900` (15 min). Falls back to local verification.
 - Liveness check (new, at existing `check_heartbeat()` call site — determines logging and fallback, not whether to dispatch). States listed in the same order as the Liveness States table:
   - `.heartbeat` fresh (<5 min) + no `.active` → listener idle, dispatch normally.
   - `.heartbeat` fresh (<5 min) + `.active` exists → listener alive, processing `<filename>`. Write prompt to `_pending_sonnet/chN/` anyway — listener picks it up next cycle after finishing current work.
