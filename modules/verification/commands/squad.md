@@ -39,9 +39,17 @@ SCOPE_SUMMARY: [one sentence]
 SQUAD_DIR: squad_[chN_]sonnet/
 ```
 
-### Step 4: Launch agents
+### Step 4: Delegate to Sonnet
 
-Launch all 5 agents in parallel (`run_in_background: true`). Each agent writes to its output file in the squad directory.
+DISPATCH TO SONNET AND ASSUME THE LISTENER IS RUNNING. Start the background wait script. You do NOT have permission to run squad agents locally unless invoked with `/squad local <scope>`. No heartbeat, no listener directory, no prior evidence of Sonnet — none of these are valid reasons to run locally.
+
+Follow this exact sequence:
+1. Update CT — cold-start ready.
+2. Write squad prompt to `verification_findings/_pending_sonnet/[chN/]squad_<timestamp>.md`.
+3. Run wait loop for result files.
+4. Read results when they appear.
+
+"Simple enough to do myself" / "already have context" / "faster" / "no heartbeat detected" are NOT valid bypass reasons.
 
 YAML frontmatter required — resolve bracket notation before writing:
 
