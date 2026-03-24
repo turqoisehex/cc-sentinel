@@ -95,7 +95,7 @@ Changes:
 New additions to the startup procedure:
 1. Create Opus pending dir: `mkdir -p verification_findings/_pending_opus/chN`
 2. Start background listener: `bash scripts/wait_for_work.sh --model opus --channel N` with `run_in_background: true`
-3. On prompt arrival: read prompt, delete prompt file, delete `.active`, re-spawn `wait_for_work.sh` in background, execute instructions
+3. On prompt arrival: read prompt file. If file is missing (orchestrator deleted it), log warning and skip to step 2 (re-spawn wait). Otherwise: delete prompt file, delete `.active`, re-spawn `wait_for_work.sh` in background, execute instructions.
 4. Opus finishes current atomic operation before reading a new prompt (prompt delivery is at tool-call boundary)
 
 Updated dispatch path: Sonnet dispatches go to `_pending_sonnet/chN/` (renamed).
