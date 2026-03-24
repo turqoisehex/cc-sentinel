@@ -40,7 +40,7 @@ Orchestrator (human in CC terminal)
 | D6 | 15-minute stale threshold (was 300s switch-to-local, 30s warn) | `.active` provides proof-of-work; raise both thresholds — warn at 5 min, switch-to-local at 15 min |
 | D7 | `/opus N` starts background listener | Opus is always receivable from the moment it starts |
 | D8 | Prompt delivery at tool-call boundary (CC runtime assumption) | CC delivers `run_in_background` completions as system messages; Opus finishes current atomic operation before reading. If CC changes this behavior, prompts may arrive mid-operation — the design tolerates this since prompts are additive instructions, not interrupts |
-| D9 | Opus listeners still get stop-hook enforcement | Unlike Sonnet (stateless service loop), Opus holds state and should save it |
+| D9 | Opus listeners still get stop-hook enforcement | Unlike Sonnet (stateless service loop), Opus holds state and should save it. No implementation change needed — `stop-task-check.sh` fires on every tool call for all sessions. The only change is the pattern exclusion for "Watching..." listener output (Component 6); actual Opus work output is enforced as normal |
 
 ## Directory Structure
 
@@ -83,7 +83,7 @@ Current signature: `bash scripts/wait_for_work.sh [--channel N]`
 New signature: `bash scripts/wait_for_work.sh --model opus|sonnet [--channel N]`
 
 Changes:
-- **`--model` flag** (optional, defaults to `sonnet`): selects `_pending_opus/` or `_pending_sonnet/`. All callers should pass it explicitly; the default exists only for backward compatibility during migration.
+- **`--model` flag** (optional, defaults to `sonnet`): selects `_pending_opus/` or `_pending_sonnet/`. All callers should pass it explicitly; the default exists only for backward compatibility during migration. Unknown values → error and exit (no silent fallback).
 - **Oldest-first ordering:** Replace arbitrary glob match with `ls -tr "$PENDING_DIR"/*.md 2>/dev/null | head -1`. Returns oldest mtime first.
 - **`.active` signal:** Before returning the filename, write `.active` containing `<ISO-8601-timestamp> processing <filename>`. Written to `$PENDING_DIR/.active`.
 - Heartbeat mechanism unchanged (background loop, PPID self-termination).
@@ -95,7 +95,7 @@ Changes:
 New additions to the startup procedure:
 1. Create Opus pending dir: `mkdir -p verification_findings/_pending_opus/chN`
 2. Start background listener: `bash scripts/wait_for_work.sh --model opus --channel N` with `run_in_background: true`
-3. On prompt arrival: read prompt file. If file is missing (orchestrator deleted it), log warning and skip to step 2 (re-spawn wait). Otherwise: delete prompt file, delete `.active`, re-spawn `wait_for_work.sh` in background, execute instructions.
+3. On prompt arrival: read prompt file. If file is missing (orchestrator deleted it), log warning to stdout and re-spawn `wait_for_work.sh` in background (return to listening). Otherwise: delete prompt file, execute instructions. On completion (cleanup): delete `.active`, re-spawn `wait_for_work.sh` in background. `.active` remains present throughout execution so observers can see what the session is working on.
 4. Opus finishes current atomic operation before reading a new prompt (prompt delivery is at tool-call boundary)
 
 Updated dispatch path: Sonnet dispatches go to `_pending_sonnet/chN/` (renamed).
@@ -109,7 +109,7 @@ Updated Sonnet heartbeat check path: `_pending_sonnet/chN/.heartbeat`.
 Changes:
 - Directory: `_pending_sonnet/chN/` (renamed from `_pending/chN/`)
 - `wait_for_work.sh` call adds `--model sonnet`
-- Cleanup step deletes `.active` before re-spawning wait
+- Cleanup step (after processing work): delete `.active`, then re-spawn wait
 
 No behavioral changes. Sonnet remains a pure service loop.
 
@@ -123,28 +123,31 @@ Changes:
 - Two existing thresholds change:
   - **Warn threshold** (line 210): `age > 30` → `age > 300` (5 min). Warns but continues.
   - **Switch-to-local threshold** (line 205): `age > 300` → `age > 900` (15 min). Falls back to local verification.
-- Three-state liveness check (new, before dispatching):
-  - `.active` exists → listener processing `<filename>`. Write prompt to `_pending_sonnet/chN/` anyway — listener picks it up next cycle after finishing current work.
-  - `.heartbeat` fresh (<15 min) + no `.active` → listener idle, dispatch normally
-  - `.heartbeat` stale (>15 min) + no `.active` → warn, switch to local verification
+- Four-state liveness check (new, at existing `check_heartbeat()` call site — determines logging and fallback, not whether to dispatch):
+  - `.active` exists + `.heartbeat` fresh (<15 min) → listener alive, processing `<filename>`. Write prompt to `_pending_sonnet/chN/` anyway — listener picks it up next cycle after finishing current work.
+  - `.active` exists + `.heartbeat` stale (>15 min) → listener may be stuck. Log warning with `.active` contents. Write prompt anyway (if listener recovers it will pick it up), but also fall back to local verification for this dispatch.
+  - `.heartbeat` fresh (<15 min) + no `.active` → listener idle, dispatch normally.
+  - `.heartbeat` stale (>15 min) + no `.active` → listener likely down. Warn, switch to local verification.
 
 ### 5. `session-orient.sh`
 
 **Location:** `modules/core/hooks/session-orient.sh`
 
-Currently cleans stale prompts from `_pending/` and `_pending/ch*/`. Must clean both `_pending_sonnet/` and `_pending_opus/` (and their `ch*/` subdirs). Also clean stale `.active` files older than 30 minutes — these indicate a crashed session that never cleaned up. Without this, a crashed session leaves `.active` indefinitely, causing `channel_commit.sh` to permanently see "listener processing."
+Currently cleans stale prompts from `_pending/` and `_pending/ch*/`. Must clean both `_pending_sonnet/` and `_pending_opus/` (and their `ch*/` subdirs), applying the same stale-prompt threshold to both. Also clean stale `.active` files older than 30 minutes — these indicate a crashed session that never cleaned up.
+
+Note: `session-orient.sh` fires only at SessionStart (hook trigger). Between sessions, a stale `.active` could persist. As a secondary defense, `channel_commit.sh`'s four-state liveness check treats "stale heartbeat + `.active` present" as "listener may be stuck" and falls back to local verification — so a stuck `.active` degrades gracefully rather than blocking indefinitely.
 
 ### 6. `stop-task-check.sh`
 
 **Location:** `modules/verification/hooks/stop-task-check.sh`
 
-Currently detects Sonnet listeners by matching "Watching _pending/" in output (line 100). Replace pattern with `"Watching _pending_(sonnet|opus)/"`. This allows the stop hook to skip enforcement for both Sonnet and Opus listener output. Note: Opus listener sessions still get full stop-hook enforcement for their actual work — the skip only applies to the "Watching..." status line output from `wait_for_work.sh`.
+Currently detects Sonnet listeners by matching "Watching _pending/" in output (line 100). Replace pattern with `"Watching _pending_(sonnet|opus)/"`. This allows the stop hook to skip enforcement for both Sonnet and Opus listener output. Note: the "Watching..." string is emitted by the `/sonnet` and `/opus` command/skill docs (the announce line), not by `wait_for_work.sh` itself (which only returns a filename on stdout). Opus listener sessions still get full stop-hook enforcement for their actual work — the skip only applies to the "Watching..." announce line.
 
 ### 7. `safe-commit.sh`
 
 **Location:** `modules/commit-enforcement/hooks/safe-commit.sh`
 
-Path check at line 75: `_pending${PENDING_SUBDIR}` → `_pending_sonnet${PENDING_SUBDIR}`. This hook checks for the Sonnet listener directory only (commit verification is always dispatched to Sonnet). No need to check `_pending_opus/` — Opus sessions don't receive commit-verification prompts.
+Path check at line 75: `_pending${PENDING_SUBDIR}` → `_pending_sonnet${PENDING_SUBDIR}`. `$PENDING_SUBDIR` is a variable already defined in `safe-commit.sh` (set from the `--channel` flag, e.g., `/ch1` or empty for unchanneled). This hook checks for the Sonnet listener directory only (commit verification is always dispatched to Sonnet). No need to check `_pending_opus/` — Opus sessions don't receive commit-verification prompts.
 
 ### 8. `spawn.py`
 
@@ -176,17 +179,21 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 5. Listener cleanup deletes `.active`
 6. `wait_for_work.sh` re-spawns (fresh heartbeat, no `.active` = idle)
 
-**Consumer:** `channel_commit.sh` checks `.active` before dispatching. Opus orchestrator can read `.active` to see what any session is working on.
+**Collision:** If `.active` already exists when `wait_for_work.sh` writes (e.g., residual from a crash before `session-orient.sh` runs), silently overwrite. The new timestamp + filename is the current truth.
+
+**Consumer:** `channel_commit.sh` checks `.active` at its `check_heartbeat()` call site (logging and fallback decision, not a dispatch gate). Opus orchestrator can read `.active` to see what any session is working on.
 
 ## Liveness States
 
-| `.heartbeat` | `.active` | Interpretation |
-|---|---|---|
-| Fresh (<15 min) | Absent | Listener alive, idle, ready for work |
-| Fresh (<15 min) | Present | Listener alive, processing `<filename>` |
-| Stale (>15 min) | Present | Listener may be stuck (processing but no heartbeat refresh) |
-| Stale (>15 min) | Absent | Listener likely down |
-| Missing | Any | Listener not started or crashed |
+| `.heartbeat` | `.active` | Interpretation | `channel_commit.sh` action |
+|---|---|---|---|
+| Fresh (<15 min) | Absent | Listener alive, idle | Dispatch normally |
+| Fresh (<15 min) | Present | Listener alive, processing `<filename>` | Write prompt anyway (queued for next cycle) |
+| Warn-stale (5–15 min) | Absent | Listener slow or briefly stalled | Warn, dispatch normally |
+| Warn-stale (5–15 min) | Present | Listener busy on long task | Log `.active` contents, dispatch normally |
+| Stale (>15 min) | Present | Listener may be stuck | Log warning, dispatch + fall back to local |
+| Stale (>15 min) | Absent | Listener likely down | Warn, switch to local verification |
+| Missing | Any | Listener not started or crashed | Switch to local verification |
 
 ## Full Flow Example
 
@@ -197,17 +204,18 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 4. User runs `/spawn duo 3` — opens 3 Opus + 3 Sonnet terminals
 
 **Auto-start (each Opus session):**
-5. `/spawn duo` types `/opus N` in each Opus window
+5. `/spawn duo` types `/opus N` in each Opus window and `/sonnet N` in each Sonnet window
 6. `/opus N` creates channel, starts `wait_for_work.sh --model opus --channel N` in background
 7. Wait script finds the launch prompt (oldest-first), writes `.active` (`2026-03-23T20:15:00Z processing launch_prerequisites.md`), returns filename
-8. Opus reads prompt, deletes prompt file, deletes `.active`, re-spawns wait in background, begins work
+8. Opus reads prompt, deletes prompt file, begins work (`.active` remains present — observers see what it's working on)
 9. Opus dispatches mechanical work to Sonnet via `_pending_sonnet/chN/`
+9a. When work completes: Opus deletes `.active`, re-spawns `wait_for_work.sh` in background
 
 **Mid-flight correction (orchestrator):**
 10. User tells orchestrator: "Ch2 is stuck, send it this fix"
 11. Orchestrator writes `_pending_opus/ch2/fix_breathwork_error.md`
 12. Ch2's background wait finds it, writes `.active`, returns filename
-13. Opus ch2 reads correction, deletes prompt + `.active`, re-spawns wait, adjusts, continues
+13. Opus ch2 reads correction, deletes prompt, adjusts work (`.active` persists during execution). On completion: deletes `.active`, re-spawns wait
 
 **Orchestrator checking status:**
 14. Reads `_pending_sonnet/ch1/.active` → "processing squad_ch1.md" (Sonnet busy with ch1's squad)
@@ -215,7 +223,7 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 
 ## Migration: `_pending/` → `_pending_sonnet/`
 
-~75 occurrences across 31 files in the sentinel repo. Full file list:
+101 occurrences across 33 files in the sentinel repo. Full file list:
 
 **Scripts (functional — must update):**
 - `modules/commit-enforcement/scripts/wait_for_work.sh` (3)
@@ -227,7 +235,7 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 - `install.sh` (1)
 - `install.ps1` (1)
 
-**Commands + Skills (documentation — must update):**
+**Commands + Skills (documentation — path-only `_pending/` → `_pending_sonnet/` string rename, no behavioral changes; owned by Components 2 and 3 for opus/sonnet files, remainder is mechanical find-and-replace):**
 - `modules/sprint-pipeline/commands/sonnet.md` (9)
 - `modules/sprint-pipeline/skills/sonnet/SKILL.md` (10)
 - `modules/sprint-pipeline/commands/opus.md` (5)
@@ -257,20 +265,22 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 - `modules/verification/tests/test_stop_task_check.sh` (1)
 
 **Wakeful propagation (after sentinel):**
-- `scripts/wait_for_work.sh`
-- `scripts/channel_commit.sh`
-- `.claude/commands/sonnet.md`, `opus.md`, and other commands
+- `scripts/wait_for_work.sh` (add `--model` flag, oldest-first, `.active` write)
+- `scripts/channel_commit.sh` (path rename + threshold update: warn 30→300, switch-to-local 300→900, four-state liveness check)
+- `scripts/claude-hooks/safe-commit.sh` (path rename)
+- `scripts/claude-hooks/stop-task-check.sh` (add listener bypass for `"Watching _pending_(sonnet|opus)/"` — currently absent from Wakeful copy)
+- `.claude/commands/sonnet.md`, `opus.md`, `squad.md`, `1.md`–`5.md`, `cold.md`, `cleanup.md`, and other commands containing `_pending/`
 - `.claude/reference/channel-routing.md`
-- `.gitignore`
-- `CLAUDE.md` accumulated corrections
-- `spawn.py` (template string + mkdir)
+- `.gitignore` (replace `verification_findings/_pending/` with `verification_findings/_pending_sonnet/` + `verification_findings/_pending_opus/`)
+- `CLAUDE.md` — two references: line 36 (`dispatch via _pending/[chN/]`) and Workflow section (`File-signal via _pending/`). **Governance-protected file: requires GOVERNANCE-EDIT-AUTHORIZED marker in CT before editing.**
+- `spawn.py` (template string + mkdir both dirs)
 
 ### Migration strategy
 
 This is a **coordinated atomic deployment** within each repo. All `_pending/` → `_pending_sonnet/` renames happen in a single commit per repo. Running listeners must be restarted after the commit (they watch the old path).
 
 **Order:**
-1. Sentinel repo: single commit renames all 32 files. Run all test suites to verify.
+1. Sentinel repo: single commit renames all 33 files. Run all test suites to verify.
 2. Wakeful repo: propagate the same rename. Restart any active Sonnet/Opus listeners.
 3. Any other downstream projects: update on next install or manual propagation.
 
@@ -279,8 +289,11 @@ No transition period or dual-path support. The directories are gitignored (runti
 ## Testing
 
 - All existing tests in `test_safe_commit.sh`, `test_channel_commit.sh`, `test_session_orient.sh`, `test_stop_task_check.sh` must pass after rename
-- New tests for `wait_for_work.sh`: `--model` flag, oldest-first ordering, `.active` write
-- New test for `channel_commit.sh`: three-state liveness check (`.active` present, fresh heartbeat, stale heartbeat)
+- New tests for `wait_for_work.sh`: `--model` flag, oldest-first ordering, `.active` write, `.active` overwrite when pre-existing (silently replace)
+- New test for `channel_commit.sh`: four-state liveness check (`.active` present + fresh, `.active` present + stale, fresh heartbeat + no `.active`, stale heartbeat + no `.active`)
+- New test for `session-orient.sh`: `.active` stale cleanup (create `.active` older than 30 min, verify it is deleted on session start)
+- Update `test_stop_task_check.sh` fixture: change `"Watching _pending/"` to `"Watching _pending_sonnet/"` to match new regex pattern
+- New test for `spawn.py`: verify both `_pending_sonnet/chN/` and `_pending_opus/chN/` directories are created
 
 ## Out of Scope
 
