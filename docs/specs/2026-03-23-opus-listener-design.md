@@ -40,7 +40,7 @@ Orchestrator (human in CC terminal)
 | D6 | 15-minute stale threshold (was 300s switch-to-local, 30s warn) | `.active` provides proof-of-work; raise both thresholds — warn at 5 min, switch-to-local at 15 min |
 | D7 | `/opus N` starts background listener | Opus is always receivable from the moment it starts |
 | D8 | Prompt delivery at tool-call boundary (CC runtime assumption) | CC delivers `run_in_background` completions as system messages; Opus finishes current atomic operation before reading. If CC changes this behavior, prompts may arrive mid-operation — the design tolerates this since prompts are additive instructions, not interrupts |
-| D9 | Opus listeners still get stop-hook enforcement | Unlike Sonnet (stateless service loop), Opus holds state and should save it. No implementation change needed — `stop-task-check.sh` fires on every tool call for all sessions. The only change is the pattern exclusion for "Watching..." listener output (Component 6); actual Opus work output is enforced as normal |
+| D9 | Opus listeners still get stop-hook enforcement | Unlike Sonnet (stateless service loop), Opus holds state and should save it. No change to enforcement logic — `stop-task-check.sh` already fires on every tool call for all sessions. The only update is the pattern exclusion for "Watching..." listener output (Component 6); actual Opus work output is enforced as normal |
 
 ## Directory Structure
 
@@ -123,12 +123,12 @@ Changes:
 - Two existing thresholds change:
   - **Warn threshold** (line 210): `age > 30` → `age > 300` (5 min). Warns but continues.
   - **Switch-to-local threshold** (line 205): `age > 300` → `age > 900` (15 min). Falls back to local verification.
-- Liveness check (new, at existing `check_heartbeat()` call site — determines logging and fallback, not whether to dispatch). All states match the Liveness States table:
-  - `.active` exists + `.heartbeat` fresh (<5 min) → listener alive, processing `<filename>`. Write prompt to `_pending_sonnet/chN/` anyway — listener picks it up next cycle after finishing current work.
-  - `.active` exists + `.heartbeat` warn-stale (5–15 min) → listener busy on long task. Log `.active` contents, dispatch normally.
-  - `.active` exists + `.heartbeat` stale (>15 min) → listener may be stuck. Log warning with `.active` contents. Write prompt anyway (if listener recovers it will pick it up), but also fall back to local verification for this dispatch.
+- Liveness check (new, at existing `check_heartbeat()` call site — determines logging and fallback, not whether to dispatch). States listed in the same order as the Liveness States table:
   - `.heartbeat` fresh (<5 min) + no `.active` → listener idle, dispatch normally.
+  - `.heartbeat` fresh (<5 min) + `.active` exists → listener alive, processing `<filename>`. Write prompt to `_pending_sonnet/chN/` anyway — listener picks it up next cycle after finishing current work.
   - `.heartbeat` warn-stale (5–15 min) + no `.active` → listener slow or briefly stalled. Warn, dispatch normally.
+  - `.heartbeat` warn-stale (5–15 min) + `.active` exists → listener busy on long task. Log `.active` contents, dispatch normally.
+  - `.heartbeat` stale (>15 min) + `.active` exists → listener may be stuck. Log warning with `.active` contents. Write prompt anyway (if listener recovers it will pick it up), but also fall back to local verification for this dispatch.
   - `.heartbeat` stale (>15 min) + no `.active` → listener likely down. Warn, switch to local verification.
   - `.heartbeat` missing + any `.active` state → listener not started or crashed. Switch to local verification.
 
@@ -179,8 +179,8 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 2. Writes `.active` with timestamp + filename
 3. Returns filename to listener (stdout)
 4. Listener processes work
-5. Listener cleanup deletes `.active`
-6. Listener session re-spawns `wait_for_work.sh` in background (fresh heartbeat, no `.active` = idle)
+5. The Opus or Sonnet session deletes `.active`
+6. The session re-spawns `wait_for_work.sh` in background (the new instance starts its heartbeat loop, producing a fresh `.heartbeat`; no `.active` exists → state returns to idle)
 
 **Collision:** If `.active` already exists when `wait_for_work.sh` writes (e.g., residual from a crash before `session-orient.sh` runs), silently overwrite. The new timestamp + filename is the current truth.
 
@@ -203,8 +203,8 @@ Example: `2026-03-23T20:15:00Z processing perfect_squad_ch1.md`
 **Sprint start (orchestrator session):**
 1. User runs `/2` — orchestrator designs work, determines 3 channels needed
 2. Orchestrator writes `CURRENT_TASK_ch1.md`, `CURRENT_TASK_ch2.md`, `CURRENT_TASK_ch3.md`
-3. Orchestrator writes launch prompts to `_pending_opus/ch1/`, `_pending_opus/ch2/`, `_pending_opus/ch3/`
-4. User runs `/spawn duo 3` — opens 3 Opus + 3 Sonnet terminals
+3. User runs `/spawn duo 3` — opens 3 Opus + 3 Sonnet terminals (creates `_pending_opus/chN/` and `_pending_sonnet/chN/` directories)
+4. Orchestrator writes launch prompts to `_pending_opus/ch1/`, `_pending_opus/ch2/`, `_pending_opus/ch3/`
 
 **Auto-start (each Opus session):**
 5. `/spawn duo` types `/opus N` in each Opus window and `/sonnet N` in each Sonnet window
