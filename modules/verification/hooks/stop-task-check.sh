@@ -92,14 +92,56 @@ if echo "$LAST_MSG" | grep -qiE "(agent|agents).*(still running|running|pending|
   exit 0
 fi
 
-# --- BYPASS: Sonnet listener sessions ---
+# --- BYPASS: Listener sessions ---
 # Listeners are stateless service loops with no work to lose. The CT staleness
-# check is designed for Opus sessions that hold conversation state. Listeners
-# must NOT touch CT files (sonnet.md hard rule), so blocking them forces a
-# rule violation. Detect by their unique "Watching _pending_..." output pattern.
+# check is designed for Opus orchestrator sessions that hold conversation state.
+# Listeners must NOT touch CT files (sonnet.md hard rule), so blocking them
+# forces a rule violation — the model "helpfully" updates CT to satisfy the hook.
+#
+# Detection is two-tier:
+#   1. Message pattern: the "Watching _pending_..." announce line (fast, exact).
+#   2. Heartbeat probe: a fresh .heartbeat file (<15s) in any _pending_sonnet/ dir
+#      proves a listener is alive. Combined with absence of completion language in
+#      the last message, this identifies a listener that has moved past its announce.
+#
+# Trade-off: if an Opus session stops while a Sonnet listener is running AND Opus's
+# last message has no completion language, Opus would also skip the CT staleness
+# check. This is acceptable — the CT staleness check is a reminder, not a gate,
+# and the alternative (Sonnet corrupting CT) is far worse.
+
+# Tier 1: message pattern (covers startup and return-to-wait)
 if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/" 2>/dev/null; then
-  echo "  -> ALLOW (listener session)" >> "$LOGFILE" 2>/dev/null
+  echo "  -> ALLOW (listener session — announce pattern)" >> "$LOGFILE" 2>/dev/null
   exit 0
+fi
+
+# Tier 2: heartbeat probe (covers mid-work and post-work)
+_listener_heartbeat_fresh() {
+  local hb hb_time hb_age now
+  now=$(date +%s) || return 1
+  for hb in "${PROJECT_DIR}"/verification_findings/_pending_sonnet/.heartbeat \
+            "${PROJECT_DIR}"/verification_findings/_pending_sonnet/ch*/.heartbeat; do
+    [[ -f "$hb" ]] || continue
+    hb_time=$(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb" 2>/dev/null) || continue
+    hb_age=$((now - hb_time))
+    if (( hb_age < 15 )); then
+      echo "$hb"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Only fire tier 2 when the message has no completion language. A listener never
+# claims completion; an Opus session that does should still hit the verification
+# gate. The pattern here is intentionally a subset of COMPLETION_PATTERNS (defined
+# below) — just enough to distinguish "I finished the work" from listener chatter.
+if ! echo "$LAST_MSG" | grep -qiE "(all (items |steps |tasks |work )?(are |is )?(done|complete)|work is (complete|done|finished)|sprint is (complete|done)|task is (complete|done)|implementation.* complete)" 2>/dev/null; then
+  FRESH_HB=$(_listener_heartbeat_fresh)
+  if [[ -n "$FRESH_HB" ]]; then
+    echo "  -> ALLOW (listener session — fresh heartbeat: $FRESH_HB)" >> "$LOGFILE" 2>/dev/null
+    exit 0
+  fi
 fi
 
 # Completion language patterns
