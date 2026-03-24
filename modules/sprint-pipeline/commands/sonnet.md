@@ -18,18 +18,18 @@ Infinite service loop. Wait for work -> execute -> wait again. Never initiate. N
 If `$ARGUMENTS` provided (e.g., `/sonnet 1`):
 - `mkdir -p verification_findings/_pending_sonnet/ch$ARGUMENTS`
 - Announce: "Sonnet listener active. Watching _pending_sonnet/ch$ARGUMENTS/"
-- Use `bash scripts/wait_for_work.sh --channel $ARGUMENTS` in Wait.
+- Use `bash scripts/wait_for_work.sh --model sonnet --channel $ARGUMENTS` in Wait.
 - Delete consumed prompts from `_pending_sonnet/ch$ARGUMENTS/` in Cleanup.
 
 If no argument:
-- `mkdir -p verification_findings/_pending`
+- `mkdir -p verification_findings/_pending_sonnet`
 - Announce: "Sonnet listener active. Watching _pending_sonnet/"
 
 ## Main Loop (channel infrastructure only)
 
 ### Wait
 
-Run `bash scripts/wait_for_work.sh [--channel N]` with `run_in_background: true`. Blocks until a prompt file appears.
+Run `bash scripts/wait_for_work.sh --model sonnet [--channel N]` with `run_in_background: true`. Blocks until a prompt file appears.
 
 ### Execute
 
@@ -82,7 +82,7 @@ One agent per task -- each has full tool access (Edit, Write, Bash).
 
 ### Cleanup
 
-Delete consumed prompt file. Kill heartbeat if needed: `kill $(cat verification_findings/_pending_sonnet/[chN/].heartbeat_pid) 2>/dev/null; rm -f verification_findings/_pending_sonnet/[chN/].heartbeat_pid`. Return to Wait.
+Delete consumed prompt file. Delete `.active` signal: `rm -f verification_findings/_pending_sonnet/[chN/].active`. Kill heartbeat if needed: `kill $(cat verification_findings/_pending_sonnet/[chN/].heartbeat_pid) 2>/dev/null; rm -f verification_findings/_pending_sonnet/[chN/].heartbeat_pid`. Return to Wait.
 
 ## Rules
 
