@@ -53,6 +53,7 @@ HEDGE="not urgent|not critical|minor issue|low priority"
 # Dot in as.is is intentional wildcard — matches as-is, as is, as.is
 HEDGE="$HEDGE|acceptable as.is|good enough for now|can wait"
 HEDGE="$HEDGE|when we have more data|once we have more"
+HEDGE="$HEDGE|tracked in|tracked as|gaps tracked|to be written"
 
 DEFERRAL_PATTERNS="$PUNT|$HEDGE"
 
