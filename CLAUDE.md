@@ -34,7 +34,7 @@ Ask these questions one at a time. Wait for each answer before proceeding.
 Based on their answers, present 3-5 of these problems that are most relevant:
 
 1. "It said it was done, but it wasn't." -> Verification module
-2. "It lost track mid-session." -> Context Awareness module
+2. "It slammed into auto-compact mid-thought and lost all its work." -> Context Awareness module
 3. "It deferred instead of fixing." -> Core (anti-deferral hook)
 4. "It modified files it shouldn't." -> Governance Protection module
 5. "I walked away and missed the finish." -> Notification module

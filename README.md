@@ -367,10 +367,10 @@ cc-sentinel needs Claude Code, Git, bash, jq, and Python 3. Most platforms have 
 
 ### Windows
 
-Fresh Windows 10 machine -- two commands install everything:
+Fresh Windows 10/11 machine -- two commands install everything:
 
 ```powershell
-winget install Microsoft.WindowsTerminal Git.Git jqlang.jq Python.Python.3.12 OpenJS.NodeJS.LTS
+winget install --source winget Microsoft.WindowsTerminal Git.Git jqlang.jq Python.Python.3.12 OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
 ```
 
 **Close and reopen your terminal after this** (PATH updates require a new session), then:
@@ -381,7 +381,7 @@ npm install -g @anthropic-ai/claude-code
 
 This gives you: Windows Terminal, Git Bash (provides bash), jq, Python 3, Node.js (provides npm), and Claude Code.
 
-Windows 11 ships with Windows Terminal, so you can drop `Microsoft.WindowsTerminal` from the command. winget skips packages that are already installed, so including it is harmless.
+Windows 11 ships with Windows Terminal pre-installed. winget skips packages that are already installed, so including it is harmless.
 
 ### macOS
 
