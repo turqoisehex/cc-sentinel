@@ -48,12 +48,20 @@ if [[ -z "$PROJECT_DIR" ]]; then
   exit 0
 fi
 
-# Collect all CT files: shared index + per-channel files
-# Glob CURRENT_TASK_ch*.md (excludes templates)
-TASK_FILES=("${PROJECT_DIR}/CURRENT_TASK.md")
-for chf in "${PROJECT_DIR}"/CURRENT_TASK_ch*.md; do
-  [[ -f "$chf" ]] && TASK_FILES+=("$chf")
-done
+# Collect CT files: if WAKEFUL_CHANNEL is set, scope to that channel only.
+# Otherwise fall back to shared index + all per-channel files.
+TASK_FILES=()
+if [[ -n "${WAKEFUL_CHANNEL:-}" ]]; then
+  # Channeled session: only check own channel's CT + shared index
+  [[ -f "${PROJECT_DIR}/CURRENT_TASK.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK.md")
+  [[ -f "${PROJECT_DIR}/CURRENT_TASK_ch${WAKEFUL_CHANNEL}.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK_ch${WAKEFUL_CHANNEL}.md")
+else
+  # Unchanneled: check shared index + all channel CTs
+  TASK_FILES=("${PROJECT_DIR}/CURRENT_TASK.md")
+  for chf in "${PROJECT_DIR}"/CURRENT_TASK_ch*.md; do
+    [[ -f "$chf" ]] && TASK_FILES+=("$chf")
+  done
+fi
 
 # Helper: extract channel number from a CT file (empty = unchanneled/shared)
 get_channel() {
