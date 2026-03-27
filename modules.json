@@ -197,7 +197,7 @@
     },
     "verification": {
       "name": "Verification",
-      "description": "6-agent verification squad, adversarial self-check, completion gate",
+      "description": "6-agent /verify squad, adversarial self-check, completion gate",
       "required": false,
       "dependencies": [
         "core"
@@ -208,7 +208,7 @@
           "comment-replacement.sh"
         ],
         "commands": [
-          "squad.md",
+          "verify.md",
           "grill.md"
         ],
         "reference": [
@@ -216,7 +216,7 @@
         ],
         "skills": [
           "grill",
-          "squad"
+          "verify"
         ],
         "tests": [
           "test_stop_task_check.sh",

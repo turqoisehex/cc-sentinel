@@ -245,7 +245,7 @@ if [[ -n "$STAGED_FILES" ]]; then
         echo "" >&2
         echo "================================================================" >&2
         echo "  COMMIT BLOCKED: Squad verification required." >&2
-        echo "  Run /squad first, or use --skip-squad for WIP commits." >&2
+        echo "  Run /verify first, or use --skip-squad for WIP commits." >&2
         echo "================================================================" >&2
         exit 1
       fi

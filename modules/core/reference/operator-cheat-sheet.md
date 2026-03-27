@@ -20,7 +20,7 @@ Quick reference for running CC sessions with cc-sentinel governance.
 |---------|-------------|
 | `/opus N` | Set channel for multi-Opus parallel sessions |
 | `/grill` | Adversarial self-check (4 questions, verify each) |
-| `/squad [scope]` | up to 6-agent verification (default/full/last N/since/on) |
+| `/verify [scope]` | up to 6-agent verification (default/full/last N/since/on) |
 | `/cold` | Prepare CURRENT_TASK.md for cold start |
 | `/sonnet` | Verification listener (run in Sonnet terminal) |
 | `/rewrite` | Ground-up rewrite of a subsystem |

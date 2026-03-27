@@ -123,4 +123,4 @@ Report: orphans resolved (N), transcript items rescued (N), incomplete items wri
 
 - State files only — code must already be committed.
 - /cold != template reset. For that: `/5` Step 9.
-- Per-commit agents in channel_commit.sh provide verification. No /squad needed.
+- Per-commit agents in channel_commit.sh provide verification. No /verify needed.

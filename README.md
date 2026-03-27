@@ -136,7 +136,7 @@ Up-to-six-agent verification squad that independently audits work before any com
 
 The `stop-task-check.sh` hook fires when Claude tries to stop, requiring verification evidence before allowing completion claims through. Self-attestation ("I verified this") is explicitly rejected -- the hook checks for actual squad output files on disk.
 
-Commands: `/squad`, `/grill` (iterative self-challenge)
+Commands: `/verify`, `/grill` (iterative self-challenge)
 
 ### Commit Enforcement
 
@@ -278,7 +278,7 @@ cc-sentinel/
   modules/
     core/                # Required -- hooks, templates, /cold, /cleanup, /status
     context-awareness/   # Status bar meter, graduated warnings
-    verification/        # up-to-6-agent squad, /squad, /grill
+    verification/        # up-to-6-agent squad, /verify, /grill
     commit-enforcement/  # safe-commit, auto-format, channel routing
     sprint-pipeline/     # /1-/5 workflow, /spawn multi-session
     governance-protection/ # file-protection, /mistake, /prune-rules

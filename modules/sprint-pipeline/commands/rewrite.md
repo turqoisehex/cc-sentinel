@@ -44,7 +44,7 @@ Rename new files to final names, update imports, delete old files (no tombstones
 
 ### Step 8: Verify
 
-`/squad on <changed files>`. All agents must pass.
+`/verify on <changed files>`. All agents must pass.
 
 ## Rules
 

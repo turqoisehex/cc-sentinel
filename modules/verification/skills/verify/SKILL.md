@@ -1,11 +1,11 @@
 ---
-name: squad
+name: verify
 description: "Launch up to 6-agent verification squad against a scope of work. Agents check mechanics, adversarial cases, completeness, dependencies, cold-readability, and performance. Use after completing work or before claiming done."
 ---
 
-# /squad — Launch Verification Squad
+# /verify — Launch Verification Squad
 
-**Trigger:** `/squad [scope]`
+**Trigger:** `/verify [scope]`
 
 Run the Verification Squad (up to 6 parallel agents) against a specified scope of work.
 
@@ -17,13 +17,13 @@ Run the Verification Squad (up to 6 parallel agents) against a specified scope o
 
 | Usage | Scope |
 |-------|-------|
-| `/squad` | Staged + unstaged. If clean, last commit. |
-| `/squad full` | All changes since session start. |
-| `/squad last` | `HEAD~1..HEAD` |
-| `/squad last N` | `HEAD~N..HEAD` |
-| `/squad since <ref>` | `<ref>..HEAD` + uncommitted |
-| `/squad on <files>` | Specific file(s) only. |
-| `/squad commit <hash>` | `<hash>~1..<hash>` |
+| `/verify` | Staged + unstaged. If clean, last commit. |
+| `/verify full` | All changes since session start. |
+| `/verify last` | `HEAD~1..HEAD` |
+| `/verify last N` | `HEAD~N..HEAD` |
+| `/verify since <ref>` | `<ref>..HEAD` + uncommitted |
+| `/verify on <files>` | Specific file(s) only. |
+| `/verify commit <hash>` | `<hash>~1..<hash>` |
 
 ## Procedure
 
@@ -65,7 +65,7 @@ Write `manifest.json` to the squad directory:
 
 If all files are source code (or mixed), launch all 6 and **delete any existing manifest.json** in the squad directory (to prevent stale partial-run manifests from affecting the commit gate).
 
-DISPATCH TO SONNET AND ASSUME THE LISTENER IS RUNNING. You do NOT have permission to run squad agents locally unless invoked with `/squad local <scope>`. No heartbeat, no listener directory, no prior evidence of Sonnet — none of these are valid reasons to run locally.
+DISPATCH TO SONNET AND ASSUME THE LISTENER IS RUNNING. You do NOT have permission to run squad agents locally unless invoked with `/verify local <scope>`. No heartbeat, no listener directory, no prior evidence of Sonnet — none of these are valid reasons to run locally.
 
 Follow this exact sequence:
 1. Update CT — cold-start ready.
