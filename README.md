@@ -27,7 +27,7 @@ Claude Code: I see this is a Python/Django project with pytest. Here's what I re
 
   [x] Core (required) -- context loss prevention, anti-deferral, state management
   [x] Context Awareness -- visual context meter in your status bar
-  [ ] Verification -- 5-agent verification squad before completion claims
+  [ ] Verification -- up to 6-agent verification squad before completion claims
   [x] Commit Enforcement -- test gating, auto-format, diff review
   [ ] Sprint Pipeline -- structured /1 through /5 workflow
   [x] Governance Protection -- protect CLAUDE.md and config from mid-session edits
@@ -124,7 +124,7 @@ Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the lo
 
 ### Verification
 
-Five-agent verification squad that independently audits work before any completion claim. Each agent has a different adversarial perspective:
+Up-to-six-agent verification squad that independently audits work before any completion claim. Each agent has a different adversarial perspective:
 
 | Agent | What It Catches |
 |---|---|
@@ -278,7 +278,7 @@ cc-sentinel/
   modules/
     core/                # Required -- hooks, templates, /cold, /cleanup, /status
     context-awareness/   # Status bar meter, graduated warnings
-    verification/        # 5-agent squad, /squad, /grill
+    verification/        # up-to-6-agent squad, /squad, /grill
     commit-enforcement/  # safe-commit, auto-format, channel routing
     sprint-pipeline/     # /1-/5 workflow, /spawn multi-session
     governance-protection/ # file-protection, /mistake, /prune-rules
@@ -304,11 +304,11 @@ cc-sentinel implements the workflow principles documented by Boris Cherny -- cre
 
 > "Probably the most important thing to get great results out of Claude Code." -- Cherny
 
-Claude's self-assessment of its own work is structurally unreliable. Cherny's workflow embeds adversarial two-layer code review, tests-first development, and stop hooks that block exit on test failure. His `/code-review` command spawns multiple parallel subagents checking style, history, and bugs -- then five more specifically tasked with *challenging* those findings.
+Claude's self-assessment of its own work is structurally unreliable. Cherny's workflow embeds adversarial two-layer code review, tests-first development, and stop hooks that block exit on test failure. His `/code-review` command spawns multiple parallel subagents checking style, history, and bugs -- then several more specifically tasked with *challenging* those findings.
 
 > "Say 'Grill me on these changes and don't make a PR until I pass your test.'" -- Cherny
 
-**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Five independent verification agents (mechanical, adversarial, completeness, dependency, cold-reader) audit in parallel. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
+**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Up to six independent verification agents (mechanical, adversarial, completeness, dependency, cold-reader, performance) audit in parallel. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
 
 ### Context is infrastructure, not conversation
 

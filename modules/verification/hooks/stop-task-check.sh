@@ -6,7 +6,7 @@
 # REQUIREMENTS:
 #   R1. Completion gate — if assistant claims work is done (completion language
 #       in last message), require verification evidence before allowing stop.
-#       Evidence: squad dir with 5 PASS/WARN verdicts, or VERIFICATION_BLOCKED
+#       Evidence: squad dir with all expected PASS/WARN verdicts, or VERIFICATION_BLOCKED
 #       marker in the active CT file. (WARN = issues found but non-blocking.)
 #   R2. Staleness gate — if any active CT file is >2 min stale, block and
 #       request progress update before stopping.
@@ -207,7 +207,28 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     fi
     [[ "$SQUAD_ALLOWED" == "false" ]] && continue
     # Source of truth for agent names: modules/verification/reference/verification-squad.md
-    SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md")
+    SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+
+    # Check for manifest.json (smart filtering) — overrides default SQUAD_EXPECTED
+    if [[ -f "$SQUAD_DIR/manifest.json" ]]; then
+      if ! jq -e '.launched' "$SQUAD_DIR/manifest.json" >/dev/null 2>&1; then
+        echo "WARNING: manifest.json exists but contains invalid JSON — using default agents" >&2
+      else
+        MANIFEST_AGENTS=$(jq -r '.launched[]? // empty' "$SQUAD_DIR/manifest.json" 2>/dev/null | tr -d '\r')
+        if [[ -n "$MANIFEST_AGENTS" ]]; then
+          SQUAD_EXPECTED=()
+          while IFS= read -r agent; do
+            agent="${agent//$'\r'/}"
+            [[ -n "$agent" ]] && SQUAD_EXPECTED+=("${agent}")
+          done <<< "$MANIFEST_AGENTS"
+          # If we ended up with empty array, restore default
+          if [[ ${#SQUAD_EXPECTED[@]} -eq 0 ]]; then
+            SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+          fi
+        fi
+      fi
+    fi
+
     SQUAD_EXISTS=0
     SQUAD_PASS=0
     SQUAD_MISSING=""
@@ -229,23 +250,23 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     # passing squad also exists, the old one still blocks — clean up old squad
     # dirs before claiming completion. This is the safe direction (false block,
     # not false allow). The anti-loop (R5) limits this to one extra stop.
-    if [[ "$SQUAD_EXISTS" -gt 0 ]] && [[ "$SQUAD_PASS" -lt 5 ]]; then
-      REASON="INCOMPLETE VERIFICATION SQUAD (${SQUAD_TAG}): Squad directory exists but not all 5 agents passed (${SQUAD_PASS}/5)."
+    if [[ "$SQUAD_EXISTS" -gt 0 ]] && [[ "$SQUAD_PASS" -lt ${#SQUAD_EXPECTED[@]} ]]; then
+      REASON="INCOMPLETE VERIFICATION SQUAD (${SQUAD_TAG}): Squad directory exists but not all ${#SQUAD_EXPECTED[@]} agents passed (${SQUAD_PASS}/${#SQUAD_EXPECTED[@]})."
       if [[ -n "$SQUAD_MISSING" ]]; then
         REASON="${REASON} Missing:${SQUAD_MISSING}."
       fi
       if [[ -n "$SQUAD_FAILED" ]]; then
         REASON="${REASON} Failed (no VERDICT: PASS or WARN):${SQUAD_FAILED}."
       fi
-      REASON="${REASON} Fix failing agents and re-run. All 5 must PASS or WARN before completion."
+      REASON="${REASON} Fix failing agents and re-run. All ${#SQUAD_EXPECTED[@]} must PASS or WARN before completion."
       REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
-      echo "  -> BLOCK (${SQUAD_TAG} incomplete: ${SQUAD_PASS}/5 pass)" >> "$LOGFILE" 2>/dev/null
+      echo "  -> BLOCK (${SQUAD_TAG} incomplete: ${SQUAD_PASS}/${#SQUAD_EXPECTED[@]} pass)" >> "$LOGFILE" 2>/dev/null
       echo "{\"decision\": \"block\", \"reason\": ${REASON_JSON}}"
       exit 0
     fi
 
-    # All 5 exist and pass — this squad counts as verification evidence
-    if [[ "$SQUAD_PASS" -eq 5 ]]; then
+    # All agents exist and pass — this squad counts as verification evidence
+    if [[ "$SQUAD_PASS" -eq ${#SQUAD_EXPECTED[@]} ]]; then
       VERIFICATION_FOUND="true"
     fi
   done

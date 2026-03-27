@@ -2,7 +2,7 @@
 
 **Trigger:** `/squad [scope]`
 
-Run the Verification Squad (5 parallel agents) against a specified scope of work.
+Run the Verification Squad (up to 6 parallel agents) against a specified scope of work.
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix.
 
@@ -41,6 +41,25 @@ SQUAD_DIR: squad_[chN_]sonnet/
 
 ### Step 4: Delegate to Sonnet
 
+### Step 4a: Smart agent filtering
+
+Before launching agents, classify the changed files to determine which agents are relevant:
+
+| File Category | Agents Launched |
+|---|---|
+| Docs only (.md, .txt, .rst) | cold_reader |
+| Tests only (*_test.*, *_spec.*, test_*) | mechanical, completeness |
+| Config only (.json, .yaml, .toml, .env*) | adversarial, dependency |
+| Source code (everything else) | all 6 |
+| Mixed | union of matching categories |
+
+Write `manifest.json` to the squad directory:
+```json
+{"launched": ["agent1", "agent2"], "reason": "category description", "timestamp": "ISO"}
+```
+
+If all files are source code (or mixed), launch all 6 and **delete any existing manifest.json** in the squad directory (to prevent stale partial-run manifests from affecting the commit gate).
+
 DISPATCH TO SONNET AND ASSUME THE LISTENER IS RUNNING. Start the background wait script. You do NOT have permission to run squad agents locally unless invoked with `/squad local <scope>`. No heartbeat, no listener directory, no prior evidence of Sonnet — none of these are valid reasons to run locally.
 
 Follow this exact sequence:
@@ -67,10 +86,12 @@ agents:
     output_path: verification_findings/squad_[chN_]sonnet/dependency.md
   - name: cold_reader
     output_path: verification_findings/squad_[chN_]sonnet/cold_reader.md
+  - name: performance
+    output_path: verification_findings/squad_[chN_]sonnet/performance.md
 ---
 ```
 
-After frontmatter, include: WORK_PRODUCT, SOURCE_SPEC, SCOPE_SUMMARY from Step 3, and the full 5-agent prompts from the verification squad reference.
+After frontmatter, include: WORK_PRODUCT, SOURCE_SPEC, SCOPE_SUMMARY from Step 3, and the full 6-agent prompts from the verification squad reference.
 
 For `on <files>`: agents focus only on specified files.
 For `full`: agents may batch-process if diff is large.
@@ -81,9 +102,9 @@ Do not idle. Proceed with queued work or run `/grill`. The wait task notifies on
 
 ### Step 5: Report
 
-When all 5 result files present:
+When all expected result files present:
 
-1. Read all 5 output files.
+1. Read all 6 output files.
 2. Present consolidated summary: each agent PASS/FAIL with issue count.
 3. ALL PASS → write `VERIFICATION_PASSED` + summary to CT (documentation only — hooks require actual squad files).
 4. ANY FAIL → list issues, ask user whether to fix and re-run failed agent(s).

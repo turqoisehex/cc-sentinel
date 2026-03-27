@@ -193,9 +193,30 @@ if [[ -n "$STAGED_FILES" ]]; then
       echo "  SQUAD BYPASSED (--skip-squad flag)" >&2
     else
       SQUAD_EVIDENCE="false"
-      SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md")
       for sd in $SQUAD_GLOB; do
         [[ ! -d "$sd" ]] && continue
+        SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+
+        # Check for manifest.json (smart filtering) — overrides default SQUAD_EXPECTED
+        if [[ -f "$sd/manifest.json" ]]; then
+          if ! jq -e '.launched' "$sd/manifest.json" >/dev/null 2>&1; then
+            echo "WARNING: manifest.json exists but contains invalid JSON — using default agents" >&2
+          else
+            MANIFEST_AGENTS=$(jq -r '.launched[]? // empty' "$sd/manifest.json" 2>/dev/null | tr -d '\r')
+            if [[ -n "$MANIFEST_AGENTS" ]]; then
+              SQUAD_EXPECTED=()
+              while IFS= read -r agent; do
+                agent="${agent//$'\r'/}"
+                [[ -n "$agent" ]] && SQUAD_EXPECTED+=("${agent}")
+              done <<< "$MANIFEST_AGENTS"
+              # If we ended up with empty array, restore default
+              if [[ ${#SQUAD_EXPECTED[@]} -eq 0 ]]; then
+                SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+              fi
+            fi
+          fi
+        fi
+
         ALL_PASS="true"
         for ef in "${SQUAD_EXPECTED[@]}"; do
           if [[ ! -f "$sd/$ef" ]] || ! grep -qE "VERDICT: (PASS|WARN)" "$sd/$ef" 2>/dev/null; then
@@ -238,9 +259,30 @@ COMMIT_EXIT=$?
 
 # 5. Clean up after successful commit
 if [[ "$COMMIT_EXIT" -eq 0 ]]; then
-  SQUAD_EXPECTED_CLEAN=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md")
   for sd in $SQUAD_GLOB; do
     [[ ! -d "$sd" ]] && continue
+    SQUAD_EXPECTED_CLEAN=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+
+    # Check for manifest.json (smart filtering) — overrides default SQUAD_EXPECTED_CLEAN
+    if [[ -f "$sd/manifest.json" ]]; then
+      if ! jq -e '.launched' "$sd/manifest.json" >/dev/null 2>&1; then
+        echo "WARNING: manifest.json exists but contains invalid JSON — using default agents" >&2
+      else
+        MANIFEST_AGENTS=$(jq -r '.launched[]? // empty' "$sd/manifest.json" 2>/dev/null | tr -d '\r')
+        if [[ -n "$MANIFEST_AGENTS" ]]; then
+          SQUAD_EXPECTED_CLEAN=()
+          while IFS= read -r agent; do
+            agent="${agent//$'\r'/}"
+            [[ -n "$agent" ]] && SQUAD_EXPECTED_CLEAN+=("${agent}")
+          done <<< "$MANIFEST_AGENTS"
+          # If we ended up with empty array, restore default
+          if [[ ${#SQUAD_EXPECTED_CLEAN[@]} -eq 0 ]]; then
+            SQUAD_EXPECTED_CLEAN=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+          fi
+        fi
+      fi
+    fi
+
     ALL_DONE="true"
     for ef in "${SQUAD_EXPECTED_CLEAN[@]}"; do
       if [[ ! -f "$sd/$ef" ]] || ! grep -qE "VERDICT: (PASS|WARN)" "$sd/$ef" 2>/dev/null; then
@@ -250,6 +292,7 @@ if [[ "$COMMIT_EXIT" -eq 0 ]]; then
     done
     if [[ "$ALL_DONE" == "true" ]]; then
       rm -f "$sd"/*.md 2>/dev/null
+      rm -f "$sd"/manifest.json 2>/dev/null
       rmdir "$sd" 2>/dev/null
     fi
   done

@@ -137,12 +137,12 @@ assert_stdout_empty() {
   fi
 }
 
-# Create a valid squad dir with all 5 agents passing
+# Create a valid squad dir with all 6 agents passing
 create_passing_squad() {
   local dir="$1" squad_name="${2:-squad_sonnet}"
   local squad_dir="$dir/verification_findings/$squad_name"
   mkdir -p "$squad_dir"
-  for agent in mechanical adversarial completeness dependency cold_reader; do
+  for agent in mechanical adversarial completeness dependency cold_reader performance; do
     echo "VERDICT: PASS" > "$squad_dir/$agent.md"
   done
 }
@@ -153,7 +153,7 @@ create_failing_squad() {
   local squad_dir="$dir/verification_findings/$squad_name"
   mkdir -p "$squad_dir"
   local i=0
-  for agent in mechanical adversarial completeness dependency cold_reader; do
+  for agent in mechanical adversarial completeness dependency cold_reader performance; do
     if (( i < fail_count )); then
       echo "VERDICT: FAIL" > "$squad_dir/$agent.md"
     else
@@ -253,6 +253,7 @@ echo "VERDICT: WARN (2 minor)" > "$WARN_SQUAD/adversarial.md"
 echo "VERDICT: PASS" > "$WARN_SQUAD/completeness.md"
 echo "VERDICT: WARN (1 minor)" > "$WARN_SQUAD/dependency.md"
 echo "VERDICT: PASS" > "$WARN_SQUAD/cold_reader.md"
+echo "VERDICT: PASS" > "$WARN_SQUAD/performance.md"
 INPUT=$(build_input "$PROJECT" "All work is complete and ready to ship.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -430,20 +431,20 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (VERIFICATION_BLOCKED counts as evidence)"
 teardown_temp
 
-# --- Test 10: Incomplete squad (3/5 pass) -> BLOCK with details ---
+# --- Test 10: Incomplete squad (4/6 pass) -> BLOCK with details ---
 echo ""
-echo "Test 10: Incomplete squad (3/5 pass) -> BLOCK"
+echo "Test 10: Incomplete squad (4/6 pass) -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
-create_failing_squad "$PROJECT" "squad_sonnet" 2  # 2 fail, 3 pass
+create_failing_squad "$PROJECT" "squad_sonnet" 2  # 2 fail, 4 pass
 INPUT=$(build_input "$PROJECT" "Everything is done. Implementation complete.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains '"decision".*"block"' "blocks (incomplete squad)"
 assert_stdout_contains "INCOMPLETE VERIFICATION SQUAD" "mentions incomplete squad"
-assert_stdout_contains "3/5" "shows pass count"
+assert_stdout_contains "4/6" "shows pass count"
 teardown_temp
 
 # --- Test 11: Channel scoping — ch1 squad doesn't satisfy ch10 ---
@@ -662,7 +663,7 @@ cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
 # CURRENT TASK
 **Status:** IN PROGRESS
 ## Notes
-VERIFICATION_PASSED — all 5 agents passed.
+VERIFICATION_PASSED — all agents passed.
 EOF
 touch_now "$PROJECT/CURRENT_TASK.md"
 INPUT=$(build_input "$PROJECT" "All work is complete. Sprint is done.")
@@ -742,18 +743,18 @@ setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
-# Create squad with only 3 of 5 agents (2 missing)
+# Create squad with only 3 of 6 agents (3 missing: dependency, cold_reader, performance)
 PARTIAL_SQUAD="$PROJECT/verification_findings/squad_sonnet"
 mkdir -p "$PARTIAL_SQUAD"
 echo "VERDICT: PASS" > "$PARTIAL_SQUAD/mechanical.md"
 echo "VERDICT: PASS" > "$PARTIAL_SQUAD/adversarial.md"
 echo "VERDICT: PASS" > "$PARTIAL_SQUAD/completeness.md"
-# dependency.md and cold_reader.md missing
+# dependency.md, cold_reader.md, and performance.md missing
 INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "Missing:" "reports missing agents"
-assert_stdout_contains "3/5" "shows 3 of 5 passed"
+assert_stdout_contains "3/6" "shows 3 of 6 passed"
 teardown_temp
 
 echo ""
@@ -762,7 +763,7 @@ setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
-# Create squad with all 5 present but 2 have FAIL verdicts
+# Create squad with all 6 present but 3 have FAIL verdicts
 FAIL_SQUAD="$PROJECT/verification_findings/squad_sonnet"
 mkdir -p "$FAIL_SQUAD"
 echo "VERDICT: PASS" > "$FAIL_SQUAD/mechanical.md"
@@ -770,11 +771,78 @@ echo "VERDICT: PASS" > "$FAIL_SQUAD/adversarial.md"
 echo "VERDICT: PASS" > "$FAIL_SQUAD/completeness.md"
 echo "VERDICT: FAIL (3 issues)" > "$FAIL_SQUAD/dependency.md"
 echo "VERDICT: FAIL (1 issue)" > "$FAIL_SQUAD/cold_reader.md"
+echo "VERDICT: FAIL (2 issues)" > "$FAIL_SQUAD/performance.md"
 INPUT=$(build_input "$PROJECT" "Everything is done. Implementation complete.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "Failed" "reports failed agents"
-assert_stdout_contains "3/5" "shows 3 of 5 passed"
+assert_stdout_contains "3/6" "shows 3 of 6 passed"
+teardown_temp
+
+# --- Test T_manifest_valid: manifest.json with 2 listed agents -> uses 2-agent squad ---
+echo ""
+echo "Test T_manifest_valid: manifest.json valid -> 2-agent squad satisfies gate"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# Create manifest-filtered squad: only mechanical + cold_reader
+MANI_SQUAD="$PROJECT/verification_findings/squad_sonnet"
+mkdir -p "$MANI_SQUAD"
+echo "VERDICT: PASS" > "$MANI_SQUAD/mechanical.md"
+echo "VERDICT: PASS" > "$MANI_SQUAD/cold_reader.md"
+printf '{"launched":["mechanical.md","cold_reader.md"],"reason":"docs only","timestamp":"2026-01-01T00:00:00Z"}' > "$MANI_SQUAD/manifest.json"
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (manifest 2-agent squad satisfies gate)"
+teardown_temp
+
+# --- Test T_manifest_invalid_json: invalid JSON in manifest.json -> falls through to default ---
+echo ""
+echo "Test T_manifest_invalid_json: invalid manifest.json -> falls through to default (all 6)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# Create squad with all 6 agents (default), plus bad manifest
+create_passing_squad "$PROJECT" "squad_sonnet"
+printf '{invalid' > "$PROJECT/verification_findings/squad_sonnet/manifest.json"
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (invalid manifest falls back to default 6)"
+teardown_temp
+
+# --- Test T_manifest_empty: empty launched array -> falls through to default ---
+echo ""
+echo "Test T_manifest_empty: empty launched[] -> falls through to default (all 6)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# Create squad with all 6 agents, plus empty manifest
+create_passing_squad "$PROJECT" "squad_sonnet"
+printf '{"launched":[]}' > "$PROJECT/verification_findings/squad_sonnet/manifest.json"
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (empty launched falls back to default 6)"
+teardown_temp
+
+# --- Test T_manifest_absent: no manifest.json -> uses default 6 agents ---
+echo ""
+echo "Test T_manifest_absent: no manifest.json -> uses default 6 agents"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+create_passing_squad "$PROJECT" "squad_sonnet"
+# No manifest.json — just the 6 agent files
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (no manifest uses default 6)"
 teardown_temp
 
 # ==================== SUMMARY ====================
