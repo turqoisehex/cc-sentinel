@@ -231,6 +231,9 @@ install_module() {
   if [[ -d "$module_dir" ]] && [[ -f "$module_dir/protected-files.txt" ]]; then
     copy_file "$module_dir/protected-files.txt" "${CLAUDE_DIR}/protected-files.txt"
   fi
+  if [[ -d "$module_dir" ]] && [[ -f "$module_dir/sensitive-patterns.txt" ]]; then
+    copy_file "$module_dir/sensitive-patterns.txt" "${CLAUDE_DIR}/sensitive-patterns.txt"
+  fi
 
   # claude-md rules
   if [[ -f "$module_dir/claude-md-rules.md" ]]; then

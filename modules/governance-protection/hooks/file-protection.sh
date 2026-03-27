@@ -75,8 +75,10 @@ done
 [[ "$GOVERNANCE_AUTHORIZED" == "true" ]] && exit 0
 
 # Check each file path against the protected list (if protected-files.txt exists)
+# Capture output so we can exit early if denied — prevents double JSON output if the
+# same file also matches a sensitive pattern in the second pass below.
 if [[ -n "$PROTECTED_FILES_LIST" ]]; then
-echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
+PROTECTED_DENY=$(echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
   [[ -z "$FILE_PATH" ]] && continue
   FILENAME="$(basename "$FILE_PATH")"
 
@@ -88,7 +90,11 @@ echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
       exit 0
     fi
   done < "$PROTECTED_FILES_LIST"
-done
+done)
+if [[ -n "$PROTECTED_DENY" ]]; then
+  echo "$PROTECTED_DENY"
+  exit 0
+fi
 fi
 
 # --- Second pass: sensitive file patterns ---

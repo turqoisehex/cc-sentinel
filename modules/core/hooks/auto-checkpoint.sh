@@ -16,10 +16,10 @@ STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
 git add -A 2>/dev/null
 SHA=$(git stash create "sentinel-checkpoint: $TIMESTAMP" 2>/dev/null)
 git reset --quiet 2>/dev/null
-# Restore any files that were staged before the hook ran
+# Restore any files that were staged before the hook ran (including staged deletions)
 if [[ -n "$STAGED_FILES" ]]; then
   while IFS= read -r f; do
-    [[ -f "$f" ]] && git add "$f" 2>/dev/null
+    [[ -n "$f" ]] && git add "$f" 2>/dev/null
   done <<< "$STAGED_FILES"
 fi
 

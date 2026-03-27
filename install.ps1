@@ -200,6 +200,10 @@ function Install-Module($moduleName) {
     if (Test-Path $protectedFiles) {
         Copy-FileChecked $protectedFiles (Join-Path $ClaudeDir "protected-files.txt")
     }
+    $sensitivePatterns = Join-Path $moduleDir "sensitive-patterns.txt"
+    if (Test-Path $sensitivePatterns) {
+        Copy-FileChecked $sensitivePatterns (Join-Path $ClaudeDir "sensitive-patterns.txt")
+    }
 
     # claude-md rules
     $rulesFile = Join-Path $moduleDir "claude-md-rules.md"
