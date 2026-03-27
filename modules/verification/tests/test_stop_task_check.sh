@@ -657,6 +657,112 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "VERIFICATION_PASSED is not accepted as evidence"
 teardown_temp
 
+# --- Test 23: Malformed CT (no Status or Phase line) -> ALLOW (fail-open) ---
+echo ""
+echo "Test 23: Malformed CT (no Status/Phase) -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
+# CURRENT TASK
+Some notes here but no Status or Phase header.
+## Plan
+- Step 1: Do something
+EOF
+touch_aged "$PROJECT/CURRENT_TASK.md" 300
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint is complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "malformed CT = no active task detected = allow"
+teardown_temp
+
+# --- Test 24: WAKEFUL_CHANNEL fallback (SENTINEL_CHANNEL unset) -> scopes correctly ---
+echo ""
+echo "Test 24: WAKEFUL_CHANNEL fallback -> checks own channel"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"  # shared not active
+create_channel_ct "$PROJECT" "4" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK_ch4.md" 300  # stale
+# Use WAKEFUL_CHANNEL instead of SENTINEL_CHANNEL
+WAKEFUL_CHANNEL=4 run_hook "$(build_input "$PROJECT" "Continuing work.")"
+assert_exit 0 "exit 0"
+assert_stdout_contains "ch4" "WAKEFUL_CHANNEL fallback scopes to ch4"
+teardown_temp
+
+# --- Test 25: WAKEFUL_LISTENER fallback -> unconditional ALLOW ---
+echo ""
+echo "Test 25: WAKEFUL_LISTENER=true -> ALLOW (fallback env var)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
+# SENTINEL_LISTENER unset; WAKEFUL_LISTENER should be accepted as fallback
+WAKEFUL_LISTENER=true run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (WAKEFUL_LISTENER fallback bypass)"
+teardown_temp
+
+# --- Test 26: Two squad dirs — first incomplete blocks even if second passes ---
+echo ""
+echo "Test 26: Two squad dirs — first incomplete blocks despite second passing"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# First squad dir (alphabetically): incomplete
+create_failing_squad "$PROJECT" "squad_a_old" 3  # 2 pass, 3 fail
+# Second squad dir (alphabetically): all pass
+create_passing_squad "$PROJECT" "squad_b_new"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint is complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains '"decision".*"block"' "first incomplete squad blocks"
+assert_stdout_contains "squad_a_old" "identifies the blocking squad dir"
+teardown_temp
+
+# --- Test 27: Squad with missing agent files vs failed verdicts -> distinct error messages ---
+echo ""
+echo "Test 27a: Squad with missing agent files -> reports 'Missing'"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# Create squad with only 3 of 5 agents (2 missing)
+PARTIAL_SQUAD="$PROJECT/verification_findings/squad_sonnet"
+mkdir -p "$PARTIAL_SQUAD"
+echo "VERDICT: PASS" > "$PARTIAL_SQUAD/mechanical.md"
+echo "VERDICT: PASS" > "$PARTIAL_SQUAD/adversarial.md"
+echo "VERDICT: PASS" > "$PARTIAL_SQUAD/completeness.md"
+# dependency.md and cold_reader.md missing
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "Missing:" "reports missing agents"
+assert_stdout_contains "3/5" "shows 3 of 5 passed"
+teardown_temp
+
+echo ""
+echo "Test 27b: Squad with failed verdicts -> reports 'Failed'"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# Create squad with all 5 present but 2 have FAIL verdicts
+FAIL_SQUAD="$PROJECT/verification_findings/squad_sonnet"
+mkdir -p "$FAIL_SQUAD"
+echo "VERDICT: PASS" > "$FAIL_SQUAD/mechanical.md"
+echo "VERDICT: PASS" > "$FAIL_SQUAD/adversarial.md"
+echo "VERDICT: PASS" > "$FAIL_SQUAD/completeness.md"
+echo "VERDICT: FAIL (3 issues)" > "$FAIL_SQUAD/dependency.md"
+echo "VERDICT: FAIL (1 issue)" > "$FAIL_SQUAD/cold_reader.md"
+INPUT=$(build_input "$PROJECT" "Everything is done. Implementation complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "Failed" "reports failed agents"
+assert_stdout_contains "3/5" "shows 3 of 5 passed"
+teardown_temp
+
 # ==================== SUMMARY ====================
 
 echo ""
