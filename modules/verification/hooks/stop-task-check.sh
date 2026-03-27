@@ -11,7 +11,7 @@
 #   R2. Staleness gate — if any active CT file is >2 min stale, block and
 #       request progress update before stopping.
 #   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
-#       loops) must never be blocked. Detection: WAKEFUL_LISTENER env var
+#       loops) must never be blocked. Detection: SENTINEL_LISTENER env var
 #       (primary, set by spawn.py) or "Watching _pending_..." message pattern
 #       (fallback for manual launches).
 #   R4. Channel scoping — each session only checks its own CT files.
@@ -237,7 +237,7 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
       if [[ -n "$SQUAD_FAILED" ]]; then
         REASON="${REASON} Failed (no VERDICT: PASS or WARN):${SQUAD_FAILED}."
       fi
-      REASON="${REASON} Fix failing agents and re-run. All 5 must PASS before completion."
+      REASON="${REASON} Fix failing agents and re-run. All 5 must PASS or WARN before completion."
       REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
       echo "  -> BLOCK (${SQUAD_TAG} incomplete: ${SQUAD_PASS}/5 pass)" >> "$LOGFILE" 2>/dev/null
       echo "{\"decision\": \"block\", \"reason\": ${REASON_JSON}}"
@@ -296,5 +296,5 @@ fi
 
 # COMPLETE status with no completion language — allow stop (R1 only triggers
 # when assistant claims completion in its message; stale check only for active tasks)
-echo "  -> ALLOW (complete status, no stale check needed)" >> "$LOGFILE" 2>/dev/null
+echo "  -> ALLOW (no completion claim, no stale active files)" >> "$LOGFILE" 2>/dev/null
 exit 0

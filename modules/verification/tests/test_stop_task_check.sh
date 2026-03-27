@@ -336,10 +336,10 @@ mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
-# Even with completion language and stale CT, WAKEFUL_LISTENER bypasses everything
+# Even with completion language and stale CT, listener env var bypasses everything
 SENTINEL_LISTENER=true run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_empty "no block (WAKEFUL_LISTENER env var bypass)"
+assert_stdout_empty "no block (listener env var bypass)"
 teardown_temp
 
 # --- Test 8: Sonnet listener bypass ---
