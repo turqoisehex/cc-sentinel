@@ -1053,17 +1053,20 @@ class Spawner:
     def _needs_trust_prompt(project_dir):
         """Check if CC will show a trust prompt for this directory.
 
-        CC shows the trust prompt when the directory has no
-        .claude/settings.json (not a trusted project).
+        CC shows the trust prompt the first time a project is opened.
+        Once trusted, the directory is remembered in user-level settings.
+        A .claude/ directory (with any contents) indicates prior CC use,
+        meaning the project has almost certainly been trusted already.
         The home directory can never be marked as trusted.
         """
         p = pathlib.Path(project_dir).expanduser().resolve()
         home = pathlib.Path.home().resolve()
         if p == home:
             return True
-        if not (p / ".claude" / "settings.json").exists():
-            return True
-        return False
+        # .claude/ directory with any contents = prior CC use = trusted
+        if (p / ".claude").is_dir():
+            return False
+        return True
 
     @staticmethod
     def _has_channel_infra(project_dir):
