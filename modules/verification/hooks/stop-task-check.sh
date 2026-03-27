@@ -15,8 +15,8 @@
 #       (primary, set by spawn.py) or "Watching _pending_..." message pattern
 #       (fallback for manual launches).
 #   R4. Channel scoping — each session only checks its own CT files.
-#       WAKEFUL_CHANNEL=N → shared CT + ch{N} CT. Unset → shared CT only.
-#       Squad evidence scoped to active channels only.
+#       SENTINEL_CHANNEL=N or WAKEFUL_CHANNEL=N → shared CT + ch{N} CT.
+#       Unset → shared CT only. Squad evidence scoped to active channels.
 #   R5. Anti-loop — CC sets stop_hook_active=true after first block.
 #       Second stop attempt always allowed.
 #   R6. Fail-open — any parse/stat/jq error → exit 0, no output → allow stop.
@@ -52,12 +52,13 @@ if [[ -z "$LAST_MSG_LEN" ]] || [[ "$LAST_MSG_LEN" -lt 1 ]]; then
 fi
 
 # --- BYPASS: Listener sessions (environment variable) ---
-# Set by spawn.py for Sonnet listener sessions at launch time. Unconditional
-# bypass — listeners are stateless service loops that must not touch CT files.
-# This is the primary listener detection mechanism; the message pattern check
-# below is a fallback for sessions launched manually without spawn.py.
-if [[ "${WAKEFUL_LISTENER:-}" == "true" ]]; then
-  echo "  -> ALLOW (WAKEFUL_LISTENER=true)" >> "$LOGFILE" 2>/dev/null
+# Set by spawn.py for listener sessions at launch time. Unconditional bypass —
+# listeners are stateless service loops that must not touch CT files.
+# Accepts both SENTINEL_LISTENER (cc-sentinel) and WAKEFUL_LISTENER (Wakeful).
+# The message pattern check below is a fallback for manual launches.
+HOOK_LISTENER="${SENTINEL_LISTENER:-${WAKEFUL_LISTENER:-}}"
+if [[ "$HOOK_LISTENER" == "true" ]]; then
+  echo "  -> ALLOW (listener env var)" >> "$LOGFILE" 2>/dev/null
   exit 0
 fi
 
@@ -77,15 +78,17 @@ if [[ -z "$PROJECT_DIR" ]]; then
   exit 0
 fi
 
-# Collect CT files: scope to own channel only. Without WAKEFUL_CHANNEL, only
+# Collect CT files: scope to own channel only. Without a channel env var, only
 # check shared CT — channel CTs belong to other sessions and checking them
 # causes cross-channel noise (stale alerts for files this session doesn't own,
 # which can lead to models deleting or overwriting other sessions' state).
+# Accepts both SENTINEL_CHANNEL (cc-sentinel) and WAKEFUL_CHANNEL (Wakeful).
+HOOK_CHANNEL="${SENTINEL_CHANNEL:-${WAKEFUL_CHANNEL:-}}"
 TASK_FILES=()
-if [[ -n "${WAKEFUL_CHANNEL:-}" ]]; then
+if [[ -n "$HOOK_CHANNEL" ]]; then
   # Channeled session: own channel + shared index
   [[ -f "${PROJECT_DIR}/CURRENT_TASK.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK.md")
-  [[ -f "${PROJECT_DIR}/CURRENT_TASK_ch${WAKEFUL_CHANNEL}.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK_ch${WAKEFUL_CHANNEL}.md")
+  [[ -f "${PROJECT_DIR}/CURRENT_TASK_ch${HOOK_CHANNEL}.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK_ch${HOOK_CHANNEL}.md")
 else
   # Unchanneled: shared CT only
   TASK_FILES=("${PROJECT_DIR}/CURRENT_TASK.md")
@@ -222,6 +225,10 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
       fi
     done
 
+    # NOTE: Blocks immediately on first incomplete squad dir found. If a newer
+    # passing squad also exists, the old one still blocks — clean up old squad
+    # dirs before claiming completion. This is the safe direction (false block,
+    # not false allow). The anti-loop (R5) limits this to one extra stop.
     if [[ "$SQUAD_EXISTS" -gt 0 ]] && [[ "$SQUAD_PASS" -lt 5 ]]; then
       REASON="INCOMPLETE VERIFICATION SQUAD (${SQUAD_TAG}): Squad directory exists but not all 5 agents passed (${SQUAD_PASS}/5)."
       if [[ -n "$SQUAD_MISSING" ]]; then

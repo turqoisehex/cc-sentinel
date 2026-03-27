@@ -270,7 +270,7 @@ touch_now "$PROJECT/CURRENT_TASK_ch2.md"
 # Squad exists but for channel 1, not channel 2
 create_passing_squad "$PROJECT" "squad_ch1_sonnet"
 INPUT=$(build_input "$PROJECT" "All tasks are done. The implementation is complete.")
-WAKEFUL_CHANNEL=2 run_hook "$INPUT"
+SENTINEL_CHANNEL=2 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains '"decision".*"block"' "blocks (wrong channel squad)"
 teardown_temp
@@ -328,16 +328,16 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (anti-loop bypass)"
 teardown_temp
 
-# --- Test 7b: WAKEFUL_LISTENER env var -> unconditional ALLOW ---
+# --- Test 7b: Listener env var -> unconditional ALLOW ---
 echo ""
-echo "Test 7b: WAKEFUL_LISTENER=true -> ALLOW (env var bypass)"
+echo "Test 7b: SENTINEL_LISTENER=true -> ALLOW (env var bypass)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
 # Even with completion language and stale CT, WAKEFUL_LISTENER bypasses everything
-WAKEFUL_LISTENER=true run_hook "$INPUT"
+SENTINEL_LISTENER=true run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_empty "no block (WAKEFUL_LISTENER env var bypass)"
 teardown_temp
@@ -443,7 +443,7 @@ touch_now "$PROJECT/CURRENT_TASK_ch10.md"
 # Squad for ch1 should NOT match ch10
 create_passing_squad "$PROJECT" "squad_ch1_sonnet"
 INPUT=$(build_input "$PROJECT" "All tasks are done. Ready to ship.")
-WAKEFUL_CHANNEL=10 run_hook "$INPUT"
+SENTINEL_CHANNEL=10 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains '"decision".*"block"' "blocks (ch1 squad doesn't satisfy ch10)"
 teardown_temp
@@ -493,7 +493,7 @@ teardown_temp
 
 # --- Test 14b: Channeled session checks own channel + shared ---
 echo ""
-echo "Test 14b: WAKEFUL_CHANNEL=2 -> checks ch2 + shared, ignores ch1"
+echo "Test 14b: SENTINEL_CHANNEL=2 -> checks ch2 + shared, ignores ch1"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "COMPLETE"  # shared not active
@@ -502,7 +502,7 @@ create_channel_ct "$PROJECT" "2" "IN PROGRESS"
 touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300  # stale but not our channel
 touch_aged "$PROJECT/CURRENT_TASK_ch2.md" 300  # stale and IS our channel
 INPUT=$(build_input "$PROJECT" "Continuing work on channel 2.")
-WAKEFUL_CHANNEL=2 run_hook "$INPUT"
+SENTINEL_CHANNEL=2 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 # Should only report ch2, not ch1
 assert_stdout_contains "ch2" "reports own channel as stale"
@@ -586,7 +586,7 @@ VERIFICATION_BLOCKED — max rounds reached, issues presented to user.
 EOF
 touch_now "$PROJECT/CURRENT_TASK_ch3.md"
 INPUT=$(build_input "$PROJECT" "All tasks are done. Work is complete.")
-WAKEFUL_CHANNEL=3 run_hook "$INPUT"
+SENTINEL_CHANNEL=3 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_empty "VERIFICATION_BLOCKED in channel CT counts as evidence"
 teardown_temp
@@ -601,7 +601,7 @@ create_channel_ct "$PROJECT" "5" "IN PROGRESS"
 touch_aged "$PROJECT/CURRENT_TASK.md" 300   # shared stale
 touch_now "$PROJECT/CURRENT_TASK_ch5.md"    # own channel fresh
 INPUT=$(build_input "$PROJECT" "Continuing work.")
-WAKEFUL_CHANNEL=5 run_hook "$INPUT"
+SENTINEL_CHANNEL=5 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "CURRENT_TASK.md" "reports stale shared CT"
 teardown_temp
@@ -622,6 +622,39 @@ INPUT=$(build_input "" "Continuing work.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_empty "no CT found via any fallback = allow"
+teardown_temp
+
+# --- Test 21: COMPLETE status + completion language -> BLOCK (no active files for verification) ---
+echo ""
+echo "Test 21: COMPLETE + completion language -> BLOCK (anti-loop allows 2nd stop)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"
+touch_now "$PROJECT/CURRENT_TASK.md"
+create_passing_squad "$PROJECT"
+INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+# COMPLETE = not active, so ACTIVE_FILES is empty, no squad can match
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "blocks (COMPLETE has no active files for verification)"
+teardown_temp
+
+# --- Test 22: VERIFICATION_PASSED is NOT accepted (self-attestation rejection) ---
+echo ""
+echo "Test 22: VERIFICATION_PASSED in CT does NOT satisfy verification gate"
+setup_temp
+mkdir -p "$PROJECT"
+cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
+# CURRENT TASK
+**Status:** IN PROGRESS
+## Notes
+VERIFICATION_PASSED — all 5 agents passed.
+EOF
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint is done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "VERIFICATION_PASSED is not accepted as evidence"
 teardown_temp
 
 # ==================== SUMMARY ====================

@@ -1239,13 +1239,13 @@ class Spawner:
 
                 # Step 5: Type claude --model <model>
                 # Set env vars for hook scoping:
-                # - WAKEFUL_CHANNEL: scopes stop hook CT checks to this channel
-                # - WAKEFUL_LISTENER: unconditional stop hook bypass for Sonnet
+                # - SENTINEL_CHANNEL: scopes stop hook CT checks to this channel
+                # - SENTINEL_LISTENER: unconditional stop hook bypass for Sonnet
                 #   listeners (stateless service loops that must not touch CT)
                 tip("%s %d: launching claude..." % (model_cap, idx))
-                env_prefix = "WAKEFUL_CHANNEL=%d" % idx
+                env_prefix = "SENTINEL_CHANNEL=%d" % idx
                 if model == "sonnet":
-                    env_prefix = "WAKEFUL_LISTENER=true " + env_prefix
+                    env_prefix = "SENTINEL_LISTENER=true " + env_prefix
                 key_sender.type_line("%s claude --model %s" % (env_prefix, model))
 
                 # Step 6: Sleep startup_delay
