@@ -370,15 +370,16 @@ teardown_temp
 
 # --- Test 8b2: "Waiting for work on chN" listener pattern -> ALLOW ---
 echo ""
-echo "Test 8b2: 'Waiting for work on ch2' listener pattern -> ALLOW"
+echo "Test 8b2: 'Waiting for work on ch10' listener pattern -> ALLOW (multi-digit)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
-INPUT=$(build_input "$PROJECT" "Waiting for work on ch2.")
+# Use ch10 (multi-digit) to prove the regex handles [0-9]+, not just [0-9]
+INPUT=$(build_input "$PROJECT" "Waiting for work on ch10.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_empty "no block (listener 'Waiting for work' pattern bypass)"
+assert_stdout_empty "no block (listener 'Waiting for work' pattern bypass, multi-digit)"
 teardown_temp
 
 # --- Test 8c: Heartbeat files do NOT bypass (regression guard) ---

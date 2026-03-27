@@ -134,7 +134,7 @@ fi
 # --- BYPASS: Listener sessions (message pattern — fallback for manual launches) ---
 # Matches the idle announce line. Once the listener picks up work, the last
 # message changes and normal CT enforcement applies. (See R3 in header.)
-if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/|Waiting for work on ch[0-9]" 2>/dev/null; then
+if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/|Waiting for work on ch[0-9]+" 2>/dev/null; then
   echo "  -> ALLOW (listener session — announce pattern)" >> "$LOGFILE" 2>/dev/null
   exit 0
 fi
