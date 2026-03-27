@@ -271,7 +271,7 @@ create_test_file "file_e.txt" "content E"
 # Stage + compute hash to pre-populate result files correctly
 git add file_e.txt
 EXPECTED_HASH=$(git diff --cached | git hash-object --stdin)
-git reset HEAD --quiet
+git reset --quiet
 mkdir -p verification_findings
 printf 'Hash: %s\nVERDICT: PASS\n' "$EXPECTED_HASH" > verification_findings/commit_check.md
 printf 'Hash: %s\nVERDICT: PASS\n' "$EXPECTED_HASH" > verification_findings/commit_cold_read.md
@@ -434,7 +434,7 @@ create_test_file "file_k.txt" "content K"
 # Stage and compute the expected hash (file_k has "content K modified")
 git add file_k.txt
 EXPECTED_HASH=$(git diff --cached | git hash-object --stdin)
-git reset HEAD --quiet
+git reset --quiet
 # Pre-populate result files with Phase 1's hash for local-verify
 mkdir -p verification_findings
 printf 'Hash: %s\nVERDICT: PASS\n' "$EXPECTED_HASH" > verification_findings/commit_check.md

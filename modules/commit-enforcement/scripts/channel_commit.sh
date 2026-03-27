@@ -104,7 +104,7 @@ phase1_stage_and_dispatch() {
     [[ -n "$unrelated" ]] && echo "WARNING: Clearing unrelated staged files:$unrelated" >&2
   fi
 
-  git reset HEAD --quiet 2>/dev/null || true
+  git reset --quiet 2>/dev/null || true
   for f in "${FILE_ARRAY[@]}"; do
     if ! git add "$f" 2>/dev/null; then
       echo "ERROR: Failed to stage: $f" >&2
@@ -300,7 +300,7 @@ done
 # --- Phase 2: Commit ---
 # Tests are owned by safe-commit.sh (single source of truth).
 acquire_lock
-git reset HEAD --quiet 2>/dev/null || true
+git reset --quiet 2>/dev/null || true
 for f in "${FILE_ARRAY[@]}"; do
   git add "$f" 2>/dev/null || { echo "ERROR: Phase 2 staging failed: $f" >&2; release_lock; exit 1; }
 done
