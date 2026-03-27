@@ -32,6 +32,16 @@ if [[ -z "$LAST_MSG_LEN" ]] || [[ "$LAST_MSG_LEN" -lt 1 ]]; then
   exit 0
 fi
 
+# --- BYPASS: Listener sessions (environment variable) ---
+# Set by spawn.py for Sonnet listener sessions at launch time. Unconditional
+# bypass — listeners are stateless service loops that must not touch CT files.
+# This is the primary listener detection mechanism; Tier 1 (message pattern)
+# below is a fallback for sessions launched manually without spawn.py.
+if [[ "${WAKEFUL_LISTENER:-}" == "true" ]]; then
+  echo "  -> ALLOW (WAKEFUL_LISTENER=true)" >> "$LOGFILE" 2>/dev/null
+  exit 0
+fi
+
 # Find project directory containing CURRENT_TASK.md
 CWD="$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null | tr -d '\r')" || true
 PROJECT_DIR=""
@@ -106,52 +116,20 @@ fi
 # Listeners must NOT touch CT files (sonnet.md hard rule), so blocking them
 # forces a rule violation — the model "helpfully" updates CT to satisfy the hook.
 #
-# Detection is two-tier:
-#   1. Message pattern: the "Watching _pending_..." announce line (fast, exact).
-#   2. Heartbeat probe: a fresh .heartbeat file (<15s) in any _pending_sonnet/ or _pending_opus/ dir
-#      proves a listener is alive. Combined with absence of completion language in
-#      the last message, this identifies a listener that has moved past its announce.
+# Detection: message pattern — the "Watching _pending_..." announce line. This
+# identifies a session that is idle, waiting for work. Once the session picks up
+# work and executes it, the announce line is no longer the last message, and the
+# session is subject to normal CT enforcement (stop_hook_active anti-loop ensures
+# at most one extra block).
 #
-# Trade-off: if an Opus session stops while a Sonnet listener is running AND Opus's
-# last message has no completion language, Opus would also skip the CT staleness
-# check. This is acceptable — the CT staleness check is a reminder, not a gate,
-# and the alternative (Sonnet corrupting CT) is far worse.
+# NOTE: A previous "Tier 2" heartbeat probe was removed because it could not
+# distinguish "I am a listener" from "a listener exists somewhere in this project."
+# With multiple channels, ANY fresh heartbeat would exempt ALL sessions — including
+# Opus orchestrators that had done real work without updating their CT.
 
-# Tier 1: message pattern (covers startup and return-to-wait)
 if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/" 2>/dev/null; then
   echo "  -> ALLOW (listener session — announce pattern)" >> "$LOGFILE" 2>/dev/null
   exit 0
-fi
-
-# Tier 2: heartbeat probe (covers mid-work and post-work)
-_listener_heartbeat_fresh() {
-  local hb hb_time hb_age now
-  now=$(date +%s) || return 1
-  for hb in "${PROJECT_DIR}"/verification_findings/_pending_sonnet/.heartbeat \
-            "${PROJECT_DIR}"/verification_findings/_pending_sonnet/ch*/.heartbeat \
-            "${PROJECT_DIR}"/verification_findings/_pending_opus/.heartbeat \
-            "${PROJECT_DIR}"/verification_findings/_pending_opus/ch*/.heartbeat; do
-    [[ -f "$hb" ]] || continue
-    hb_time=$(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb" 2>/dev/null) || continue
-    hb_age=$((now - hb_time))
-    if (( hb_age < 15 )); then
-      echo "$hb"
-      return 0
-    fi
-  done
-  return 1
-}
-
-# Only fire tier 2 when the message has no completion language. A listener never
-# claims completion; an Opus session that does should still hit the verification
-# gate. The pattern here is intentionally a subset of COMPLETION_PATTERNS (defined
-# below) — just enough to distinguish "I finished the work" from listener chatter.
-if ! echo "$LAST_MSG" | grep -qiE "(all (items |steps |tasks |work )?(are |is )?(done|complete)|work is (complete|done|finished)|sprint is (complete|done)|task is (complete|done)|implementation.* complete)" 2>/dev/null; then
-  FRESH_HB=$(_listener_heartbeat_fresh)
-  if [[ -n "$FRESH_HB" ]]; then
-    echo "  -> ALLOW (listener session — fresh heartbeat: $FRESH_HB)" >> "$LOGFILE" 2>/dev/null
-    exit 0
-  fi
 fi
 
 # Completion language patterns
@@ -273,14 +251,11 @@ fi
 if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   NOW=$(date +%s) || exit 0
   STALE_FILES=""
-  ANY_FRESH="false"
   for tf in "${ACTIVE_FILES[@]}"; do
     FILE_MTIME=$(stat -c %Y "$tf" 2>/dev/null || stat -f %m "$tf" 2>/dev/null) || continue
     FILE_MTIME=$(echo "$FILE_MTIME" | tr -d '\r')
     DIFF=$((NOW - FILE_MTIME)) || continue
-    if [[ "$DIFF" -lt 120 ]]; then
-      ANY_FRESH="true"
-    else
+    if [[ "$DIFF" -ge 120 ]]; then
       CH=$(get_channel "$tf")
       FNAME="$(basename "$tf")"
       if [[ -n "$CH" ]]; then
@@ -291,11 +266,12 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
     fi
   done
 
-  # If at least one active file is fresh, allow stop (session may be working on that channel)
-  if [[ "$ANY_FRESH" == "true" ]]; then
-    echo "  -> ALLOW (at least one active CT file is fresh)" >> "$LOGFILE" 2>/dev/null
-    exit 0
-  fi
+  # NOTE: A previous ANY_FRESH shortcut allowed stop if ANY active CT was fresh,
+  # even when other channels' CTs were stale. This was removed because in multi-
+  # channel setups, one channel's activity would exempt all others — allowing
+  # sessions to stop without updating their own CT. Now each stale file is
+  # reported individually. The stop_hook_active anti-loop (line 23) ensures a
+  # session can always stop on its second attempt.
 
   if [[ -n "$STALE_FILES" ]]; then
     REASON="Active CT file(s) not updated in the last 2 minutes:${STALE_FILES}. Before stopping: update each active channel's Completed Steps with what you did, and update Status if the task is done. Do NOT clear or rewrite — only add progress. Then stop again."

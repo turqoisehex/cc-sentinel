@@ -84,7 +84,9 @@ run_hook() {
   local stderr_file="$TMPDIR_ROOT/stderr"
   local exit_code
 
-  echo "$input" | bash "$HOOK_SCRIPT" > "$stdout_file" 2> "$stderr_file"
+  # Run in temp dir to prevent $(pwd) / git-rev-parse fallback from finding
+  # real project files outside the test fixture.
+  echo "$input" | (cd "$TMPDIR_ROOT" && bash "$HOOK_SCRIPT") > "$stdout_file" 2> "$stderr_file"
   exit_code=$?
 
   LAST_EXIT=$exit_code
@@ -305,6 +307,20 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (anti-loop bypass)"
 teardown_temp
 
+# --- Test 7b: WAKEFUL_LISTENER env var -> unconditional ALLOW ---
+echo ""
+echo "Test 7b: WAKEFUL_LISTENER=true -> ALLOW (env var bypass)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
+# Even with completion language and stale CT, WAKEFUL_LISTENER bypasses everything
+WAKEFUL_LISTENER=true run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (WAKEFUL_LISTENER env var bypass)"
+teardown_temp
+
 # --- Test 8: Sonnet listener bypass ---
 echo ""
 echo "Test 8: Sonnet listener session -> ALLOW"
@@ -331,9 +347,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (Opus listener Tier 1 bypass)"
 teardown_temp
 
-# --- Test 8c: Tier 2 heartbeat bypass — fresh heartbeat, no completion language -> ALLOW ---
+# --- Test 8c: Heartbeat does NOT bypass stale CT check (Tier 2 removed) ---
 echo ""
-echo "Test 8c: Fresh heartbeat, no completion language -> ALLOW (Tier 2)"
+echo "Test 8c: Fresh heartbeat, no completion language -> BLOCK (Tier 2 removed)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -343,7 +359,7 @@ touch "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat"
 INPUT=$(build_input "$PROJECT" "Processing the prompt file...")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_empty "no block (Tier 2 fresh heartbeat bypass)"
+assert_stdout_contains "Active CT file" "blocks (heartbeat no longer bypasses stale CT check)"
 teardown_temp
 
 # --- Test 8d: Tier 2 heartbeat — fresh heartbeat WITH completion language -> BLOCK ---
@@ -376,9 +392,9 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "Active CT file" "blocks (stale heartbeat falls through to CT check)"
 teardown_temp
 
-# --- Test 8f: Tier 2 — _pending_opus heartbeat -> ALLOW ---
+# --- Test 8f: Opus heartbeat does NOT bypass stale CT check (Tier 2 removed) ---
 echo ""
-echo "Test 8f: Fresh _pending_opus heartbeat, no completion language -> ALLOW (Tier 2)"
+echo "Test 8f: Fresh _pending_opus heartbeat, no completion language -> BLOCK (Tier 2 removed)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -388,7 +404,7 @@ touch "$PROJECT/verification_findings/_pending_opus/ch2/.heartbeat"
 INPUT=$(build_input "$PROJECT" "Running verification agents...")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_empty "no block (Tier 2 opus heartbeat bypass)"
+assert_stdout_contains "Active CT file" "blocks (opus heartbeat no longer bypasses stale CT check)"
 teardown_temp
 
 # --- Test 9: VERIFICATION_BLOCKED in CT -> ALLOW ---
@@ -466,9 +482,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (no message = startup)"
 teardown_temp
 
-# --- Test 14: One fresh CT among multiple stale -> ALLOW ---
+# --- Test 14: One fresh CT among multiple stale -> BLOCK (stale ones listed) ---
 echo ""
-echo "Test 14: One fresh CT file among stale ones -> ALLOW"
+echo "Test 14: One fresh CT among stale ones -> BLOCK (cross-channel freshness does not exempt)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -480,7 +496,7 @@ touch_now "$PROJECT/CURRENT_TASK_ch2.md"  # this one is fresh
 INPUT=$(build_input "$PROJECT" "Continuing work on channel 2.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_empty "no block (at least one fresh CT)"
+assert_stdout_contains "Active CT file" "blocks (lists stale files regardless of other channels being fresh)"
 teardown_temp
 
 # ==================== SUMMARY ====================
