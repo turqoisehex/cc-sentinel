@@ -8,6 +8,10 @@
 
 **Abbreviations:** CT=your channel CT file (or `CURRENT_TASK.md` if unchanneled). BACKLOG=your project backlog or sprint checklist (if you use one). PLAN=your implementation plan (if you use one).
 
+### Step 0a: Read YAML frontmatter
+
+If the state file (CT) starts with a `---` YAML frontmatter block, read it first. The frontmatter contains structured session context from the previous session: `goal`, `now`, `done_this_session`, `decisions`, `next`, `files_created`, `files_modified`. Use this for fast orientation before reading the full markdown body.
+
 ### Step 0: Gate checks and task setup
 
 1. **Sonnet check.** If `scripts/wait_for_results.sh` exists (Commit Enforcement installed): check for an active Sonnet listener. If no heartbeat, warn: "No Sonnet listener — Step 1 will use subagents instead of Sonnet dispatch." If `wait_for_results.sh` does not exist (Core-only install): skip — Step 1 uses subagents directly.

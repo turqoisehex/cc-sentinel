@@ -1,3 +1,19 @@
+---
+goal: ""
+now: ""
+test: ""
+done_this_session: []
+blockers: []
+questions: []
+decisions: []
+findings: []
+worked: []
+failed: []
+next: ""
+files_created: []
+files_modified: []
+---
+
 # CURRENT TASK
 
 > **This file is the single source of truth for what CC is doing right now.**
