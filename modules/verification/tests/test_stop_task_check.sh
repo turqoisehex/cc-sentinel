@@ -368,6 +368,19 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (Opus listener message pattern bypass)"
 teardown_temp
 
+# --- Test 8b2: "Waiting for work on chN" listener pattern -> ALLOW ---
+echo ""
+echo "Test 8b2: 'Waiting for work on ch2' listener pattern -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+INPUT=$(build_input "$PROJECT" "Waiting for work on ch2.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (listener 'Waiting for work' pattern bypass)"
+teardown_temp
+
 # --- Test 8c: Heartbeat files do NOT bypass (regression guard) ---
 echo ""
 echo "Test 8c: Sonnet heartbeat does NOT bypass stale CT"

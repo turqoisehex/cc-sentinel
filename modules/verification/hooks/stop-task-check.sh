@@ -134,7 +134,7 @@ fi
 # --- BYPASS: Listener sessions (message pattern — fallback for manual launches) ---
 # Matches the idle announce line. Once the listener picks up work, the last
 # message changes and normal CT enforcement applies. (See R3 in header.)
-if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/" 2>/dev/null; then
+if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/|Waiting for work on ch[0-9]" 2>/dev/null; then
   echo "  -> ALLOW (listener session — announce pattern)" >> "$LOGFILE" 2>/dev/null
   exit 0
 fi
@@ -286,7 +286,7 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   # session can always stop on its second attempt.
 
   if [[ -n "$STALE_FILES" ]]; then
-    REASON="Active CT file(s) not updated in the last 2 minutes:${STALE_FILES}. Before stopping: update each active channel's Completed Steps with what you did, and update Status if the task is done. Do NOT clear or rewrite — only add progress. Then stop again."
+    REASON="Active CT file(s) not updated in the last 2 minutes:${STALE_FILES}. Before stopping: update your Completed Steps with what you did, and update Status if the task is done. Do NOT clear or rewrite — only add progress. Then stop again."
     REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
     echo "  -> BLOCK (stale:${STALE_FILES})" >> "$LOGFILE" 2>/dev/null
     echo "{\"decision\": \"block\", \"reason\": ${REASON_JSON}}"
