@@ -12,7 +12,8 @@
           "session-orient.sh",
           "pre-compact-state-save.sh",
           "post-compact-reorient.sh",
-          "agent-file-reminder.sh"
+          "agent-file-reminder.sh",
+          "auto-checkpoint.sh"
         ],
         "commands": [
           "self-test.md",
@@ -43,7 +44,8 @@
           "test_session_orient.sh",
           "test_agent_file_reminder.sh",
           "test_pre_compact.sh",
-          "test_post_compact.sh"
+          "test_post_compact.sh",
+          "test_auto_checkpoint.sh"
         ]
       },
       "settings_merge": {
@@ -87,6 +89,18 @@
               ]
             }
           ],
+          "Stop": [
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/auto-checkpoint.sh",
+                  "timeout": 10
+                }
+              ]
+            }
+          ],
           "PreCompact": [
             {
               "matcher": "",
@@ -94,6 +108,16 @@
                 {
                   "type": "command",
                   "command": "bash .claude/hooks/pre-compact-state-save.sh",
+                  "timeout": 10
+                }
+              ]
+            },
+            {
+              "matcher": "",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/auto-checkpoint.sh",
                   "timeout": 10
                 }
               ]
