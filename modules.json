@@ -197,14 +197,15 @@
     },
     "verification": {
       "name": "Verification",
-      "description": "5-agent verification squad, adversarial self-check, completion gate",
+      "description": "6-agent verification squad, adversarial self-check, completion gate",
       "required": false,
       "dependencies": [
         "core"
       ],
       "files": {
         "hooks": [
-          "stop-task-check.sh"
+          "stop-task-check.sh",
+          "comment-replacement.sh"
         ],
         "commands": [
           "squad.md",
@@ -218,7 +219,8 @@
           "squad"
         ],
         "tests": [
-          "test_stop_task_check.sh"
+          "test_stop_task_check.sh",
+          "test_comment_replacement.sh"
         ]
       },
       "settings_merge": {
@@ -230,6 +232,18 @@
                 {
                   "type": "command",
                   "command": "bash .claude/hooks/stop-task-check.sh",
+                  "timeout": 10
+                }
+              ]
+            }
+          ],
+          "PostToolUse": [
+            {
+              "matcher": "Edit|MultiEdit",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "bash .claude/hooks/comment-replacement.sh",
                   "timeout": 10
                 }
               ]
