@@ -347,9 +347,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (Opus listener Tier 1 bypass)"
 teardown_temp
 
-# --- Test 8c: Heartbeat does NOT bypass stale CT check (Tier 2 removed) ---
+# --- Test 8c: Heartbeat files do NOT bypass (Tier 2 removed — regression guard) ---
 echo ""
-echo "Test 8c: Fresh heartbeat, no completion language -> BLOCK (Tier 2 removed)"
+echo "Test 8c: Sonnet heartbeat does NOT bypass stale CT (Tier 2 removed)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -359,42 +359,12 @@ touch "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat"
 INPUT=$(build_input "$PROJECT" "Processing the prompt file...")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_contains "Active CT file" "blocks (heartbeat no longer bypasses stale CT check)"
+assert_stdout_contains "Active CT file" "blocks (sonnet heartbeat no longer bypasses)"
 teardown_temp
 
-# --- Test 8d: Tier 2 heartbeat — fresh heartbeat WITH completion language -> BLOCK ---
+# --- Test 8d: Opus heartbeat does NOT bypass (Tier 2 removed — regression guard) ---
 echo ""
-echo "Test 8d: Fresh heartbeat + completion language -> BLOCK (completion overrides Tier 2)"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
-mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
-touch "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat"
-INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
-run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_contains "COMPLETION WITHOUT VERIFICATION|Active CT file" "blocks (completion language overrides Tier 2)"
-teardown_temp
-
-# --- Test 8e: Tier 2 heartbeat — stale heartbeat (30s) -> falls through to CT check -> BLOCK ---
-echo ""
-echo "Test 8e: Stale heartbeat (30s) -> BLOCK (falls through to CT staleness check)"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale CT
-mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
-touch_aged "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat" 30  # heartbeat too old
-INPUT=$(build_input "$PROJECT" "Processing the prompt file...")
-run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_contains "Active CT file" "blocks (stale heartbeat falls through to CT check)"
-teardown_temp
-
-# --- Test 8f: Opus heartbeat does NOT bypass stale CT check (Tier 2 removed) ---
-echo ""
-echo "Test 8f: Fresh _pending_opus heartbeat, no completion language -> BLOCK (Tier 2 removed)"
+echo "Test 8d: Opus heartbeat does NOT bypass stale CT (Tier 2 removed)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -404,7 +374,7 @@ touch "$PROJECT/verification_findings/_pending_opus/ch2/.heartbeat"
 INPUT=$(build_input "$PROJECT" "Running verification agents...")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_contains "Active CT file" "blocks (opus heartbeat no longer bypasses stale CT check)"
+assert_stdout_contains "Active CT file" "blocks (opus heartbeat no longer bypasses)"
 teardown_temp
 
 # --- Test 9: VERIFICATION_BLOCKED in CT -> ALLOW ---
@@ -515,6 +485,122 @@ WAKEFUL_CHANNEL=2 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 # Should only report ch2, not ch1
 assert_stdout_contains "ch2" "reports own channel as stale"
+teardown_temp
+
+# --- Test 15: Phase-based activity detection -> active ---
+echo ""
+echo "Test 15: Phase line without 'complete' -> active -> stale CT blocks"
+setup_temp
+mkdir -p "$PROJECT"
+cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
+# CURRENT TASK
+**Phase:** /3 Build
+## Plan
+- Step 1: Implement feature
+EOF
+touch_aged "$PROJECT/CURRENT_TASK.md" 300
+INPUT=$(build_input "$PROJECT" "Continuing implementation.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "Active CT file" "Phase /3 detected as active"
+teardown_temp
+
+# --- Test 15b: Phase line WITH complete -> not active -> ALLOW ---
+echo ""
+echo "Test 15b: Phase line with 'complete' -> not active -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
+# CURRENT TASK
+**Phase:** /4 Quality — complete
+## Plan
+- Done
+EOF
+touch_aged "$PROJECT/CURRENT_TASK.md" 300
+INPUT=$(build_input "$PROJECT" "Reviewing results.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "Phase complete not treated as active"
+teardown_temp
+
+# --- Test 16: COMPLETE status without completion language -> ALLOW ---
+echo ""
+echo "Test 16: COMPLETE status + no completion language -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale but COMPLETE
+INPUT=$(build_input "$PROJECT" "Reading the spec file now.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "COMPLETE status allows stop without completion language"
+teardown_temp
+
+# --- Test 17: Unchanneled squad matching (no channel prefix) -> ALLOW ---
+echo ""
+echo "Test 17: Unchanneled active + unchanneled squad -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+create_passing_squad "$PROJECT" "squad_sonnet"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint is complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "unchanneled squad matches unchanneled active"
+teardown_temp
+
+# --- Test 18: VERIFICATION_BLOCKED in channel CT -> ALLOW ---
+echo ""
+echo "Test 18: VERIFICATION_BLOCKED in channel CT -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"  # shared not active
+cat > "$PROJECT/CURRENT_TASK_ch3.md" << 'EOF'
+# CURRENT TASK — Channel 3
+**Channel:** 3
+**Status:** IN PROGRESS
+## Notes
+VERIFICATION_BLOCKED — max rounds reached, issues presented to user.
+EOF
+touch_now "$PROJECT/CURRENT_TASK_ch3.md"
+INPUT=$(build_input "$PROJECT" "All tasks are done. Work is complete.")
+WAKEFUL_CHANNEL=3 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "VERIFICATION_BLOCKED in channel CT counts as evidence"
+teardown_temp
+
+# --- Test 19: Multi-channel — one stale, one fresh -> reports stale only ---
+echo ""
+echo "Test 19: Channeled session, shared stale + own channel fresh -> blocks for shared"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+create_channel_ct "$PROJECT" "5" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 300   # shared stale
+touch_now "$PROJECT/CURRENT_TASK_ch5.md"    # own channel fresh
+INPUT=$(build_input "$PROJECT" "Continuing work.")
+WAKEFUL_CHANNEL=5 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "CURRENT_TASK.md" "reports stale shared CT"
+teardown_temp
+
+# --- Test 20: CWD fallback — empty CWD, pwd finds project ---
+echo ""
+echo "Test 20: Empty CWD in JSON -> falls through to pwd-based discovery"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 300
+# Build input with empty CWD; the hook's cd to TMPDIR_ROOT won't find CT
+# but if we pass a valid CWD in JSON it should work
+INPUT=$(build_input "" "Continuing work.")
+# Hook runs cd'd to TMPDIR_ROOT which has no CT; empty CWD in JSON;
+# only git rev-parse fallback might find something, but we're in temp dir.
+# So this should ALLOW (no CT found).
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no CT found via any fallback = allow"
 teardown_temp
 
 # ==================== SUMMARY ====================

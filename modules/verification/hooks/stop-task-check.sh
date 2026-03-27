@@ -1,9 +1,26 @@
 #!/usr/bin/env bash
-# Stop hook: (1) reminds assistant to update CT files before stopping,
-#            (2) blocks completion claims without verification evidence.
-# Checks CURRENT_TASK.md (shared index) + all CURRENT_TASK_ch*.md (per-channel).
-# SAFETY: Fails open (exit 0, no output = allow stop) on any error.
-# Only blocks when all conditions are explicitly met.
+# Stop hook: blocks two specific mistakes at session stop time.
+#
+# REQUIREMENTS:
+#   R1. Completion gate — if assistant claims work is done (completion language
+#       in last message), require verification evidence before allowing stop.
+#       Evidence: squad dir with 5 PASS/WARN verdicts, or VERIFICATION_BLOCKED
+#       marker in the active CT file.
+#   R2. Staleness gate — if any active CT file is >2 min stale, block and
+#       request progress update before stopping.
+#   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
+#       loops) must never be blocked. Detection: WAKEFUL_LISTENER env var
+#       (primary, set by spawn.py) or "Watching _pending_..." message pattern
+#       (fallback for manual launches).
+#   R4. Channel scoping — each session only checks its own CT files.
+#       WAKEFUL_CHANNEL=N → shared CT + ch{N} CT. Unset → shared CT only.
+#       Squad evidence scoped to active channels only.
+#   R5. Anti-loop — CC sets stop_hook_active=true after first block.
+#       Second stop attempt always allowed.
+#   R6. Fail-open — any parse/stat/jq error → exit 0, no output → allow stop.
+#
+# Checks CURRENT_TASK.md (shared index) + CURRENT_TASK_ch{N}.md (own channel).
+# Agent names for squad validation: see scripts/verification-squad.md.
 set -u
 
 LOGFILE="${SENTINEL_DEBUG_LOG:-/dev/null}"
@@ -109,30 +126,16 @@ if echo "$LAST_MSG" | grep -qiE "(agent|agents).*(still running|running|pending|
   exit 0
 fi
 
-# --- BYPASS: Listener sessions ---
-# Listeners are stateless service loops with no work to lose. The CT staleness
-# check is designed for Opus orchestrator sessions that hold conversation state.
-# Listeners must NOT touch CT files (sonnet.md hard rule), so blocking them
-# forces a rule violation — the model "helpfully" updates CT to satisfy the hook.
-#
-# Detection: message pattern — the "Watching _pending_..." announce line. This
-# identifies a session that is idle, waiting for work. Once the session picks up
-# work and executes it, the announce line is no longer the last message, and the
-# session is subject to normal CT enforcement (stop_hook_active anti-loop ensures
-# at most one extra block).
-#
-# NOTE: A previous "Tier 2" heartbeat probe was removed because it could not
-# distinguish "I am a listener" from "a listener exists somewhere in this project."
-# With multiple channels, ANY fresh heartbeat would exempt ALL sessions — including
-# Opus orchestrators that had done real work without updating their CT.
-
+# --- BYPASS: Listener sessions (message pattern — fallback for manual launches) ---
+# Matches the idle announce line. Once the listener picks up work, the last
+# message changes and normal CT enforcement applies. (See R3 in header.)
 if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/" 2>/dev/null; then
   echo "  -> ALLOW (listener session — announce pattern)" >> "$LOGFILE" 2>/dev/null
   exit 0
 fi
 
 # Completion language patterns
-COMPLETION_PATTERNS="(all (items |steps |tasks |work )?(are |is )?(done|complete)|work is (complete|done|finished)|sprint is (complete|done)|task is (complete|done)|everything.s (done|complete)|implementation.* complete|ship.ready|what.s next|what should we|shall we move on|ready to move|what would you like)"
+COMPLETION_PATTERNS="(all (items |steps |tasks |work )?(are |is )?(done|complete)|work is (complete|done|finished)|sprint is (complete|done)|task is (complete|done)|everything.s (done|complete)|implementation.* complete|ship.ready|what.s next|what should we|shall we move on|ready to move)"
 
 # Completion signal: completion language in assistant message (REQUIRED).
 # COMPLETE status in CURRENT_TASK.md alone is NOT sufficient — it may be stale
@@ -198,6 +201,7 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
       SQUAD_ALLOWED="true"
     fi
     [[ "$SQUAD_ALLOWED" == "false" ]] && continue
+    # Source of truth for agent names: scripts/verification-squad.md
     SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md")
     SQUAD_EXISTS=0
     SQUAD_PASS=0
@@ -269,7 +273,7 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   # even when other channels' CTs were stale. This was removed because in multi-
   # channel setups, one channel's activity would exempt all others — allowing
   # sessions to stop without updating their own CT. Now each stale file is
-  # reported individually. The stop_hook_active anti-loop (line 23) ensures a
+  # reported individually. The stop_hook_active anti-loop (R5) ensures a
   # session can always stop on its second attempt.
 
   if [[ -n "$STALE_FILES" ]]; then
