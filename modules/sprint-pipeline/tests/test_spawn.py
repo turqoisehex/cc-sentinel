@@ -582,6 +582,17 @@ class TestSpawner(unittest.TestCase):
         self.assertIn("/opus 1", text)
         self.assertIn("/rename Opus 2", text)
 
+    def test_scaffold_creates_dual_pending_dirs(self):
+        from spawn import Spawner
+        with tempfile.TemporaryDirectory() as tmp:
+            Spawner.scaffold_channels(tmp, 2)
+            p = Path(tmp)
+            self.assertTrue((p / "verification_findings" / "_pending_sonnet" / "ch1").is_dir())
+            self.assertTrue((p / "verification_findings" / "_pending_sonnet" / "ch2").is_dir())
+            self.assertTrue((p / "verification_findings" / "_pending_opus" / "ch1").is_dir())
+            self.assertTrue((p / "verification_findings" / "_pending_opus" / "ch2").is_dir())
+            self.assertTrue((p / "channel-template.md").exists())
+
 
 # -- Task 10: CLI Entry Point -------------------------------------------------
 

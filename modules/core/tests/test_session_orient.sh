@@ -274,6 +274,114 @@ else
 fi
 teardown_temp
 
+# --- Test 10b: Stale .active cleanup in _pending_sonnet ---
+echo ""
+echo "Test 10b: Stale .active in _pending_sonnet/ch1 -> deleted"
+setup_temp
+create_ct "$PROJECT" "IN PROGRESS"
+mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
+STALE_ACTIVE_SONNET="$PROJECT/verification_findings/_pending_sonnet/ch1/.active"
+touch "$STALE_ACTIVE_SONNET"
+STALE_WIN=$(cygpath -w "$STALE_ACTIVE_SONNET" 2>/dev/null || echo "$STALE_ACTIVE_SONNET")
+python -c "import os, time; os.utime(r'$STALE_WIN', (time.time()-7200, time.time()-7200))" 2>/dev/null || \
+  python3 -c "import os, time; os.utime(r'$STALE_WIN', (time.time()-7200, time.time()-7200))" 2>/dev/null || \
+  touch -d "2 hours ago" "$STALE_ACTIVE_SONNET" 2>/dev/null
+INPUT=$(build_input "$PROJECT")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+TOTAL=$((TOTAL + 1))
+if [[ ! -f "$STALE_ACTIVE_SONNET" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: stale .active in _pending_sonnet/ch1 was cleaned up"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: stale .active in _pending_sonnet/ch1 still exists"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test 10c: Stale .active cleanup in _pending_opus ---
+echo ""
+echo "Test 10c: Stale .active in _pending_opus/ch1 -> deleted"
+setup_temp
+create_ct "$PROJECT" "IN PROGRESS"
+mkdir -p "$PROJECT/verification_findings/_pending_opus/ch1"
+STALE_ACTIVE_OPUS="$PROJECT/verification_findings/_pending_opus/ch1/.active"
+touch "$STALE_ACTIVE_OPUS"
+STALE_WIN=$(cygpath -w "$STALE_ACTIVE_OPUS" 2>/dev/null || echo "$STALE_ACTIVE_OPUS")
+python -c "import os, time; os.utime(r'$STALE_WIN', (time.time()-7200, time.time()-7200))" 2>/dev/null || \
+  python3 -c "import os, time; os.utime(r'$STALE_WIN', (time.time()-7200, time.time()-7200))" 2>/dev/null || \
+  touch -d "2 hours ago" "$STALE_ACTIVE_OPUS" 2>/dev/null
+INPUT=$(build_input "$PROJECT")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+TOTAL=$((TOTAL + 1))
+if [[ ! -f "$STALE_ACTIVE_OPUS" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: stale .active in _pending_opus/ch1 was cleaned up"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: stale .active in _pending_opus/ch1 still exists"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test 10d: Stale .md cleanup in _pending_opus ---
+echo ""
+echo "Test 10d: Stale .md in _pending_opus/ch1 -> deleted"
+setup_temp
+create_ct "$PROJECT" "IN PROGRESS"
+mkdir -p "$PROJECT/verification_findings/_pending_opus/ch1"
+STALE_MD_OPUS="$PROJECT/verification_findings/_pending_opus/ch1/stale_task.md"
+echo "old opus work" > "$STALE_MD_OPUS"
+STALE_WIN=$(cygpath -w "$STALE_MD_OPUS" 2>/dev/null || echo "$STALE_MD_OPUS")
+python -c "import os, time; os.utime(r'$STALE_WIN', (time.time()-7200, time.time()-7200))" 2>/dev/null || \
+  python3 -c "import os, time; os.utime(r'$STALE_WIN', (time.time()-7200, time.time()-7200))" 2>/dev/null || \
+  touch -d "2 hours ago" "$STALE_MD_OPUS" 2>/dev/null
+INPUT=$(build_input "$PROJECT")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+TOTAL=$((TOTAL + 1))
+if [[ ! -f "$STALE_MD_OPUS" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: stale .md in _pending_opus/ch1 was cleaned up"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: stale .md in _pending_opus/ch1 still exists"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test 10e: Fresh files NOT cleaned ---
+echo ""
+echo "Test 10e: Fresh files in _pending_sonnet and _pending_opus -> preserved"
+setup_temp
+create_ct "$PROJECT" "IN PROGRESS"
+mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
+mkdir -p "$PROJECT/verification_findings/_pending_opus/ch1"
+FRESH_ACTIVE="$PROJECT/verification_findings/_pending_sonnet/ch1/.active"
+FRESH_MD="$PROJECT/verification_findings/_pending_opus/ch1/active_task.md"
+touch "$FRESH_ACTIVE"
+echo "active opus work" > "$FRESH_MD"
+# No aging — files are fresh (< 30min and < 60min thresholds)
+INPUT=$(build_input "$PROJECT")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+TOTAL=$((TOTAL + 1))
+if [[ -f "$FRESH_ACTIVE" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: fresh .active in _pending_sonnet/ch1 was preserved"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: fresh .active in _pending_sonnet/ch1 was incorrectly deleted"
+  FAIL=$((FAIL + 1))
+fi
+TOTAL=$((TOTAL + 1))
+if [[ -f "$FRESH_MD" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: fresh .md in _pending_opus/ch1 was preserved"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: fresh .md in _pending_opus/ch1 was incorrectly deleted"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
 # --- Test 11: Empty input -> silent exit ---
 echo ""
 echo "Test 11: Empty/invalid input -> silent exit"

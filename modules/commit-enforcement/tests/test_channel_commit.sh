@@ -109,6 +109,18 @@ create_heartbeat() {
   touch "$pending/.heartbeat"
 }
 
+# Create a heartbeat with a specific age in seconds (for liveness-state tests)
+create_aged_heartbeat() {
+  local pending="${1:-verification_findings/_pending_sonnet}" age_seconds="${2:-400}"
+  mkdir -p "$pending"
+  touch "$pending/.heartbeat"
+  local hb_win
+  hb_win=$(cygpath -w "$pending/.heartbeat" 2>/dev/null || echo "$pending/.heartbeat")
+  python -c "import os, time; os.utime(r'$hb_win', (time.time()-$age_seconds, time.time()-$age_seconds))" 2>/dev/null || \
+    python3 -c "import os, time; os.utime(r'$hb_win', (time.time()-$age_seconds, time.time()-$age_seconds))" 2>/dev/null || \
+    touch -d "${age_seconds} seconds ago" "$pending/.heartbeat" 2>/dev/null
+}
+
 teardown_repo() {
   cd /
   rm -rf "$TMPDIR_ROOT" 2>/dev/null
@@ -340,6 +352,57 @@ run_commit --files "file_i.txt" -m "test: heartbeat"
 assert_exit 1 "exits with error (no results for local-verify)"
 assert_stderr_contains "(heartbeat|No Sonnet)" "heartbeat check fires"
 assert_stderr_contains "LOCAL VERIFY" "falls back to local-verify mode"
+assert_no_lock "lock cleaned up on failure"
+teardown_repo
+
+# --- Test 10b: Fresh heartbeat + .active present -> dispatch normally, log processing ---
+echo ""
+echo "Test 10b: Fresh heartbeat + .active present -> commits successfully, logs processing"
+setup_repo
+create_test_file "file_10b.txt" "content 10b"
+create_heartbeat
+echo "2026-03-23T20:15:00Z processing test_task.md" > "verification_findings/_pending_sonnet/.active"
+run_commit --files "file_10b.txt" -m "test: fresh hb with active"
+assert_exit 0 "exits successfully (fresh hb + .active)"
+assert_stderr_contains "processing" "logs listener is processing"
+assert_no_lock "lock cleaned up"
+teardown_repo
+
+# --- Test 10c: Warn-stale heartbeat (~400s) + no .active -> commits, warns slow listener ---
+echo ""
+echo "Test 10c: Warn-stale heartbeat (~400s) + no .active -> commits successfully, warns about slow listener"
+setup_repo
+create_test_file "file_10c.txt" "content 10c"
+create_aged_heartbeat "verification_findings/_pending_sonnet" 400
+run_commit --files "file_10c.txt" -m "test: warn-stale hb no active"
+assert_exit 0 "exits successfully (warn-stale hb, no .active)"
+assert_stderr_contains "(slow|stalled|Listener)" "warns about stale heartbeat"
+assert_no_lock "lock cleaned up"
+teardown_repo
+
+# --- Test 10d: Warn-stale heartbeat (~400s) + .active present -> commits, logs busy ---
+echo ""
+echo "Test 10d: Warn-stale heartbeat (~400s) + .active present -> commits successfully, logs busy"
+setup_repo
+create_test_file "file_10d.txt" "content 10d"
+create_aged_heartbeat "verification_findings/_pending_sonnet" 400
+echo "2026-03-23T20:15:00Z processing test_task.md" > "verification_findings/_pending_sonnet/.active"
+run_commit --files "file_10d.txt" -m "test: warn-stale hb with active"
+assert_exit 0 "exits successfully (warn-stale hb + .active)"
+assert_stderr_contains "(busy|long task)" "logs listener busy"
+assert_no_lock "lock cleaned up"
+teardown_repo
+
+# --- Test 10e: Stale heartbeat (~1000s) + no .active -> falls back to local-verify (exit 1) ---
+echo ""
+echo "Test 10e: Stale heartbeat (~1000s) + no .active -> falls back to local-verify, exits 1"
+setup_repo
+create_test_file "file_10e.txt" "content 10e"
+create_aged_heartbeat "verification_findings/_pending_sonnet" 1000
+# No pre-existing result files, so local-verify also fails -> exit 1
+run_commit --files "file_10e.txt" -m "test: stale hb no active"
+assert_exit 1 "exits 1 (stale hb, no .active, no result files)"
+assert_stderr_contains "(down|stale|local)" "warns about stale heartbeat"
 assert_no_lock "lock cleaned up on failure"
 teardown_repo
 

@@ -318,6 +318,79 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (Sonnet listener bypass)"
 teardown_temp
 
+# --- Test 8b: Opus listener bypass (Tier 1) ---
+echo ""
+echo "Test 8b: Opus listener session -> ALLOW (Tier 1 pattern)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+INPUT=$(build_input "$PROJECT" "Opus listener active. Watching _pending_opus/ch1/ for new work...")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (Opus listener Tier 1 bypass)"
+teardown_temp
+
+# --- Test 8c: Tier 2 heartbeat bypass — fresh heartbeat, no completion language -> ALLOW ---
+echo ""
+echo "Test 8c: Fresh heartbeat, no completion language -> ALLOW (Tier 2)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
+touch "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat"
+INPUT=$(build_input "$PROJECT" "Processing the prompt file...")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (Tier 2 fresh heartbeat bypass)"
+teardown_temp
+
+# --- Test 8d: Tier 2 heartbeat — fresh heartbeat WITH completion language -> BLOCK ---
+echo ""
+echo "Test 8d: Fresh heartbeat + completion language -> BLOCK (completion overrides Tier 2)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
+touch "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat"
+INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION|Active CT file" "blocks (completion language overrides Tier 2)"
+teardown_temp
+
+# --- Test 8e: Tier 2 heartbeat — stale heartbeat (30s) -> falls through to CT check -> BLOCK ---
+echo ""
+echo "Test 8e: Stale heartbeat (30s) -> BLOCK (falls through to CT staleness check)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale CT
+mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
+touch_aged "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat" 30  # heartbeat too old
+INPUT=$(build_input "$PROJECT" "Processing the prompt file...")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "Active CT file" "blocks (stale heartbeat falls through to CT check)"
+teardown_temp
+
+# --- Test 8f: Tier 2 — _pending_opus heartbeat -> ALLOW ---
+echo ""
+echo "Test 8f: Fresh _pending_opus heartbeat, no completion language -> ALLOW (Tier 2)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+mkdir -p "$PROJECT/verification_findings/_pending_opus/ch2"
+touch "$PROJECT/verification_findings/_pending_opus/ch2/.heartbeat"
+INPUT=$(build_input "$PROJECT" "Running verification agents...")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (Tier 2 opus heartbeat bypass)"
+teardown_temp
+
 # --- Test 9: VERIFICATION_BLOCKED in CT -> ALLOW ---
 echo ""
 echo "Test 9: VERIFICATION_BLOCKED in active CT -> ALLOW"
