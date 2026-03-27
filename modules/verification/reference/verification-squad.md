@@ -2,9 +2,9 @@
 
 **Trigger:** Before ANY completion claim. Squad is the **default** — you must actively qualify for an exemption to skip it. If unsure, run it.
 
-### The Five Agents
+### The Six Agents
 
-Launch all 5 in parallel (`run_in_background: true`). Write to `squad_opus/` or `squad_sonnet/` (per session-bound dirs rule below).
+Launch all 6 in parallel (`run_in_background: true`). Write to `squad_opus/` or `squad_sonnet/` (per session-bound dirs rule below).
 
 | Agent | File | What It Catches |
 |---|---|---|
@@ -13,17 +13,18 @@ Launch all 5 in parallel (`run_in_background: true`). Write to `squad_opus/` or 
 | Completeness Scanner | `completeness.md` | Missing requirements, unassigned items, spec gaps. **Sequential batches of 7 for >20 items.** |
 | Dependency Tracer | `dependency.md` | **Missing migrations, silent default changes, untraced call sites** — every change traced one level out |
 | Cold Reader | `cold_reader.md` | **Semantic errors invisible to the author** — nonsense, broken/dead instructions, orphaned context, stale language. Reads with zero intent knowledge. |
+| Performance Auditor | `performance.md` | **CRITICAL/HIGH performance issues** — O(n²)+, N+1 queries, unbounded memory, sync blocking in async context |
 
 Each agent MUST end with `VERDICT: PASS` or `VERDICT: FAIL` + issue count.
 
 ### Rules
 
-1. **All 5 must PASS** before claiming completion. Any FAIL → fix issues → re-run only the failed agent(s).
+1. **All agents must PASS** before claiming completion. Any FAIL → fix issues → re-run only the failed agent(s).
 2. **Max 3 rounds.** Initial run + 2 re-runs. If any agent still FAILs after round 3: stop fixing. Delete the squad directory. Write remaining issues to CURRENT_TASK.md with `VERIFICATION_BLOCKED` marker and present to user with the list of unresolved issues and recommended actions. Do not attempt further autonomous fixes — remaining issues likely require design judgment.
-3. **After all 5 PASS:** Write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md. Note: this is documentation only — hooks do NOT accept it as enforcement evidence. Only actual squad files satisfy the commit gate.
-4. **Squad files are ephemeral.** Gitignored. The commit hook cleans only COMPLETED squad directories (all 5 files with VERDICT: PASS) after successful commit. In-progress or failed directories from other sessions are left untouched.
+3. **After all 6 PASS:** Write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md. Note: this is documentation only — hooks do NOT accept it as enforcement evidence. Only actual squad files satisfy the commit gate.
+4. **Squad files are ephemeral.** Gitignored. The commit hook cleans only COMPLETED squad directories (all expected files with VERDICT: PASS) after successful commit. In-progress or failed directories from other sessions are left untouched.
 5. **Replaces ad-hoc verification.** No extra agents unless Squad flags areas needing deeper investigation.
-6. **Hook-enforced.** The commit hook blocks non-exempt commits without 5/5 PASS in `squad_*/`. Use `--skip-squad` for WIP only.
+6. **Hook-enforced.** The commit hook blocks non-exempt commits without all PASS in `squad_*/`. Use `--skip-squad` for WIP only.
 7. **Session-bound dirs.** `squad_opus/` or `squad_sonnet/` — no default `squad/`.
 8. **Source spec rule.** Completeness Scanner SOURCE_SPEC = authoritative spec or user request, never just CURRENT_TASK.md.
 
@@ -56,6 +57,8 @@ Everything else → Squad required. The commit hook hard-blocks non-exempt files
 Output: `verification_findings/SQUAD_DIR/mechanical.md`
 
 ```
+CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
+
 Verify factual claims against the actual filesystem. Zero tolerance for unverified claims.
 
 WORK PRODUCT: [paste path(s)]
@@ -134,6 +137,8 @@ VERDICT is PASS only if Issues = 0. `[X]` (unverified) = FAIL. `[~]` (approximat
 Output: `verification_findings/SQUAD_DIR/adversarial.md`
 
 ```
+CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
+
 Find errors, contradictions, and rule violations. Zero issues = YOU failed — look harder. Do NOT be charitable. Read literally.
 
 WORK PRODUCT: [paste path(s)]
@@ -222,6 +227,8 @@ IMPORTANT: If you find zero issues on first pass, re-read the last third of the 
 Output: `verification_findings/SQUAD_DIR/completeness.md`
 
 ```
+CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
+
 Find what's MISSING — requirements not addressed, items without owners, gaps between asked and delivered.
 
 WORK PRODUCT: [paste path(s)]
@@ -293,6 +300,8 @@ Unspecified items are flagged for review but don't cause FAIL.
 Output: `verification_findings/SQUAD_DIR/dependency.md`
 
 ```
+CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
+
 Find SIDE EFFECTS and MISSING DEPENDENCIES — things that must change as a consequence of the work product but aren't mentioned. Every change has a blast radius. Trace it.
 
 WORK PRODUCT: [paste path(s)]
@@ -366,6 +375,8 @@ IMPORTANT: For every [U] item, state the SPECIFIC RISK — what breaks, how, and
 Output: `verification_findings/SQUAD_DIR/cold_reader.md`
 
 ```
+CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
+
 Read the work product AS IF YOU HAVE NEVER SEEN IT BEFORE with ZERO KNOWLEDGE of intent. You are the most important agent — the only one that reads cold. The other four verify with knowledge of intent.
 
 WORK PRODUCT: [paste path(s)]
@@ -431,9 +442,65 @@ VERDICT is PASS only if Total issues = 0.
 
 ---
 
-## After All Five Complete
+## Agent 6: Performance Auditor
 
-1. Read all 5 output files
+Output: `verification_findings/SQUAD_DIR/performance.md`
+
+```
+CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
+
+Flag performance issues in the work product. Only report CRITICAL and HIGH severity.
+
+WORK PRODUCT: [paste path(s)]
+SCOPE: [paste one-sentence scope]
+
+### What to flag
+
+- **CRITICAL:** O(n^2) or worse where O(n) exists, unbounded memory growth, N+1 queries, synchronous blocking in async context
+- **HIGH:** Missing batching opportunities, lock contention, unnecessary allocations in hot paths, redundant I/O
+- **MEDIUM:** Suboptimal but functional — e.g., linear search where hash lookup exists, repeated string concatenation
+- **LOW:** Style-level — e.g., could use const, unnecessary intermediate variable
+
+Only CRITICAL and HIGH are reported. MEDIUM and LOW are rated internally but not included in the output — their purpose is to ensure the agent consciously considers and discards lower-severity findings rather than missing them.
+
+### Procedure
+
+1. Read work product in full.
+
+2. For each function, method, or algorithm: assess time/space complexity. Flag if a more efficient approach exists and the scale warrants it.
+
+3. For each I/O operation: check for batching, caching, streaming. Flag N+1 patterns.
+
+4. For each synchronous operation: check if it blocks an async context.
+
+5. Mark: [P] PERFORMANCE_ISSUE (with severity), [~] POTENTIAL (context-dependent), [OK] CHECKED_CLEAN.
+
+6. Write via atomic protocol: `.tmp` then `mv -f` to final path.
+
+Output format:
+
+    VERDICT: PASS | FAIL (N issues)
+    Work product: [path]
+
+    ## Summary (parent reads THIS section only)
+    1. [SEVERITY] One-line — file:function or line
+    Categories: [CRITICAL], [HIGH]
+
+    ---
+    ## Detail (parent reads ONLY for judgment on specific finding)
+    ### Finding 1: [title]
+    Location, current complexity, suggested alternative, evidence
+
+Two-layer verification: After finding issues, challenge each one. Is the scale large enough to matter? Is the suggested alternative actually feasible? Only report genuine CRITICAL and HIGH.
+
+VERDICT is PASS only if CRITICAL = 0 AND HIGH = 0.
+```
+
+---
+
+## After All Six Complete
+
+1. Read all 6 output files
 2. If ALL PASS: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
 3. If ANY FAIL: fix the issues, then re-run ONLY the failed agent(s)
 4. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`) are cleaned up automatically by the commit hook after a successful commit
