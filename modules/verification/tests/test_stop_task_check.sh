@@ -482,21 +482,39 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (no message = startup)"
 teardown_temp
 
-# --- Test 14: One fresh CT among multiple stale -> BLOCK (stale ones listed) ---
+# --- Test 14: Unchanneled session only checks shared CT, not channel CTs ---
 echo ""
-echo "Test 14: One fresh CT among stale ones -> BLOCK (cross-channel freshness does not exempt)"
+echo "Test 14: Unchanneled session ignores channel CTs -> only shared CT checked"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 create_channel_ct "$PROJECT" "1" "IN PROGRESS"
 create_channel_ct "$PROJECT" "2" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 300
+touch_aged "$PROJECT/CURRENT_TASK.md" 300   # shared CT stale
 touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300
-touch_now "$PROJECT/CURRENT_TASK_ch2.md"  # this one is fresh
-INPUT=$(build_input "$PROJECT" "Continuing work on channel 2.")
+touch_now "$PROJECT/CURRENT_TASK_ch2.md"
+INPUT=$(build_input "$PROJECT" "Continuing work.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_contains "Active CT file" "blocks (lists stale files regardless of other channels being fresh)"
+# Only shared CT reported, not ch1 or ch2
+assert_stdout_contains "CURRENT_TASK.md" "blocks for stale shared CT"
+teardown_temp
+
+# --- Test 14b: Channeled session checks own channel + shared ---
+echo ""
+echo "Test 14b: WAKEFUL_CHANNEL=2 -> checks ch2 + shared, ignores ch1"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"  # shared not active
+create_channel_ct "$PROJECT" "1" "IN PROGRESS"
+create_channel_ct "$PROJECT" "2" "IN PROGRESS"
+touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300  # stale but not our channel
+touch_aged "$PROJECT/CURRENT_TASK_ch2.md" 300  # stale and IS our channel
+INPUT=$(build_input "$PROJECT" "Continuing work on channel 2.")
+WAKEFUL_CHANNEL=2 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+# Should only report ch2, not ch1
+assert_stdout_contains "ch2" "reports own channel as stale"
 teardown_temp
 
 # ==================== SUMMARY ====================

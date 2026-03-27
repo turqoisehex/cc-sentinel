@@ -58,19 +58,18 @@ if [[ -z "$PROJECT_DIR" ]]; then
   exit 0
 fi
 
-# Collect CT files: if WAKEFUL_CHANNEL is set, scope to that channel only.
-# Otherwise fall back to shared index + all per-channel files.
+# Collect CT files: scope to own channel only. Without WAKEFUL_CHANNEL, only
+# check shared CT — channel CTs belong to other sessions and checking them
+# causes cross-channel noise (stale alerts for files this session doesn't own,
+# which can lead to models deleting or overwriting other sessions' state).
 TASK_FILES=()
 if [[ -n "${WAKEFUL_CHANNEL:-}" ]]; then
-  # Channeled session: only check own channel's CT + shared index
+  # Channeled session: own channel + shared index
   [[ -f "${PROJECT_DIR}/CURRENT_TASK.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK.md")
   [[ -f "${PROJECT_DIR}/CURRENT_TASK_ch${WAKEFUL_CHANNEL}.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK_ch${WAKEFUL_CHANNEL}.md")
 else
-  # Unchanneled: check shared index + all channel CTs
+  # Unchanneled: shared CT only
   TASK_FILES=("${PROJECT_DIR}/CURRENT_TASK.md")
-  for chf in "${PROJECT_DIR}"/CURRENT_TASK_ch*.md; do
-    [[ -f "$chf" ]] && TASK_FILES+=("$chf")
-  done
 fi
 
 # Helper: extract channel number from a CT file (empty = unchanneled/shared)
