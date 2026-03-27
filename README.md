@@ -357,7 +357,7 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 | Governance protection | Not mentioned | Protected files list + authorization marker protocol |
 | Cold-start protocol | CLAUDE.md as ground truth | CURRENT_TASK as complete cold-start survival document |
 | Multi-channel coordination | Parallel sessions (independent) | File-signal coordination between orchestrator + executor |
-| Verification depth | 2-layer review (check + challenge) | 5 independent agents + per-commit agents + stop hook gate |
+| Verification depth | 2-layer review (check + challenge) | Up to 6 independent agents + per-commit agents + stop hook gate |
 | Plan enforcement | Plan mode discipline (manual) | /design forces brainstorm, spec, adversarial review, user gate |
 | Completion loops | ralph-loop plugin (re-feed until done) | Stop hook + verification evidence gate + anti-deferral hook (three independent mechanisms) |
 | Permission model | Pre-approved allow list (manual) | Same + file-protection hook for governance files + authorization marker protocol |

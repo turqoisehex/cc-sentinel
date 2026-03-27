@@ -120,7 +120,7 @@ Also update all "5 agents" references to "up to 6 agents" and add `performance.m
 ```
 Both `stop-task-check.sh` and `safe-commit.sh` gate logic changes from "all 6 must exist and PASS" to "all agents listed in manifest.json must exist and PASS; if no manifest, expect all 6." This makes the gates filter-aware.
 
-**manifest.json edge cases:** If manifest.json exists but is unparseable (invalid JSON), treat as "no manifest" (expect all 6) and log a warning. If `launched` array is empty, treat as "no manifest." Stale manifests are not a concern because squad.md manages manifest.json at launch time: filtered runs write a manifest listing launched agents, and full-scope runs (all 6 agents) delete any existing manifest.json to prevent a stale partial-run manifest from reducing expectations on the next run. Gates only read manifest.json during the same commit flow.
+**manifest.json edge cases:** If manifest.json exists but is unparseable (invalid JSON), treat as "no manifest" (expect all 6) and log a warning. If `launched` array is empty, treat as "no manifest." Stale manifests are not a concern because verify.md manages manifest.json at launch time: filtered runs write a manifest listing launched agents, and full-scope runs (all 6 agents) delete any existing manifest.json to prevent a stale partial-run manifest from reducing expectations on the next run. Gates only read manifest.json during the same commit flow.
 
 **Files with hardcoded "5 agents" that need updating:**
 - `modules/verification/reference/verification-squad.md` (heading, rules, multiple references)

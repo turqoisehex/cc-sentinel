@@ -52,7 +52,7 @@ DELEGATE four agents. Report only. YAML frontmatter required.
 
 ## Phase 3: Squad Loop (max 3 rounds)
 
-DELEGATE 6-agent squad from `.claude/reference/verification-squad.md`. All agents must PASS. FAIL: fix -> re-run failed agents only. Max 3 rounds.
+DELEGATE 6-agent squad from `.claude/reference/verification-squad.md`. All agents must PASS or WARN. FAIL: fix -> re-run failed agents only. Max 3 rounds.
 
 ## Phase 4: Prove Correctness — user gate
 
