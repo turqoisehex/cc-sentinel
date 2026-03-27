@@ -33,16 +33,24 @@
 # DATABASE
 *.sql.dump
 *.sqlite
+!*_test.sqlite
+!*test*.sqlite
 *.db
 !*.db.example
+!*_test.db
+!*test*.db
 # SECRETS / TOKENS
 *.secret
 *.secrets
-*credentials*
-*secret_key*
-*api_key*
-*access_token*
-!*credentials*.example
+**/credentials
+**/credentials.*
+**/secret_key
+**/secret_key.*
+**/api_key
+**/api_key.*
+**/access_token
+**/access_token.*
+!**/credentials.example
 # CONFIG WITH SECRETS
 */.npmrc
 */.pypirc

@@ -117,6 +117,26 @@ OUTPUT=$(echo '{"trigger":"Stop"}' | bash "$HOOK_SCRIPT" 2>/dev/null)
 assert_eq "T5: exit code" "0" "$?"
 rm -rf "$TMPDIR_ROOT"
 
+# T6: Pre-staged files remain staged after hook runs
+echo "--- T6: Pre-staged files preserved after hook ---"
+setup_repo
+# Stage one file
+echo "staged content" > staged.txt
+git add staged.txt
+# Also have an unstaged change
+echo "unstaged content" >> file.txt
+# Confirm staged before hook
+STAGED_BEFORE=$(git diff --cached --name-only)
+assert_eq "T6: file is staged before hook" "staged.txt" "$STAGED_BEFORE"
+OUTPUT=$(echo '{"trigger":"Stop"}' | bash "$HOOK_SCRIPT" 2>/dev/null)
+assert_eq "T6: exit code" "0" "$?"
+STASH_COUNT=$(git stash list | grep -c "sentinel-checkpoint:" || true)
+assert_eq "T6: sentinel stash created" "1" "$STASH_COUNT"
+# staged.txt should still be staged
+STAGED_AFTER=$(git diff --cached --name-only)
+assert_eq "T6: staged file still staged after hook" "staged.txt" "$STAGED_AFTER"
+teardown
+
 echo ""
 echo "=============================="
 echo "Results: $PASS passed, $FAIL failed, $TOTAL total"

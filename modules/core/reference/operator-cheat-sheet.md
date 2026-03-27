@@ -92,7 +92,7 @@ Each channel pair is isolated: Opus N dispatches to `_pending_sonnet/chN/`, Sonn
 |------|---------|
 | **TaskCreate** | Claude Code's built-in task tracking tool. Commands use "TaskCreate every step" to mean: create a checklist of tasks and mark them in_progress → completed as you go. |
 | **CT** | CURRENT_TASK.md — the session state file. |
-| **Squad** | The verification squad — up to 6 agents (mechanical, adversarial, completeness, dependency, cold reader, performance). |
+| **Squad** | The verification squad — up to 6 agents (mechanical, adversarial, completeness, dependency, cold reader, performance). Invoked via `/verify`. |
 
 ---
 

@@ -26,7 +26,7 @@ For each hook: check the command path exists as a file on disk. PASS if register
 Check that `.claude/commands/` contains all expected command files for installed modules:
 
 - **Core:** `self-test.md`, `cold.md`, `cleanup.md`, `status.md`
-- **Verification:** `squad.md`, `grill.md`
+- **Verification:** `verify.md`, `grill.md`
 - **Sprint Pipeline:** `1.md` through `5.md`, `audit.md`, `design.md`, `build.md`, `perfect.md`, `finalize.md`, `opus.md`, `sonnet.md`, `rewrite.md`, `spawn.md`
 - **Governance Protection:** `mistake.md`, `prune-rules.md`
 
@@ -60,7 +60,7 @@ Check that installed skills exist in `.claude/skills/<name>/SKILL.md`:
 
 - **Core:** `cleanup`, `cold`, `self-test`, `status`
 - **Context Awareness:** `configure-context-awareness`
-- **Verification:** `grill`, `squad`
+- **Verification:** `grill`, `verify`
 - **Sprint Pipeline:** `1`, `2`, `3`, `4`, `5`, `audit`, `design`, `build`, `perfect`, `finalize`, `opus`, `sonnet`, `rewrite`, `spawn`
 - **Governance Protection:** `mistake`, `prune-rules`
 

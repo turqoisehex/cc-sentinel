@@ -8,7 +8,7 @@ CLAUDE.md
 settings.json
 
 # Slash commands (add your project-specific commands below)
-# squad.md
+# verify.md
 # grill.md
 # mistake.md
 
