@@ -61,6 +61,18 @@ INPUT='{"tool_name":"Edit","tool_input":{"file_path":"src/main.py","old_string":
 OUTPUT=$(echo "$INPUT" | bash "$HOOK_SCRIPT" 2>/dev/null)
 assert_eq "T5: skip comment-to-comment" "" "$OUTPUT"
 
+# T6: MultiEdit code→comment → warning
+echo "--- T6: MultiEdit code→comment ---"
+INPUT='{"tool_name":"MultiEdit","tool_input":{"edits":[{"file_path":"src/main.py","old_string":"def run():\n    process()","new_string":"# TODO: implement\n# removed"}]}}'
+OUTPUT=$(echo "$INPUT" | bash "$HOOK_SCRIPT" 2>/dev/null)
+assert_contains "T6: MultiEdit warns" "additionalContext" "$OUTPUT"
+
+# T7: MultiEdit on markdown file → skip (per-edit file path check)
+echo "--- T7: MultiEdit markdown skip ---"
+INPUT='{"tool_name":"MultiEdit","tool_input":{"edits":[{"file_path":"docs/README.md","old_string":"old text","new_string":"# New Section\n## Overview"}]}}'
+OUTPUT=$(echo "$INPUT" | bash "$HOOK_SCRIPT" 2>/dev/null)
+assert_eq "T7: MultiEdit skip markdown" "" "$OUTPUT"
+
 echo ""
 echo "=============================="
 echo "Results: $PASS passed, $FAIL failed, $TOTAL total"

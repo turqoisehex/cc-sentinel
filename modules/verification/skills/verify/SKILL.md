@@ -52,9 +52,9 @@ Before launching agents, classify the changed files to determine which agents ar
 
 | File Category | Agents Launched |
 |---|---|
-| Docs only (.md, .txt, .rst) | cold_reader |
-| Tests only (*_test.*, *_spec.*, test_*) | mechanical, completeness |
-| Config only (.json, .yaml, .toml, .env*) | adversarial, dependency |
+| Docs only (.md, .txt, .rst) | cold_reader.md |
+| Tests only (*_test.*, *_spec.*, test_*) | mechanical.md, completeness.md |
+| Config only (.json, .yaml, .toml, .env*) | adversarial.md, dependency.md |
 | Source code (everything else) | all 6 |
 | Mixed | union of matching categories |
 
@@ -104,7 +104,7 @@ Do not idle. Proceed with queued work or run `/grill`.
 
 When all expected result files present:
 
-1. Read all 6 output files.
+1. Read all launched agent output files (may be fewer than 6 if smart filtering was applied).
 2. Present consolidated summary: each agent PASS/FAIL with issue count.
 3. ALL PASS -> write `VERIFICATION_PASSED` + summary to CT.
 4. ANY FAIL -> list issues, ask user whether to fix and re-run.

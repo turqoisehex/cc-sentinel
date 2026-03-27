@@ -133,6 +133,7 @@ Up-to-six-agent verification squad that independently audits work before any com
 | **Completeness Scanner** | Missing requirements, unassigned items, spec gaps |
 | **Dependency Tracer** | Missing migrations, untraced call sites, silent default changes |
 | **Cold Reader** | Semantic errors invisible to the author -- reads with zero context |
+| **Performance Auditor** | Algorithm complexity, unbounded memory, N+1 queries, blocking in async |
 
 The `stop-task-check.sh` hook fires when Claude tries to stop, requiring verification evidence before allowing completion claims through. Self-attestation ("I verified this") is explicitly rejected -- the hook checks for actual squad output files on disk.
 

@@ -75,21 +75,25 @@ done
 [[ "$GOVERNANCE_AUTHORIZED" == "true" ]] && exit 0
 
 # Check each file path against the protected list (if protected-files.txt exists)
-# Capture output so we can exit early if denied — prevents double JSON output if the
-# same file also matches a sensitive pattern in the second pass below.
+# Pre-load into array to avoid re-reading file per FILE_PATH
 if [[ -n "$PROTECTED_FILES_LIST" ]]; then
+PROTECTED_ENTRIES=()
+while IFS= read -r LINE || [[ -n "$LINE" ]]; do
+  LINE=$(echo "$LINE" | tr -d '\r' | xargs)
+  [[ -z "$LINE" || "$LINE" == \#* ]] && continue
+  PROTECTED_ENTRIES+=("$LINE")
+done < "$PROTECTED_FILES_LIST"
+
 PROTECTED_DENY=$(echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
   [[ -z "$FILE_PATH" ]] && continue
   FILENAME="$(basename "$FILE_PATH")"
 
-  while IFS= read -r PROTECTED || [[ -n "$PROTECTED" ]]; do
-    PROTECTED=$(echo "$PROTECTED" | tr -d '\r' | xargs)
-    [[ -z "$PROTECTED" || "$PROTECTED" == \#* ]] && continue
+  for PROTECTED in "${PROTECTED_ENTRIES[@]}"; do
     if [[ "$FILENAME" == "$PROTECTED" ]]; then
       echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","reason":"PROTECTED: '"$FILENAME"' is a governance file. To edit: add GOVERNANCE-EDIT-AUTHORIZED as its own standalone line in your channel CT file (CURRENT_TASK_chN.md) or CURRENT_TASK.md if unchanneled. It must be the entire line by itself. Then retry the edit."}}'
       exit 0
     fi
-  done < "$PROTECTED_FILES_LIST"
+  done
 done)
 if [[ -n "$PROTECTED_DENY" ]]; then
   echo "$PROTECTED_DENY"
@@ -110,34 +114,39 @@ for candidate in \
 done
 
 if [[ -n "$SENSITIVE_LIST" ]]; then
+  # Pre-load into deny and negation arrays to avoid re-reading file per FILE_PATH
+  DENY_PATTERNS=()
+  NEGATION_PATTERNS=()
+  while IFS= read -r LINE || [[ -n "$LINE" ]]; do
+    LINE=$(echo "$LINE" | tr -d '\r' | xargs)
+    [[ -z "$LINE" || "$LINE" == \#* ]] && continue
+    if [[ "$LINE" == !* ]]; then
+      NEGATION_PATTERNS+=("${LINE#!}")
+    else
+      DENY_PATTERNS+=("$LINE")
+    fi
+  done < "$SENSITIVE_LIST"
+
   echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
     [[ -z "$FILE_PATH" ]] && continue
 
-    # Two-pass: collect deny matches, then check negations
     DENIED="false"
-    while IFS= read -r PATTERN || [[ -n "$PATTERN" ]]; do
-      PATTERN=$(echo "$PATTERN" | tr -d '\r' | xargs)
-      [[ -z "$PATTERN" || "$PATTERN" == \#* || "$PATTERN" == !* ]] && continue
+    for PATTERN in "${DENY_PATTERNS[@]}"; do
       # shellcheck disable=SC2053
       if [[ "$FILE_PATH" == $PATTERN ]]; then
         DENIED="true"
         break
       fi
-    done < "$SENSITIVE_LIST"
+    done
 
     if [[ "$DENIED" == "true" ]]; then
-      # Check negation patterns
-      while IFS= read -r PATTERN || [[ -n "$PATTERN" ]]; do
-        PATTERN=$(echo "$PATTERN" | tr -d '\r' | xargs)
-        [[ -z "$PATTERN" ]] && continue
-        [[ "$PATTERN" != !* ]] && continue
-        NEG_PATTERN="${PATTERN#!}"
+      for NEG_PATTERN in "${NEGATION_PATTERNS[@]}"; do
         # shellcheck disable=SC2053
         if [[ "$FILE_PATH" == $NEG_PATTERN ]]; then
           DENIED="false"
           break
         fi
-      done < "$SENSITIVE_LIST"
+      done
     fi
 
     if [[ "$DENIED" == "true" ]]; then

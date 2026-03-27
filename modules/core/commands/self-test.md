@@ -12,9 +12,9 @@ Run each check below. Report PASS/FAIL for each. At the end, summarize with tota
 
 Read the project's `.claude/settings.json` (or `~/.claude/settings.json` for global installs). For each installed module, verify that its hooks are registered:
 
-- **Core:** `anti-deferral.sh` in PreToolUse, `session-orient.sh` in SessionStart, `pre-compact-state-save.sh` in PreCompact, `post-compact-reorient.sh` in SessionStart (compact matcher), `agent-file-reminder.sh` in PreToolUse
+- **Core:** `anti-deferral.sh` in PreToolUse, `session-orient.sh` in SessionStart, `pre-compact-state-save.sh` in PreCompact, `post-compact-reorient.sh` in SessionStart (compact matcher), `agent-file-reminder.sh` in PreToolUse, `auto-checkpoint.sh` in Stop and PreCompact
 - **Context Awareness:** `context-awareness-hook.sh` in PreToolUse, `context-awareness-reset.sh` in SessionStart (compact matcher), statusLine configured
-- **Verification:** `stop-task-check.sh` in Stop
+- **Verification:** `stop-task-check.sh` in Stop, `comment-replacement.sh` in PostToolUse (Edit|MultiEdit matcher)
 - **Commit Enforcement:** `auto-format.sh` in PostToolUse
 - **Governance Protection:** `file-protection.sh` in PreToolUse
 - **Notification:** platform-appropriate flash script in Stop + Notification

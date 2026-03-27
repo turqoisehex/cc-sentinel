@@ -59,6 +59,11 @@ if [[ "$TOOL" == "Edit" ]]; then
 elif [[ "$TOOL" == "MultiEdit" ]]; then
   EDIT_COUNT=$(echo "$INPUT" | jq '.tool_input.edits | length' 2>/dev/null || echo "0")
   for (( i=0; i<EDIT_COUNT; i++ )); do
+    # Check per-edit file path for markdown/docs skip
+    EDIT_PATH=$(echo "$INPUT" | jq -r ".tool_input.edits[$i].file_path // \"\"" | tr -d '\r')
+    case "$EDIT_PATH" in
+      *.md|*.txt|*.rst) continue ;;
+    esac
     OLD=$(echo "$INPUT" | jq -r ".tool_input.edits[$i].old_string // \"\"" | tr -d '\r')
     NEW=$(echo "$INPUT" | jq -r ".tool_input.edits[$i].new_string // \"\"" | tr -d '\r')
     if check_replacement "$OLD" "$NEW"; then
