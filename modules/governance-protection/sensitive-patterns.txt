@@ -1,0 +1,72 @@
+# ENVIRONMENT
+*.env
+*.env.*
+!*.env.example
+!*.env.template
+# CERTIFICATE
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+*.cer
+*.jks
+*.keystore
+# SSH
+*/.ssh/*
+*/id_rsa*
+*/id_ed25519*
+*/id_ecdsa*
+*/id_dsa*
+*.ppk
+*/authorized_keys
+*/known_hosts
+# CLOUD
+*/.aws/*
+*/.azure/*
+*/.gcloud/*
+*/.terraform/*
+*/terraform.tfstate*
+*/.digitalocean/*
+# DOCKER
+*/docker-compose.override.yml
+# DATABASE
+*.sql.dump
+*.sqlite
+*.db
+!*.db.example
+# SECRETS / TOKENS
+*.secret
+*.secrets
+*credentials*
+*secret_key*
+*api_key*
+*access_token*
+!*credentials*.example
+# CONFIG WITH SECRETS
+*/.npmrc
+*/.pypirc
+*/.gem/credentials
+*/.docker/config.json
+*/.kube/config
+*/.vault-token
+*/.netrc
+*/.pgpass
+*/.my.cnf
+*/.s3cfg
+# HISTORY
+*/.bash_history
+*/.zsh_history
+*/.psql_history
+*/.mysql_history
+*/.node_repl_history
+*/.python_history
+# BACKUP
+*.bak
+*.backup
+*.old
+!*.bak.example
+# OS / EDITOR
+*/.DS_Store
+*/Thumbs.db
+*/.idea/workspace.xml

@@ -385,6 +385,67 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "PROTECTED" "embedded marker not accepted as authorization"
 teardown_temp
 
+# --- Test 13: .env file -> deny (sensitive pattern) ---
+echo ""
+echo "Test 13: .env file -> deny (sensitive pattern)"
+setup_temp
+# No protected-files.txt needed — sensitive-patterns.txt triggers
+cp "$(cd "$SCRIPT_DIR/.." && pwd)/sensitive-patterns.txt" "$PROJECT/sensitive-patterns.txt"
+create_ct "$PROJECT" "false"
+INPUT=$(build_edit_input "$PROJECT/.env")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "SENSITIVE" ".env denied by sensitive patterns"
+teardown_temp
+
+# --- Test 14: .env.example -> allow (negation exemption) ---
+echo ""
+echo "Test 14: .env.example -> allow (negation exemption)"
+setup_temp
+cp "$(cd "$SCRIPT_DIR/.." && pwd)/sensitive-patterns.txt" "$PROJECT/sensitive-patterns.txt"
+create_ct "$PROJECT" "false"
+INPUT=$(build_edit_input "$PROJECT/.env.example")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty ".env.example allowed by negation"
+teardown_temp
+
+# --- Test 15: .ssh/id_rsa -> deny (SSH key) ---
+echo ""
+echo "Test 15: .ssh/id_rsa -> deny (SSH key)"
+setup_temp
+cp "$(cd "$SCRIPT_DIR/.." && pwd)/sensitive-patterns.txt" "$PROJECT/sensitive-patterns.txt"
+create_ct "$PROJECT" "false"
+INPUT=$(build_edit_input "$PROJECT/.ssh/id_rsa")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "SENSITIVE" "id_rsa denied by sensitive patterns"
+teardown_temp
+
+# --- Test 16: src/main.py -> allow (normal file) ---
+echo ""
+echo "Test 16: src/main.py -> allow (normal file)"
+setup_temp
+cp "$(cd "$SCRIPT_DIR/.." && pwd)/sensitive-patterns.txt" "$PROJECT/sensitive-patterns.txt"
+create_ct "$PROJECT" "false"
+INPUT=$(build_edit_input "$PROJECT/src/main.py")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "normal source file allowed"
+teardown_temp
+
+# --- Test 17: .aws/credentials -> deny (cloud) ---
+echo ""
+echo "Test 17: .aws/credentials -> deny (cloud)"
+setup_temp
+cp "$(cd "$SCRIPT_DIR/.." && pwd)/sensitive-patterns.txt" "$PROJECT/sensitive-patterns.txt"
+create_ct "$PROJECT" "false"
+INPUT=$(build_edit_input "$PROJECT/.aws/credentials")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "SENSITIVE" ".aws/credentials denied by sensitive patterns"
+teardown_temp
+
 # ==================== SUMMARY ====================
 
 echo ""

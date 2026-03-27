@@ -370,7 +370,8 @@
           "prune-rules"
         ],
         "config": [
-          "protected-files.txt"
+          "protected-files.txt",
+          "sensitive-patterns.txt"
         ],
         "tests": [
           "test_file_protection.sh"

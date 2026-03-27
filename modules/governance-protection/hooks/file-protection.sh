@@ -51,8 +51,6 @@ for candidate in \
   fi
 done
 
-[[ -z "$PROTECTED_FILES_LIST" ]] && exit 0
-
 # Check if current task authorizes governance edits
 GOVERNANCE_AUTHORIZED="false"
 for CHECK_DIR in "$PROJECT_DIR" "${CLAUDE_PROJECT_DIR:-}"; do
@@ -76,7 +74,8 @@ done
 
 [[ "$GOVERNANCE_AUTHORIZED" == "true" ]] && exit 0
 
-# Check each file path against the protected list
+# Check each file path against the protected list (if protected-files.txt exists)
+if [[ -n "$PROTECTED_FILES_LIST" ]]; then
 echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
   [[ -z "$FILE_PATH" ]] && continue
   FILENAME="$(basename "$FILE_PATH")"
@@ -90,3 +89,54 @@ echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
     fi
   done < "$PROTECTED_FILES_LIST"
 done
+fi
+
+# --- Second pass: sensitive file patterns ---
+SENSITIVE_LIST=""
+for candidate in \
+  "${PROJECT_DIR}/sensitive-patterns.txt" \
+  "${PROJECT_DIR}/.claude/sensitive-patterns.txt" \
+  "${HOME}/.claude/sensitive-patterns.txt"; do
+  if [[ -f "$candidate" ]]; then
+    SENSITIVE_LIST="$candidate"
+    break
+  fi
+done
+
+if [[ -n "$SENSITIVE_LIST" ]]; then
+  echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
+    [[ -z "$FILE_PATH" ]] && continue
+
+    # Two-pass: collect deny matches, then check negations
+    DENIED="false"
+    while IFS= read -r PATTERN || [[ -n "$PATTERN" ]]; do
+      PATTERN=$(echo "$PATTERN" | tr -d '\r' | xargs)
+      [[ -z "$PATTERN" || "$PATTERN" == \#* || "$PATTERN" == !* ]] && continue
+      # shellcheck disable=SC2053
+      if [[ "$FILE_PATH" == $PATTERN ]]; then
+        DENIED="true"
+        break
+      fi
+    done < "$SENSITIVE_LIST"
+
+    if [[ "$DENIED" == "true" ]]; then
+      # Check negation patterns
+      while IFS= read -r PATTERN || [[ -n "$PATTERN" ]]; do
+        PATTERN=$(echo "$PATTERN" | tr -d '\r' | xargs)
+        [[ -z "$PATTERN" ]] && continue
+        [[ "$PATTERN" != !* ]] && continue
+        NEG_PATTERN="${PATTERN#!}"
+        # shellcheck disable=SC2053
+        if [[ "$FILE_PATH" == $NEG_PATTERN ]]; then
+          DENIED="false"
+          break
+        fi
+      done < "$SENSITIVE_LIST"
+    fi
+
+    if [[ "$DENIED" == "true" ]]; then
+      echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","reason":"SENSITIVE: This file matches a credential/secret pattern and should not be read or modified by Claude."}}'
+      exit 0
+    fi
+  done
+fi
