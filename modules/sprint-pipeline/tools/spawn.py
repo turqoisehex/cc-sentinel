@@ -376,7 +376,9 @@ class WTDriver(TerminalDriver):
             if new:
                 self._window_hwnds[window_name] = new.pop()
                 return
-        # Fallback: try using wt ft if HWND detection failed
+        # Fallback: wt ft (may silently fail from subprocesses)
+        print("  [!] Could not detect WT window HWND for '%s'; "
+              "keystroke delivery may fail" % window_name, file=sys.stderr)
         subprocess.run(["wt", "-w", window_name, "ft"], check=False)
 
     def open_tab(self, window_name, project_dir):
@@ -390,6 +392,7 @@ class WTDriver(TerminalDriver):
         if hwnd:
             self._force_foreground(hwnd)
         else:
+            # wt ft may silently fail from subprocesses (see class docstring)
             subprocess.run(["wt", "-w", window_name, "ft"], check=False)
 
     # -- Win32 helpers ---
