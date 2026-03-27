@@ -23,6 +23,7 @@ Set this session's channel identity. Adapts to project infrastructure.
    e. `mkdir -p verification_findings/_pending_opus/ch$ARGUMENTS`
    f. Read `.claude/reference/channel-routing.md` if it exists. Apply for the rest of this session.
    g. **Opus listener startup:** Start background listener to receive prompts from the orchestrator:
+      - Announce: "Opus listener active. Watching _pending_opus/ch$ARGUMENTS/ for new work..."
       - `bash scripts/wait_for_work.sh --model opus --channel $ARGUMENTS` with `run_in_background: true`
       - On prompt arrival: read the prompt file. If file is missing (orchestrator deleted it), log warning and re-spawn `wait_for_work.sh` in background. Otherwise: delete prompt file, execute instructions. On completion (cleanup): delete `.active`, re-spawn `wait_for_work.sh --model opus --channel $ARGUMENTS` in background.
       - `.active` remains present throughout execution so observers can see what this session is working on.
