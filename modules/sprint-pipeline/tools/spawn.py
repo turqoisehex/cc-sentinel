@@ -350,12 +350,34 @@ def _xdotool_activate_by_pid(pid):
 
 
 class WTDriver(TerminalDriver):
-    """Windows Terminal driver."""
+    """Windows Terminal driver.
+
+    Uses Win32 SetForegroundWindow for activation because ``wt ft`` silently
+    fails to change focus when called from a subprocess (Windows blocks
+    cross-process SetForegroundWindow unless the caller owns the input queue).
+    The Alt-key trick grants a brief focus-steal allowance.
+    """
+
+    _WT_CLASS = "CASCADIA_HOSTING_WINDOW_CLASS"
+
+    def __init__(self):
+        self._window_hwnds = {}  # window_name -> HWND
 
     def open_window(self, window_name, project_dir):
+        before = self._enum_wt_hwnds()
         subprocess.run(
             ["wt", "-w", window_name, "-d", str(project_dir)], check=True
         )
+        # Wait for the new WT window to appear (up to 3s)
+        for _ in range(30):
+            time.sleep(0.1)
+            after = self._enum_wt_hwnds()
+            new = after - before
+            if new:
+                self._window_hwnds[window_name] = new.pop()
+                return
+        # Fallback: try using wt ft if HWND detection failed
+        subprocess.run(["wt", "-w", window_name, "ft"], check=False)
 
     def open_tab(self, window_name, project_dir):
         subprocess.run(
@@ -364,7 +386,60 @@ class WTDriver(TerminalDriver):
         )
 
     def activate(self, window_name):
-        subprocess.run(["wt", "-w", window_name, "ft"], check=True)
+        hwnd = self._window_hwnds.get(window_name)
+        if hwnd:
+            self._force_foreground(hwnd)
+        else:
+            subprocess.run(["wt", "-w", window_name, "ft"], check=False)
+
+    # -- Win32 helpers ---
+
+    @staticmethod
+    def _enum_wt_hwnds():
+        """Return set of visible Windows Terminal window handles."""
+        if sys.platform != "win32":
+            return set()
+        hwnds = set()
+        WNDENUMPROC = ctypes.WINFUNCTYPE(
+            ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM,
+        )
+        get_class = ctypes.windll.user32.GetClassNameW
+        is_visible = ctypes.windll.user32.IsWindowVisible
+        buf = ctypes.create_unicode_buffer(64)
+
+        def callback(hwnd, _lparam):
+            if is_visible(hwnd):
+                get_class(hwnd, buf, 64)
+                if buf.value == WTDriver._WT_CLASS:
+                    hwnds.add(hwnd)
+            return True
+
+        ctypes.windll.user32.EnumWindows(WNDENUMPROC(callback), 0)
+        return hwnds
+
+    @staticmethod
+    def _force_foreground(hwnd):
+        """Bring *hwnd* to the foreground using the Alt-key trick.
+
+        Windows blocks SetForegroundWindow from background processes.
+        Sending a brief Alt press/release via keybd_event grants the caller
+        a short window during which SetForegroundWindow succeeds.
+
+        Uses keybd_event (not SendInput) to avoid ctypes argtypes collision
+        with Win32KeySender's SendInput binding.
+        """
+        if sys.platform != "win32":
+            return
+
+        VK_MENU = 0x12
+        KEYEVENTF_KEYUP = 0x0002
+
+        keybd_event = ctypes.windll.user32.keybd_event
+        keybd_event(VK_MENU, 0, 0, 0)              # Alt down
+        keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)  # Alt up
+        time.sleep(0.05)
+
+        ctypes.windll.user32.SetForegroundWindow(hwnd)
 
 
 class GnomeTermDriver(TerminalDriver):

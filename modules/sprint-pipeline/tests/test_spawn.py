@@ -185,9 +185,21 @@ class TestWTDriver(unittest.TestCase):
         driver = WTDriver()
         with patch("spawn.subprocess.run") as mock_run:
             driver.open_window("opus", "/home/user")
-            mock_run.assert_called_once()
-            cmd = mock_run.call_args[0][0]
-            self.assertEqual(cmd, ["wt", "-w", "opus", "-d", "/home/user"])
+            # First call opens the window; HWND detection loop finds nothing
+            # under mock, so fallback wt-ft call also fires
+            first_call = mock_run.call_args_list[0]
+            self.assertEqual(first_call[0][0],
+                             ["wt", "-w", "opus", "-d", "/home/user"])
+
+    def test_open_window_tracks_hwnd(self):
+        from spawn import WTDriver
+        driver = WTDriver()
+        fake_hwnd = 12345
+        with patch("spawn.subprocess.run"), \
+             patch.object(WTDriver, "_enum_wt_hwnds",
+                          side_effect=[set(), {fake_hwnd}]):
+            driver.open_window("opus", "/home/user")
+            self.assertEqual(driver._window_hwnds.get("opus"), fake_hwnd)
 
     def test_open_tab_command(self):
         from spawn import WTDriver
@@ -197,7 +209,15 @@ class TestWTDriver(unittest.TestCase):
             cmd = mock_run.call_args[0][0]
             self.assertEqual(cmd, ["wt", "-w", "opus", "nt", "-d", "/home/user"])
 
-    def test_activate_command(self):
+    def test_activate_uses_force_foreground_when_hwnd_known(self):
+        from spawn import WTDriver
+        driver = WTDriver()
+        driver._window_hwnds["opus"] = 99999
+        with patch.object(WTDriver, "_force_foreground") as mock_fg:
+            driver.activate("opus")
+            mock_fg.assert_called_once_with(99999)
+
+    def test_activate_falls_back_to_wt_ft(self):
         from spawn import WTDriver
         driver = WTDriver()
         with patch("spawn.subprocess.run") as mock_run:
