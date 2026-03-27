@@ -238,6 +238,27 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (verification found)"
 teardown_temp
 
+# --- Test 3b: VERDICT: WARN counts as passing (not just PASS) ---
+echo ""
+echo "Test 3b: Squad with WARN verdicts -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# Create squad with mix of PASS and WARN
+WARN_SQUAD="$PROJECT/verification_findings/squad_sonnet"
+mkdir -p "$WARN_SQUAD"
+echo "VERDICT: PASS" > "$WARN_SQUAD/mechanical.md"
+echo "VERDICT: WARN (2 minor)" > "$WARN_SQUAD/adversarial.md"
+echo "VERDICT: PASS" > "$WARN_SQUAD/completeness.md"
+echo "VERDICT: WARN (1 minor)" > "$WARN_SQUAD/dependency.md"
+echo "VERDICT: PASS" > "$WARN_SQUAD/cold_reader.md"
+INPUT=$(build_input "$PROJECT" "All work is complete and ready to ship.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (WARN counts as passing)"
+teardown_temp
+
 # --- Test 4: Active task + completion + squad from wrong channel -> BLOCK ---
 echo ""
 echo "Test 4: Channeled task + completion + wrong-channel squad -> BLOCK"
@@ -249,7 +270,7 @@ touch_now "$PROJECT/CURRENT_TASK_ch2.md"
 # Squad exists but for channel 1, not channel 2
 create_passing_squad "$PROJECT" "squad_ch1_sonnet"
 INPUT=$(build_input "$PROJECT" "All tasks are done. The implementation is complete.")
-run_hook "$INPUT"
+WAKEFUL_CHANNEL=2 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains '"decision".*"block"' "blocks (wrong channel squad)"
 teardown_temp
@@ -334,9 +355,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (Sonnet listener bypass)"
 teardown_temp
 
-# --- Test 8b: Opus listener bypass (Tier 1) ---
+# --- Test 8b: Opus listener bypass (message pattern) ---
 echo ""
-echo "Test 8b: Opus listener session -> ALLOW (Tier 1 pattern)"
+echo "Test 8b: Opus listener session -> ALLOW (message pattern)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -344,12 +365,12 @@ touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 INPUT=$(build_input "$PROJECT" "Opus listener active. Watching _pending_opus/ch1/ for new work...")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_empty "no block (Opus listener Tier 1 bypass)"
+assert_stdout_empty "no block (Opus listener message pattern bypass)"
 teardown_temp
 
-# --- Test 8c: Heartbeat files do NOT bypass (Tier 2 removed — regression guard) ---
+# --- Test 8c: Heartbeat files do NOT bypass (regression guard) ---
 echo ""
-echo "Test 8c: Sonnet heartbeat does NOT bypass stale CT (Tier 2 removed)"
+echo "Test 8c: Sonnet heartbeat does NOT bypass stale CT"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -362,9 +383,9 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "Active CT file" "blocks (sonnet heartbeat no longer bypasses)"
 teardown_temp
 
-# --- Test 8d: Opus heartbeat does NOT bypass (Tier 2 removed — regression guard) ---
+# --- Test 8d: Opus heartbeat does NOT bypass (regression guard) ---
 echo ""
-echo "Test 8d: Opus heartbeat does NOT bypass stale CT (Tier 2 removed)"
+echo "Test 8d: Opus heartbeat does NOT bypass stale CT"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -422,7 +443,7 @@ touch_now "$PROJECT/CURRENT_TASK_ch10.md"
 # Squad for ch1 should NOT match ch10
 create_passing_squad "$PROJECT" "squad_ch1_sonnet"
 INPUT=$(build_input "$PROJECT" "All tasks are done. Ready to ship.")
-run_hook "$INPUT"
+WAKEFUL_CHANNEL=10 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains '"decision".*"block"' "blocks (ch1 squad doesn't satisfy ch10)"
 teardown_temp

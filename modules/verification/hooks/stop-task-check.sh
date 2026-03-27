@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Stop hook: blocks two specific mistakes at session stop time.
 #
+# Glossary: CC = Claude Code, CT = CURRENT_TASK (the .md state files).
+#
 # REQUIREMENTS:
 #   R1. Completion gate — if assistant claims work is done (completion language
 #       in last message), require verification evidence before allowing stop.
 #       Evidence: squad dir with 5 PASS/WARN verdicts, or VERIFICATION_BLOCKED
-#       marker in the active CT file.
+#       marker in the active CT file. (WARN = issues found but non-blocking.)
 #   R2. Staleness gate — if any active CT file is >2 min stale, block and
 #       request progress update before stopping.
 #   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
@@ -20,7 +22,7 @@
 #   R6. Fail-open — any parse/stat/jq error → exit 0, no output → allow stop.
 #
 # Checks CURRENT_TASK.md (shared index) + CURRENT_TASK_ch{N}.md (own channel).
-# Agent names for squad validation: see scripts/verification-squad.md.
+# Agent names for squad validation: see modules/verification/reference/verification-squad.md.
 set -u
 
 LOGFILE="${SENTINEL_DEBUG_LOG:-/dev/null}"
@@ -52,7 +54,7 @@ fi
 # --- BYPASS: Listener sessions (environment variable) ---
 # Set by spawn.py for Sonnet listener sessions at launch time. Unconditional
 # bypass — listeners are stateless service loops that must not touch CT files.
-# This is the primary listener detection mechanism; Tier 1 (message pattern)
+# This is the primary listener detection mechanism; the message pattern check
 # below is a fallback for sessions launched manually without spawn.py.
 if [[ "${WAKEFUL_LISTENER:-}" == "true" ]]; then
   echo "  -> ALLOW (WAKEFUL_LISTENER=true)" >> "$LOGFILE" 2>/dev/null
@@ -201,7 +203,7 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
       SQUAD_ALLOWED="true"
     fi
     [[ "$SQUAD_ALLOWED" == "false" ]] && continue
-    # Source of truth for agent names: scripts/verification-squad.md
+    # Source of truth for agent names: modules/verification/reference/verification-squad.md
     SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md")
     SQUAD_EXISTS=0
     SQUAD_PASS=0
@@ -285,6 +287,7 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   fi
 fi
 
-# COMPLETE status with no completion language — allow stop (verification was checked above)
+# COMPLETE status with no completion language — allow stop (R1 only triggers
+# when assistant claims completion in its message; stale check only for active tasks)
 echo "  -> ALLOW (complete status, no stale check needed)" >> "$LOGFILE" 2>/dev/null
 exit 0
