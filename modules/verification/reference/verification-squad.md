@@ -4,7 +4,7 @@
 
 ### The Six Agents
 
-Launch all 6 in parallel (`run_in_background: true`). Write to `squad_opus/` or `squad_sonnet/` (per session-bound dirs rule below).
+Launch all applicable agents in parallel (`run_in_background: true`). Write to `squad_opus/` or `squad_sonnet/` (per session-bound dirs rule below). Smart filtering may reduce the set — see `/verify` SKILL.md for filtering rules.
 
 | Agent | File | What It Catches |
 |---|---|---|
@@ -21,7 +21,7 @@ Each agent MUST end with `VERDICT: PASS`, `VERDICT: WARN` + issue count, or `VER
 
 1. **All agents must PASS or WARN** before claiming completion. Any FAIL → fix issues → re-run only the failed agent(s).
 2. **Max 3 rounds.** Initial run + 2 re-runs. If any agent still FAILs after round 3: stop fixing. Delete the squad directory. Write remaining issues to CURRENT_TASK.md with `VERIFICATION_BLOCKED` marker and present to user with the list of unresolved issues and recommended actions. Do not attempt further autonomous fixes — remaining issues likely require design judgment.
-3. **After all 6 PASS or WARN:** Write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md. Note: this is documentation only — hooks do NOT accept it as enforcement evidence. Only actual squad files satisfy the commit gate.
+3. **After all launched agents PASS or WARN:** Write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md. Note: this is documentation only — hooks do NOT accept it as enforcement evidence. Only actual squad files satisfy the commit gate.
 4. **Squad files are ephemeral.** Gitignored. The commit hook cleans only COMPLETED squad directories (all expected files with VERDICT: PASS or WARN) after successful commit. In-progress or failed directories from other sessions are left untouched.
 5. **Replaces ad-hoc verification.** No extra agents unless Squad flags areas needing deeper investigation.
 6. **Hook-enforced.** The commit hook blocks non-exempt commits without all PASS/WARN in `squad_*/`. Use `--skip-squad` for WIP only.
@@ -479,7 +479,7 @@ Only CRITICAL and HIGH are reported. MEDIUM and LOW are rated internally but not
 
 Output format:
 
-    VERDICT: PASS | FAIL (N issues)
+    VERDICT: PASS | WARN (N issues) | FAIL (N issues)
     Work product: [path]
 
     ## Summary (parent reads THIS section only)
@@ -493,14 +493,14 @@ Output format:
 
 Two-layer verification: After finding issues, challenge each one. Is the scale large enough to matter? Is the suggested alternative actually feasible? Only report genuine CRITICAL and HIGH.
 
-VERDICT is PASS only if CRITICAL = 0 AND HIGH = 0.
+VERDICT is PASS if no issues at any level. WARN if MEDIUM or LOW found but CRITICAL = 0 AND HIGH = 0. FAIL if any CRITICAL or HIGH.
 ```
 
 ---
 
-## After All Six Complete
+## After All Agents Complete
 
-1. Read all 6 output files
+1. Read all launched agent output files
 2. If ALL PASS: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
 3. If ANY FAIL: fix the issues, then re-run ONLY the failed agent(s)
 4. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`) are cleaned up automatically by the commit hook after a successful commit

@@ -197,7 +197,7 @@
     },
     "verification": {
       "name": "Verification",
-      "description": "6-agent /verify squad, adversarial self-check, completion gate",
+      "description": "Up to 6-agent /verify squad, adversarial self-check, completion gate",
       "required": false,
       "dependencies": [
         "core"

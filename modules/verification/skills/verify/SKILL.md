@@ -58,9 +58,9 @@ Before launching agents, classify the changed files to determine which agents ar
 | Source code (everything else) | all 6 |
 | Mixed | union of matching categories |
 
-Write `manifest.json` to the squad directory:
+Write `manifest.json` to the squad directory. Agent names MUST include the `.md` extension (the commit gate checks filenames directly):
 ```json
-{"launched": ["agent1", "agent2"], "reason": "category description", "timestamp": "ISO"}
+{"launched": ["cold_reader.md"], "reason": "docs-only scope", "timestamp": "ISO"}
 ```
 
 If all files are source code (or mixed), launch all 6 and **delete any existing manifest.json** in the squad directory (to prevent stale partial-run manifests from affecting the commit gate).

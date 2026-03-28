@@ -314,9 +314,9 @@ setup_repo
 stage_code_file "src/index.ts" "console.log('hi')"
 HASH=$(get_staged_hash)
 create_agent_evidence "$HASH"
-# Create squad dir with one FAIL verdict
+# Create squad dir with one FAIL verdict (all 6 agents present, one fails)
 mkdir -p "verification_findings/squad_fail1"
-for agent in mechanical.md adversarial.md completeness.md dependency.md; do
+for agent in mechanical.md adversarial.md completeness.md dependency.md performance.md; do
   printf 'VERDICT: PASS\n' > "verification_findings/squad_fail1/$agent"
 done
 printf 'VERDICT: FAIL\n' > "verification_findings/squad_fail1/cold_reader.md"

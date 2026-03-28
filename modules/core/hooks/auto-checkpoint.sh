@@ -41,7 +41,7 @@ done < <(git stash list 2>/dev/null)
 if [[ ${#SENTINEL_REFS[@]} -gt $MAX_CHECKPOINTS ]]; then
   # Drop from the end (oldest first — git stash list is newest-first)
   for (( i=${#SENTINEL_REFS[@]}-1; i>=MAX_CHECKPOINTS; i-- )); do
-    git stash drop "${SENTINEL_REFS[$i]}" --quiet 2>/dev/null
+    git stash drop --quiet "${SENTINEL_REFS[$i]}" 2>/dev/null
   done
 fi
 

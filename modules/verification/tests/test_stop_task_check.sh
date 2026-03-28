@@ -224,7 +224,7 @@ assert_stdout_contains '"decision".*"block"' "outputs block decision"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "mentions verification"
 teardown_temp
 
-# --- Test 3: Active task + completion language + valid squad (5 PASS) -> ALLOW ---
+# --- Test 3: Active task + completion language + valid squad (6 PASS) -> ALLOW ---
 echo ""
 echo "Test 3: Active task + completion language + valid squad -> ALLOW"
 setup_temp
