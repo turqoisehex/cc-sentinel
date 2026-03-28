@@ -116,7 +116,7 @@ Also update all "5 agents" references to "up to 6 agents" and add `performance.m
 
 **Gate coordination for smart filtering:** When squad launches fewer than 6 agents, write a `manifest.json` to the squad directory listing which agents were launched:
 ```json
-{"launched": ["cold_reader"], "reason": "docs-only scope", "timestamp": "..."}
+{"launched": ["cold_reader.md"], "reason": "docs-only scope", "timestamp": "..."}
 ```
 Both `stop-task-check.sh` and `safe-commit.sh` gate logic changes from "all 6 must exist and PASS" to "all agents listed in manifest.json must exist and PASS; if no manifest, expect all 6." This makes the gates filter-aware.
 
@@ -170,7 +170,7 @@ Never blocks — advisory only via `additionalContext`.
 
 New file: `modules/governance-protection/sensitive-patterns.txt` (at module root, matching `protected-files.txt` convention)
 
-~65 patterns from claudekit organized across 11 categories. **Directory-scoped patterns use bash case-glob matching against full `$FILE_PATH`:**
+~70 patterns from claudekit organized across 11 categories. **Directory-scoped patterns use bash case-glob matching against full `$FILE_PATH`:**
 ```
 # ENVIRONMENT
 *.env
@@ -196,7 +196,7 @@ New file: `modules/governance-protection/sensitive-patterns.txt` (at module root
 */.azure/*
 */.gcloud/*
 */.terraform/*
-...etc (~65 total, 11 categories, adapted for bash glob)
+...etc (~70 total, 11 categories, adapted for bash glob)
 ```
 
 **Note on recursive depth:** `*/.ssh/*` matches files at any nesting depth within `.ssh/` because `[[ "$FILE_PATH" == $PATTERN ]]` with `*` matches path separators in bash. For example, `*/.ssh/*` matches both `/home/user/.ssh/id_rsa` and `/home/user/.ssh/keys/backup.pem` because the trailing `*` consumes everything after `.ssh/`. Both `*` and `**` are functionally equivalent in bash `==` pattern matching (neither does true recursive globbing — they both match any characters including `/`). Some patterns in `sensitive-patterns.txt` use `**` for readability convention; both forms work.

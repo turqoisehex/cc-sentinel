@@ -124,7 +124,7 @@ Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the lo
 
 ### Verification
 
-Up-to-six-agent verification squad that independently audits work before any completion claim. Each agent has a different adversarial perspective:
+Up to 6-agent verification squad that independently audits work before any completion claim. Each agent has a different adversarial perspective:
 
 | Agent | What It Catches |
 |---|---|
@@ -279,7 +279,7 @@ cc-sentinel/
   modules/
     core/                # Required -- hooks, templates, /cold, /cleanup, /status
     context-awareness/   # Status bar meter, graduated warnings
-    verification/        # up-to-6-agent squad, /verify, /grill
+    verification/        # up to 6-agent squad, /verify, /grill
     commit-enforcement/  # safe-commit, auto-format, channel routing
     sprint-pipeline/     # /1-/5 workflow, /spawn multi-session
     governance-protection/ # file-protection, /mistake, /prune-rules

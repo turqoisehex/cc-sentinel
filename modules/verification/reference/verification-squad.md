@@ -83,7 +83,7 @@ SCOPE: [paste one-sentence scope]
 5. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
-VERDICT: PASS | FAIL (N issues)
+VERDICT: PASS | WARN (N issues) | FAIL (N issues)
 Work product: [path]
 Claims extracted: [N]
 
@@ -167,7 +167,7 @@ SCOPE: [paste one-sentence scope]
 8. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
-VERDICT: PASS | FAIL (N issues)
+VERDICT: PASS | WARN (N issues) | FAIL (N issues)
 Work product: [path]
 
 ## Summary (parent reads THIS section only)
@@ -254,7 +254,7 @@ SCOPE: [paste one-sentence scope]
 6. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
-VERDICT: PASS | FAIL (N issues)
+VERDICT: PASS | WARN (N issues) | FAIL (N issues)
 Work product: [path] | Source spec: [path] | Requirements: N
 
 ## Summary (parent reads THIS section only)
@@ -330,7 +330,7 @@ SCOPE: [paste one-sentence scope]
 6. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
-VERDICT: PASS | FAIL (N issues)
+VERDICT: PASS | WARN (N issues) | FAIL (N issues)
 Work product: [path] | Changes traced: N
 
 ## Summary (parent reads THIS section only)
@@ -411,7 +411,7 @@ SCOPE: [paste one-sentence scope]
 6. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
-VERDICT: PASS | FAIL (N issues)
+VERDICT: PASS | WARN (N issues) | FAIL (N issues)
 Work product: [path]
 
 ## Summary (parent reads THIS section only)
@@ -493,7 +493,7 @@ Output format:
 
 Two-layer verification: After finding issues, challenge each one. Is the scale large enough to matter? Is the suggested alternative actually feasible? Only report genuine CRITICAL and HIGH.
 
-VERDICT is PASS if no issues at any level. WARN if MEDIUM or LOW found but CRITICAL = 0 AND HIGH = 0. FAIL if any CRITICAL or HIGH.
+VERDICT is PASS if CRITICAL = 0 AND HIGH = 0. FAIL if any CRITICAL or HIGH.
 ```
 
 ---

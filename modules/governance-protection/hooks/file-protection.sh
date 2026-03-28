@@ -150,7 +150,7 @@ if [[ -n "$SENSITIVE_LIST" ]]; then
     fi
 
     if [[ "$DENIED" == "true" ]]; then
-      echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","reason":"SENSITIVE: This file matches a credential/secret pattern and should not be read or modified by Claude."}}'
+      echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","reason":"SENSITIVE: This file matches a credential/secret pattern and should not be modified by Claude."}}'
       exit 0
     fi
   done)

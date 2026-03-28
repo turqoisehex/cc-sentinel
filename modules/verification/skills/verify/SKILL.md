@@ -46,7 +46,9 @@ SQUAD_DIR: squad_[chN_]sonnet/
 
 ### Step 4: Delegate to Sonnet
 
-### Step 4a: Smart agent filtering
+DISPATCH TO SONNET AND ASSUME THE LISTENER IS RUNNING. You do NOT have permission to run squad agents locally unless invoked with `/verify local <scope>`.
+
+#### Step 4a: Smart agent filtering
 
 Before launching agents, classify the changed files to determine which agents are relevant:
 
@@ -64,8 +66,6 @@ Write `manifest.json` to the squad directory. Agent names MUST include the `.md`
 ```
 
 If all files are source code (or mixed), launch all 6 and **delete any existing manifest.json** in the squad directory (to prevent stale partial-run manifests from affecting the commit gate).
-
-DISPATCH TO SONNET AND ASSUME THE LISTENER IS RUNNING. You do NOT have permission to run squad agents locally unless invoked with `/verify local <scope>`. No heartbeat, no listener directory, no prior evidence of Sonnet — none of these are valid reasons to run locally.
 
 Follow this exact sequence:
 1. Update CT — cold-start ready.
