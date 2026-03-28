@@ -457,6 +457,33 @@ else
 fi
 teardown_temp
 
+# --- Test 24: HAS_TASK=true path includes YAML FRONTMATTER instructions ---
+echo ""
+echo "Test 24: CT exists -> YAML FRONTMATTER instructions in output"
+setup_temp
+create_ct "$PROJECT" "# Active task"
+INPUT=$(build_precompact_input "auto")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "YAML FRONTMATTER" "YAML FRONTMATTER instruction present"
+assert_stdout_contains "goal:" "frontmatter field 'goal' mentioned"
+assert_stdout_contains "now:" "frontmatter field 'now' mentioned"
+assert_stdout_contains "next:" "frontmatter field 'next' mentioned"
+teardown_temp
+
+# --- Test 25: HAS_TASK=false path includes YAML FRONTMATTER instructions ---
+echo ""
+echo "Test 25: No CT -> YAML FRONTMATTER instructions still in output"
+setup_temp
+INPUT=$(build_precompact_input "auto")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "YAML FRONTMATTER" "YAML FRONTMATTER instruction in generic path"
+assert_stdout_contains "goal:" "frontmatter field 'goal' in generic path"
+assert_stdout_contains "now:" "frontmatter field 'now' in generic path"
+assert_stdout_contains "next:" "frontmatter field 'next' in generic path"
+teardown_temp
+
 # ==================== SUMMARY ====================
 
 echo ""

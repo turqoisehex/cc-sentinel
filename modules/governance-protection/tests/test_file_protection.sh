@@ -446,6 +446,33 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "SENSITIVE" ".aws/credentials denied by sensitive patterns"
 teardown_temp
 
+# --- Test 18: install.sh dry-run deploys sensitive-patterns.txt ---
+echo ""
+echo "Test 18: install.sh dry-run includes sensitive-patterns.txt deployment"
+TOTAL=$((TOTAL + 1))
+INSTALLER_OUTPUT=$(cd "$SCRIPT_DIR/../../.." && bash install.sh --modules "governance-protection" --target project --dry-run 2>&1)
+if echo "$INSTALLER_OUTPUT" | grep -q "WOULD COPY.*sensitive-patterns.txt"; then
+  echo -e "  ${GREEN}PASS${NC}: install.sh dry-run lists sensitive-patterns.txt"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: install.sh dry-run does not mention sensitive-patterns.txt"
+  echo "    output: ${INSTALLER_OUTPUT:0:500}"
+  FAIL=$((FAIL + 1))
+fi
+
+# --- Test 19: install.sh deploys sensitive-patterns.txt to correct path ---
+echo ""
+echo "Test 19: install.sh dry-run target path is .claude/sensitive-patterns.txt"
+TOTAL=$((TOTAL + 1))
+if echo "$INSTALLER_OUTPUT" | grep -q "sensitive-patterns.txt → .claude/sensitive-patterns.txt"; then
+  echo -e "  ${GREEN}PASS${NC}: target path is .claude/sensitive-patterns.txt"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: target path mismatch"
+  echo "    output: $(echo "$INSTALLER_OUTPUT" | grep sensitive)"
+  FAIL=$((FAIL + 1))
+fi
+
 # ==================== SUMMARY ====================
 
 echo ""
