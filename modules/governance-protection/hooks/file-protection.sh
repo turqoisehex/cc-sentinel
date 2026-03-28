@@ -127,7 +127,7 @@ if [[ -n "$SENSITIVE_LIST" ]]; then
     fi
   done < "$SENSITIVE_LIST"
 
-  echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
+  SENSITIVE_DENY=$(echo "$FILE_PATHS" | while IFS= read -r FILE_PATH; do
     [[ -z "$FILE_PATH" ]] && continue
 
     DENIED="false"
@@ -153,5 +153,9 @@ if [[ -n "$SENSITIVE_LIST" ]]; then
       echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","reason":"SENSITIVE: This file matches a credential/secret pattern and should not be read or modified by Claude."}}'
       exit 0
     fi
-  done
+  done)
+  if [[ -n "$SENSITIVE_DENY" ]]; then
+    echo "$SENSITIVE_DENY"
+    exit 0
+  fi
 fi

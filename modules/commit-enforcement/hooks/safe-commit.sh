@@ -52,6 +52,29 @@ for arg in "$@"; do
   fi
 done
 
+# --- Manifest-aware agent list ---
+# Reads manifest.json from a squad directory. Sets SQUAD_EXPECTED array.
+# If manifest is missing, invalid, or empty: uses default 6-agent list.
+DEFAULT_AGENTS=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+parse_manifest_agents() {
+  local squad_dir="$1"
+  SQUAD_EXPECTED=("${DEFAULT_AGENTS[@]}")
+  [[ ! -f "$squad_dir/manifest.json" ]] && return
+  if ! jq -e '.launched' "$squad_dir/manifest.json" >/dev/null 2>&1; then
+    echo "WARNING: manifest.json exists but contains invalid JSON — using default agents" >&2
+    return
+  fi
+  local agents
+  agents=$(jq -r '.launched[]? // empty' "$squad_dir/manifest.json" 2>/dev/null | tr -d '\r')
+  [[ -z "$agents" ]] && return
+  SQUAD_EXPECTED=()
+  while IFS= read -r agent; do
+    agent="${agent//$'\r'/}"
+    [[ -n "$agent" ]] && SQUAD_EXPECTED+=("${agent}")
+  done <<< "$agents"
+  [[ ${#SQUAD_EXPECTED[@]} -eq 0 ]] && SQUAD_EXPECTED=("${DEFAULT_AGENTS[@]}")
+}
+
 # --- Channel detection ---
 CH_SUFFIX=""
 PENDING_SUBDIR=""
@@ -195,27 +218,7 @@ if [[ -n "$STAGED_FILES" ]]; then
       SQUAD_EVIDENCE="false"
       for sd in $SQUAD_GLOB; do
         [[ ! -d "$sd" ]] && continue
-        SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
-
-        # Check for manifest.json (smart filtering) — overrides default SQUAD_EXPECTED
-        if [[ -f "$sd/manifest.json" ]]; then
-          if ! jq -e '.launched' "$sd/manifest.json" >/dev/null 2>&1; then
-            echo "WARNING: manifest.json exists but contains invalid JSON — using default agents" >&2
-          else
-            MANIFEST_AGENTS=$(jq -r '.launched[]? // empty' "$sd/manifest.json" 2>/dev/null | tr -d '\r')
-            if [[ -n "$MANIFEST_AGENTS" ]]; then
-              SQUAD_EXPECTED=()
-              while IFS= read -r agent; do
-                agent="${agent//$'\r'/}"
-                [[ -n "$agent" ]] && SQUAD_EXPECTED+=("${agent}")
-              done <<< "$MANIFEST_AGENTS"
-              # If we ended up with empty array, restore default
-              if [[ ${#SQUAD_EXPECTED[@]} -eq 0 ]]; then
-                SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
-              fi
-            fi
-          fi
-        fi
+        parse_manifest_agents "$sd"
 
         ALL_PASS="true"
         for ef in "${SQUAD_EXPECTED[@]}"; do
@@ -261,30 +264,10 @@ COMMIT_EXIT=$?
 if [[ "$COMMIT_EXIT" -eq 0 ]]; then
   for sd in $SQUAD_GLOB; do
     [[ ! -d "$sd" ]] && continue
-    SQUAD_EXPECTED_CLEAN=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
-
-    # Check for manifest.json (smart filtering) — overrides default SQUAD_EXPECTED_CLEAN
-    if [[ -f "$sd/manifest.json" ]]; then
-      if ! jq -e '.launched' "$sd/manifest.json" >/dev/null 2>&1; then
-        echo "WARNING: manifest.json exists but contains invalid JSON — using default agents" >&2
-      else
-        MANIFEST_AGENTS=$(jq -r '.launched[]? // empty' "$sd/manifest.json" 2>/dev/null | tr -d '\r')
-        if [[ -n "$MANIFEST_AGENTS" ]]; then
-          SQUAD_EXPECTED_CLEAN=()
-          while IFS= read -r agent; do
-            agent="${agent//$'\r'/}"
-            [[ -n "$agent" ]] && SQUAD_EXPECTED_CLEAN+=("${agent}")
-          done <<< "$MANIFEST_AGENTS"
-          # If we ended up with empty array, restore default
-          if [[ ${#SQUAD_EXPECTED_CLEAN[@]} -eq 0 ]]; then
-            SQUAD_EXPECTED_CLEAN=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
-          fi
-        fi
-      fi
-    fi
+    parse_manifest_agents "$sd"
 
     ALL_DONE="true"
-    for ef in "${SQUAD_EXPECTED_CLEAN[@]}"; do
+    for ef in "${SQUAD_EXPECTED[@]}"; do
       if [[ ! -f "$sd/$ef" ]] || ! grep -qE "VERDICT: (PASS|WARN)" "$sd/$ef" 2>/dev/null; then
         ALL_DONE="false"
         break
