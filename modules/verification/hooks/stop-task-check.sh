@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop hook: blocks two specific mistakes at session stop time.
+# Stop hook: blocks three specific mistakes at session stop time.
 #
 # Glossary: CC = Claude Code, CT = CURRENT_TASK (the .md state files).
 #
@@ -12,14 +12,18 @@
 #       request progress update before stopping.
 #   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
 #       loops) must never be blocked. Detection: SENTINEL_LISTENER env var
-#       (primary, set by spawn.py) or "Watching _pending_..." message pattern
-#       (fallback for manual launches).
+#       (primary, set by spawn.py) or "Watching _pending_..."/"Waiting for
+#       work on chN" message patterns (fallback for manual launches).
 #   R4. Channel scoping — each session only checks its own CT files.
 #       SENTINEL_CHANNEL=N or WAKEFUL_CHANNEL=N → shared CT + ch{N} CT.
 #       Unset → shared CT only. Squad evidence scoped to active channels.
 #   R5. Anti-loop — CC sets stop_hook_active=true after first block.
 #       Second stop attempt always allowed.
 #   R6. Fail-open — any parse/stat/jq error → exit 0, no output → allow stop.
+#   R7. Deferral gate — if assistant message contains deferral language
+#       ("deferred items", "future sprint", etc.), block and require developer
+#       permission. Complements PreToolUse anti-deferral hook (which only
+#       sees file writes, not conversational output).
 #
 # Checks CURRENT_TASK.md (shared index) + CURRENT_TASK_ch{N}.md (own channel).
 # Agent names for squad validation: see modules/verification/reference/verification-squad.md.
@@ -105,14 +109,15 @@ get_channel() {
 TASK_STATUS="none"
 ACTIVE_FILES=()
 for tf in "${TASK_FILES[@]}"; do
-  if grep -qiE '\*\*Status:\*\*[[:space:]]*IN PROGRESS' "$tf" 2>/dev/null; then
+  if grep -qiE '\*\*Status:\*\*[[:space:]]*(COMPLETE|ALL DONE)' "$tf" 2>/dev/null; then
+    [[ "$TASK_STATUS" == "none" ]] && TASK_STATUS="complete"
+  elif grep -qiE '\*\*Status:\*\*' "$tf" 2>/dev/null; then
+    # Any non-COMPLETE status with a Status header = active
     TASK_STATUS="active"
     ACTIVE_FILES+=("$tf")
   elif grep -iE '\*\*Phase:\*\*[[:space:]]*/[0-9]' "$tf" 2>/dev/null | grep -qivE '(complete|done|finished)'; then
     TASK_STATUS="active"
     ACTIVE_FILES+=("$tf")
-  elif grep -qiE '\*\*Status:\*\*[[:space:]]*(COMPLETE|ALL DONE)' "$tf" 2>/dev/null; then
-    [[ "$TASK_STATUS" == "none" ]] && TASK_STATUS="complete"
   fi
 done
 
@@ -315,7 +320,18 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   fi
 fi
 
-# COMPLETE status with no completion language — allow stop (R1 only triggers
-# when assistant claims completion in its message; stale check only for active tasks)
-echo "  -> ALLOW (no completion claim, no stale active files)" >> "$LOGFILE" 2>/dev/null
+# --- CHECK 3: Deferral language in assistant message ---
+# Catches "Deferred items:", "future sprint", etc. in conversational output
+# where the PreToolUse anti-deferral hook cannot see it (not a file write).
+DEFERRAL_PATTERNS="deferred (items|deployment|to |as )|future sprint|later sprint|next sprint|handle this later|address this later|out of scope for now|separate (pass|effort|session) needed"
+if echo "$LAST_MSG" | grep -qiE "$DEFERRAL_PATTERNS" 2>/dev/null; then
+  REASON="DEFERRAL IN CONVERSATION: Your last message contains deferral language. Rule 0: Fix it now. Never defer without explicit developer permission. If the developer already approved these deferrals, ignore this and stop again."
+  REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
+  echo "  -> BLOCK (deferral language)" >> "$LOGFILE" 2>/dev/null
+  echo "{\"decision\": \"block\", \"reason\": ${REASON_JSON}}"
+  exit 0
+fi
+
+# No completion claim, no stale active files, no deferral — allow stop
+echo "  -> ALLOW (all checks passed)" >> "$LOGFILE" 2>/dev/null
 exit 0

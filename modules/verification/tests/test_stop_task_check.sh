@@ -845,6 +845,65 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (no manifest uses default 6)"
 teardown_temp
 
+# --- Test 30: Non-standard Status (e.g. AWAITING) counts as active ---
+echo ""
+echo "Test 30: AWAITING USER APPROVAL status -> active (stale blocks)"
+setup_temp
+mkdir -p "$PROJECT"
+cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
+# CURRENT TASK
+**Status:** AWAITING USER APPROVAL — Design spec + implementation plan complete.
+**Phase:** /2 complete → /3 pending approval
+EOF
+touch_aged "$PROJECT/CURRENT_TASK.md" 300
+INPUT=$(build_input "$PROJECT" "Continuing work on the design.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains '"decision".*"block"' "AWAITING status treated as active"
+assert_stdout_contains "CURRENT_TASK.md" "identifies the stale file"
+teardown_temp
+
+# --- Test 31: Deferral language in assistant message -> BLOCK ---
+echo ""
+echo "Test 31: Deferral language -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# Fresh CT, no completion language, but deferred items in message
+INPUT=$(build_input "$PROJECT" "Done with the build. Deferred deployment items: 1. Run installer 2. Update config")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains '"decision".*"block"' "deferral language blocked"
+assert_stdout_contains "DEFERRAL" "reason identifies deferral"
+teardown_temp
+
+# --- Test 32: Deferral with "future sprint" in message -> BLOCK ---
+echo ""
+echo "Test 32: 'future sprint' deferral -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "All done. The remaining items can wait for a future sprint.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains '"decision".*"block"' "future sprint deferral blocked"
+teardown_temp
+
+# --- Test 33: No deferral language -> ALLOW ---
+echo ""
+echo "Test 33: No deferral language -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "Updated the config file. Looks good.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no deferral = no block"
+teardown_temp
+
 # ==================== SUMMARY ====================
 
 echo ""
