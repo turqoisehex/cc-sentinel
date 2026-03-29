@@ -84,18 +84,22 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 
 **Global install:**
 ```json
-"Bash(bash ~/.claude/hooks/:*)",
-"Bash(bash ~/.claude/scripts/:*)",
-"Bash(bash ~/.claude/cc-context-awareness/:*)",
-"Bash(python3 ~/.claude/tools/:*)"
+"Bash(bash ~/.claude/hooks/*)",
+"Bash(bash ~/.claude/scripts/*)",
+"Bash(bash ~/.claude/cc-context-awareness/*)",
+"Bash(python3 ~/.claude/tools/*)",
+"Bash(mkdir -p verification_findings/*)",
+"Bash(ls verification_findings/*)"
 ```
 
 **Project install:**
 ```json
-"Bash(bash .claude/hooks/:*)",
-"Bash(bash scripts/:*)",
-"Bash(bash .claude/cc-context-awareness/:*)",
-"Bash(python3 ~/.claude/tools/:*)"
+"Bash(bash .claude/hooks/*)",
+"Bash(bash scripts/*)",
+"Bash(bash .claude/cc-context-awareness/*)",
+"Bash(python3 ~/.claude/tools/*)",
+"Bash(mkdir -p verification_findings/*)",
+"Bash(ls verification_findings/*)"
 ```
 
 Do this silently — no user prompt needed. The installer will also add these rules mechanically as a safety net.

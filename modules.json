@@ -343,6 +343,9 @@
           "sonnet",
           "spawn"
         ],
+        "scripts": [
+          "heartbeat_watcher.sh"
+        ],
         "tools": [
           "spawn.py"
         ],

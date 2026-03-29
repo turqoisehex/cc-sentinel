@@ -467,17 +467,21 @@ existing = set(settings["permissions"]["allow"])
 
 if target == "global":
     rules = [
-        "Bash(bash ~/.claude/hooks/:*)",
-        "Bash(bash ~/.claude/scripts/:*)",
-        "Bash(bash ~/.claude/cc-context-awareness/:*)",
-        "Bash(python3 ~/.claude/tools/:*)",
+        "Bash(bash ~/.claude/hooks/*)",
+        "Bash(bash ~/.claude/scripts/*)",
+        "Bash(bash ~/.claude/cc-context-awareness/*)",
+        "Bash(python3 ~/.claude/tools/*)",
+        "Bash(mkdir -p verification_findings/*)",
+        "Bash(ls verification_findings/*)",
     ]
 else:
     rules = [
-        "Bash(bash .claude/hooks/:*)",
-        "Bash(bash scripts/:*)",
-        "Bash(bash .claude/cc-context-awareness/:*)",
-        "Bash(python3 ~/.claude/tools/:*)",
+        "Bash(bash .claude/hooks/*)",
+        "Bash(bash scripts/*)",
+        "Bash(bash .claude/cc-context-awareness/*)",
+        "Bash(python3 ~/.claude/tools/*)",
+        "Bash(mkdir -p verification_findings/*)",
+        "Bash(ls verification_findings/*)",
     ]
 
 added = []
