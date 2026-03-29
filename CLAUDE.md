@@ -15,52 +15,54 @@ Before asking any questions, silently detect:
 - **Project type:** Look for `pubspec.yaml` (Flutter), `package.json` (Node.js), `Cargo.toml` (Rust), `go.mod` (Go), `setup.py`/`pyproject.toml` (Python), `Makefile`.
 - **Existing hooks:** Check if `.claude/settings.json` or `~/.claude/settings.json` already has hooks configured.
 
-### Step 2: Discovery Questions (one at a time)
+### Step 2: Discovery Questions (one at a time, ALL mandatory)
 
-Ask these questions one at a time. Wait for each answer before proceeding.
+Ask these questions one at a time. Wait for each answer before proceeding. Do NOT skip any question. Do NOT combine questions.
 
-**Question 1:** "What do you use Claude Code for? (For example: software development, research, translation, writing, data analysis, or something else)"
+**Question 1 (MANDATORY):** "What do you use Claude Code for? (For example: software development, research, translation, writing, data analysis, or something else)"
 
-**Question 2:** "Do you work on long, multi-step projects that span multiple sessions? The sprint pipeline (/audit -> /design -> /build -> /perfect -> /finalize) is designed for this."
+**Question 2 (MANDATORY):** "Do you work on long, multi-step projects that span multiple sessions? The sprint pipeline (/audit -> /design -> /build -> /perfect -> /finalize) is designed for this."
 
-**Question 3:** (Only if git detected) "Do you want commits to be verified automatically? cc-sentinel can run adversarial checks on every commit and block unverified code."
+**Question 3 (MANDATORY if git detected):** "Do you want commits to be verified automatically? cc-sentinel can run adversarial checks on every commit and block unverified code."
 
-**Question 4:** "Would you like project-level install (just this project) or global install (all projects)?"
+**Question 4 (MANDATORY):** "Would you like project-level install (just this project) or global install (all projects)?"
 - Explain: Project = `.claude/` in this directory only. Good for trying it out.
-- Global = `~/.claude/`. Applies to all projects. Good once you want it everywhere.
+- Global = `~/.claude/`. Applies to all projects. Recommended for most users.
 
-### Step 3: Present Pain Points
+### Step 3: Present Problem→Solution Table
 
-Based on their answers, present 3-5 of these problems that are most relevant:
+Present ALL of these problems as a table. Do NOT filter or select a subset. Show all 8 rows:
 
-1. "It said it was done, but it wasn't." -> Verification module
-2. "It slammed into auto-compact mid-thought and lost all its work." -> Context Awareness module
-3. "It deferred instead of fixing." -> Core (anti-deferral hook)
-4. "It modified files it shouldn't." -> Governance Protection module
-5. "I walked away and missed the finish." -> Notification module
-6. "After compaction, it forgot everything." -> Core (compaction hooks)
-7. "It committed untested code." -> Commit Enforcement module
-8. "Every session starts from scratch." -> Core (CURRENT_TASK protocol)
-9. "I make the same corrections repeatedly." -> Governance Protection (/mistake, /prune-rules)
-10. "Complex work has no structure." -> Sprint Pipeline module
-
-For each problem: describe it in one sentence, then say "cc-sentinel fixes this with [specific mechanism]."
+| # | Problem | Solution |
+|---|---------|----------|
+| 1 | "It said it was done, but it wasn't." | Verification — up to 6-agent squad audits before completion |
+| 2 | "It slammed into auto-compact and lost its work." | Context Awareness — visual status bar with 5 graduated warnings |
+| 3 | "It deferred instead of fixing." | Core — anti-deferral hook scans every write |
+| 4 | "After compaction, it forgot everything." | Core — CURRENT_TASK.md state survives compaction |
+| 5 | "It committed untested code." | Commit Enforcement — tests, formatting, adversarial diff review |
+| 6 | "Complex work has no structure." | Sprint Pipeline — structured /1 through /5 workflow |
+| 7 | "It modified files it shouldn't." | Governance Protection — blocks mid-session edits to rules |
+| 8 | "I walked away and missed the finish." | Notification — desktop alerts when done |
 
 ### Step 4: Recommend Modules
 
-Based on answers, recommend modules. Always include Core. Show a table:
+Present ALL 8 problems as a numbered table with the module that solves each. Then present the module selection table below. Always include Core.
 
 | Module | What it solves | Recommended? |
 |--------|---------------|-------------|
 | Core | Context loss, deferral, state management | Always (required) |
-| Context Awareness | Silent context window fill | Yes if multi-step work |
-| Verification | Premature completion claims | Yes if quality matters |
-| Commit Enforcement | Unreviewed commits | Yes if using git |
-| Sprint Pipeline | Ad-hoc workflows | Yes if multi-step projects |
-| Governance Protection | Accidental rule modification | Yes if using rules |
-| Notification | No alerts when done | Yes (low cost) |
+| Context Awareness | Silent context window fill | Yes |
+| Verification | Premature completion claims | Yes |
+| Commit Enforcement | Unreviewed commits | Yes |
+| Sprint Pipeline | Ad-hoc workflows | Yes |
+| Governance Protection | Accidental rule modification | Yes |
+| Notification | No alerts when done | Yes |
 
-Let the user select. Auto-include dependencies (e.g., Sprint Pipeline requires Core + Verification + Commit Enforcement).
+Present options in this exact order:
+1. **All modules (Recommended)** — install everything
+2. Individual module selection
+
+Do NOT present individual selection first. "All modules" is the default. Auto-include dependencies (e.g., Sprint Pipeline requires Core + Verification + Commit Enforcement).
 
 ### Step 4b: Spawn Configuration (if Sprint Pipeline selected)
 

@@ -60,14 +60,18 @@ If Claude Code can do it, cc-sentinel can govern it.
 Install https://github.com/turqoisehex/cc-sentinel
 ```
 
-Claude Code reads the repo's CLAUDE.md, which contains an interactive installer. It will:
+Claude Code clones the repo and runs an interactive installer. The expected flow:
 
-1. Detect your OS, shell, and project type
-2. Ask what problems you want solved (one question at a time)
-3. Recommend modules based on your answers
-4. Run the installer script
-5. Inject rules into your project's CLAUDE.md
-6. Verify the installation with `/self-test`
+1. **Detect** your OS, shell, terminal, and project type. Report findings.
+2. **Ask your use case** -- what you use Claude Code for (development, research, writing, etc.).
+3. **Present a problem→solution table** showing each failure mode and the module that solves it.
+4. **Present a module table** with recommendations. Always offer "All modules" as the first option.
+5. **Ask about global vs project install.** Recommend global for most users.
+6. **Run the installer** with the selected modules. Do not ask for confirmation after module selection -- just run it.
+7. **Offer deny rules** for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
+8. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
+9. **Print a summary** of what was installed: modules, hooks, commands, status line, spawn config.
+10. **Tell the user to run `/self-test`** in their next session to validate.
 
 **Manual installation:**
 
