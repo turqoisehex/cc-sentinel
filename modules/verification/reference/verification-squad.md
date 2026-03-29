@@ -48,7 +48,7 @@ Everything else → Squad required. The commit hook hard-blocks non-exempt files
 - **WORK_PRODUCT**: File(s) produced
 - **SOURCE_SPEC**: Authoritative spec (e.g., `docs/api-spec.md`) or user's original request. **Never CURRENT_TASK.md alone** — it's the model's interpretation, not the requirement.
 - **SCOPE_SUMMARY**: One sentence
-- **SQUAD_DIR**: `squad_opus/` or `squad_sonnet/`. Channeled: `squad_chN_opus/` or `squad_chN_sonnet/`. Replace in all prompts below. The commit hook cleans on all-PASS commit.
+- **SQUAD_DIR**: `squad_opus/` or `squad_sonnet/`. Channeled: `squad_chN_opus/` or `squad_chN_sonnet/`. Replace in all prompts below. The commit hook cleans on all-PASS/WARN commit.
 
 ---
 
@@ -493,14 +493,14 @@ Output format:
 
 Two-layer verification: After finding issues, challenge each one. Is the scale large enough to matter? Is the suggested alternative actually feasible? Only report genuine CRITICAL and HIGH.
 
-VERDICT is PASS if CRITICAL = 0 AND HIGH = 0. FAIL if any CRITICAL or HIGH.
+VERDICT is PASS if CRITICAL = 0 AND HIGH = 0. WARN if HIGH > 0 but CRITICAL = 0. FAIL if any CRITICAL.
 ```
 
 ---
 
-## After All Agents Complete
+## After All Launched Agents Complete
 
-1. Read all launched agent output files
-2. If ALL PASS: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
+1. Read all launched agent output files (may be fewer than 6 if smart filtering was applied)
+2. If ALL PASS or WARN: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
 3. If ANY FAIL: fix the issues, then re-run ONLY the failed agent(s)
 4. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`) are cleaned up automatically by the commit hook after a successful commit

@@ -11,7 +11,7 @@ Quick reference for running CC sessions with cc-sentinel governance.
 | Audit | `/audit` | `/1` | Spec integrity, scan deps, write CURRENT_TASK.md |
 | Design | `/design` | `/2` | Brainstorm → spec → implementation plan |
 | Build | `/build` | `/3` | Autonomous execution of approved plan |
-| Quality | `/perfect` | `/4` | Evaluate → simplify or rewrite → grill → squad → prove correctness |
+| Quality | `/perfect` | `/4` | Evaluate → simplify or rewrite → grill → verify → prove correctness |
 | Finalize | `/finalize` | `/5` | Review, prove, close out, reset |
 
 ## Utility Commands
