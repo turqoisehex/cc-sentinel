@@ -136,11 +136,27 @@ If user picks B: append `*.m4a`, `*.wav`, `*.ogg`, `*.flac`, `*.aac`, `*.sqlite`
 If user picks C: say "Edit `.claudeignore` in your project root any time. It uses the same syntax as `.gitignore`."
 If user picks D: make the requested changes.
 
-**For global installs (`--target global`):** Skip `.claudeignore` generation. Instead say:
+**For global installs (`--target global`):** Skip `.claudeignore` generation. Instead, offer deny rules with this exact explanation:
 
-"`.claudeignore` is a project-level file — it doesn't have a global equivalent. For global file exclusions, you can add `deny` rules to `~/.claude/settings.json`. Would you like me to add common binary exclusions as deny rules? (Y/n)"
+"`.claudeignore` is project-level — no global equivalent. For global exclusions, deny rules in `~/.claude/settings.json` block the `Read()` tool from loading specific file types into context.
 
-If yes, add deny rules like `"Read(*.mp3)"`, `"Read(*.mp4)"`, `"Read(*.zip)"`, etc. to the deny array in `~/.claude/settings.json`.
+**Important:** Deny rules only block `Read()`. They do NOT block `Bash()` — Claude can still execute files, unzip archives, and process files with CLI tools. However, denying image formats (`*.png`, `*.jpg`) WILL block Claude's built-in image viewing and OCR, since those work through `Read()`.
+
+**Conservative (Recommended):** Block media, video, archives, and binaries. Keep images and PDFs readable for OCR."
+
+If they accept, add ONLY these deny rules (no images, no PDFs):
+```json
+"permissions": {
+  "deny": [
+    "Read(*.mp3)", "Read(*.mp4)", "Read(*.avi)", "Read(*.mkv)", "Read(*.mov)",
+    "Read(*.wav)", "Read(*.flac)", "Read(*.aac)", "Read(*.ogg)",
+    "Read(*.zip)", "Read(*.tar.gz)", "Read(*.tar.bz2)", "Read(*.rar)", "Read(*.7z)",
+    "Read(*.exe)", "Read(*.dll)", "Read(*.so)", "Read(*.dylib)"
+  ]
+}
+```
+
+Do NOT include `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp`, `*.svg`, `*.pdf`, or `*.docx` — these are formats Claude can usefully read.
 
 ### Step 6: Inject CLAUDE.md Rules
 
