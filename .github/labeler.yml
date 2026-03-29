@@ -1,0 +1,43 @@
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: ["docs/**", "*.md", "!CHANGELOG.md"]
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: ["modules/*/tests/**"]
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: [".github/**"]
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: [".github/dependabot.yml"]
+
+core:
+  - changed-files:
+      - any-glob-to-any-file: ["modules/core/**"]
+
+verification:
+  - changed-files:
+      - any-glob-to-any-file: ["modules/verification/**"]
+
+commit-enforcement:
+  - changed-files:
+      - any-glob-to-any-file: ["modules/commit-enforcement/**"]
+
+governance:
+  - changed-files:
+      - any-glob-to-any-file: ["modules/governance-protection/**"]
+
+sprint-pipeline:
+  - changed-files:
+      - any-glob-to-any-file: ["modules/sprint-pipeline/**"]
+
+context-awareness:
+  - changed-files:
+      - any-glob-to-any-file: ["modules/context-awareness/**"]
+
+notification:
+  - changed-files:
+      - any-glob-to-any-file: ["modules/notification/**"]
