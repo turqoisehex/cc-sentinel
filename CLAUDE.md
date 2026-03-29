@@ -8,12 +8,12 @@ When the user installs this package (by saying "Install" followed by this repo's
 
 ### Step 1: Detect Environment
 
-Before asking any questions, silently detect:
-- **OS:** Check `uname -s` or PowerShell `$env:OS`. Determine Windows/macOS/Linux.
-- **Existing .claude/:** Check if `.claude/` exists in the current project and `~/.claude/` exists globally.
-- **Git:** Check if this is a git repository (`git rev-parse --is-inside-work-tree`).
-- **Project type:** Look for `pubspec.yaml` (Flutter), `package.json` (Node.js), `Cargo.toml` (Rust), `go.mod` (Go), `setup.py`/`pyproject.toml` (Python), `Makefile`.
-- **Existing hooks:** Check if `.claude/settings.json` or `~/.claude/settings.json` already has hooks configured.
+Before asking any questions, silently detect. Use built-in tools (Glob, Read) instead of Bash wherever possible — Bash triggers permission prompts, built-in tools do not:
+- **OS:** One Bash call: `uname -s` (macOS/Linux) or read `$env:OS` (Windows). This is the only Bash call needed.
+- **Existing .claude/:** Use Glob for `.claude/settings.json` and `~/.claude/settings.json`.
+- **Git:** Use Glob for `.git/` in the current directory.
+- **Project type:** Use Glob for `pubspec.yaml`, `package.json`, `Cargo.toml`, `go.mod`, `setup.py`, `pyproject.toml`, `Makefile`.
+- **Existing hooks:** Use Read on `~/.claude/settings.json` (or `.claude/settings.json`). Check for `"hooks"` key.
 
 ### Step 2: Discovery Questions (one at a time, ALL mandatory)
 
@@ -218,7 +218,25 @@ If the Sprint Pipeline module was installed, recommend complementary plugins. Pr
 
 ### Step 8: Run Self-Test
 
-Run `/self-test` to verify the installation.
+Skills installed during this session are not loadable until the next session — do NOT invoke `/self-test`. Instead, verify inline using built-in tools (Glob, Read) to avoid permission prompts:
+
+1. Read settings.json — count hook event types and total hook entries.
+2. Glob for hook files on disk (`~/.claude/hooks/*.sh` or `.claude/hooks/*.sh`) — count them.
+3. Glob for command files (`~/.claude/commands/*.md` or `.claude/commands/*.md`) — count them.
+4. Glob for skill directories (`~/.claude/skills/*/SKILL.md` or `.claude/skills/*/SKILL.md`) — count them.
+5. Read the target CLAUDE.md — search for `cc-sentinel rules start`.
+6. Read settings.json — confirm `permissions.allow` contains cc-sentinel allow rules.
+
+Present results as a table: each check PASS or FAIL with count. Example:
+
+```
+Hooks registered:  16/16 PASS
+Hook files on disk: 15/15 PASS
+Commands:          22/22 PASS
+Skills:            23/23 PASS
+CLAUDE.md rules:   PASS
+Permissions:       PASS
+```
 
 ### Step 9: Getting Started
 

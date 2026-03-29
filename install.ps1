@@ -305,7 +305,8 @@ function Merge-Settings {
                     foreach ($hook in $entry.hooks) {
                         $cmd = $hook.command
                         if ($Target -eq "global") {
-                            $cmd = $cmd -replace "\.claude/", "$($env:USERPROFILE -replace '\\','/')/.claude/"
+                            # Use ~/ prefix so allow rules match (bash expands ~ at runtime)
+                            $cmd = $cmd -replace "\.claude/", "~/.claude/"
                         }
                         # Windows: wrap bash commands with full path
                         if ($cmd -match "^bash ") {
@@ -315,9 +316,10 @@ function Merge-Settings {
                             }
                         }
 
-                        # Handle notification placeholder
+                        # Handle notification placeholder (use ~/ for global so allow rules match)
                         if ($cmd -eq "__NOTIFICATION_SCRIPT__") {
-                            $cmd = "powershell -ExecutionPolicy Bypass -File $HookPrefix/hooks/flash.ps1"
+                            $cmdPrefix = if ($Target -eq "global") { "~/.claude" } else { $HookPrefix }
+                            $cmd = "powershell -ExecutionPolicy Bypass -File $cmdPrefix/hooks/flash.ps1"
                         }
 
                         $newHooks += @{
@@ -352,7 +354,7 @@ function Merge-Settings {
         if ($merge.statusLine) {
             $sl = $merge.statusLine.PSObject.Copy()
             if ($Target -eq "global") {
-                $sl.command = $sl.command -replace "\.claude/", "$($env:USERPROFILE -replace '\\','/')/.claude/"
+                $sl.command = $sl.command -replace "\.claude/", "~/.claude/"
             }
             $settings | Add-Member -NotePropertyName "statusLine" -NotePropertyValue $sl -Force
         }

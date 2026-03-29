@@ -386,9 +386,9 @@ for mod_key in modules:
             new_entry = {"matcher": entry.get("matcher", ""), "hooks": []}
             for hook in entry.get("hooks", []):
                 cmd = hook.get("command", "")
-                # Replace .claude/ prefix with actual target path
+                # Replace .claude/ prefix with global path (keep ~ unexpanded so allow rules match)
                 if target == "global":
-                    cmd = cmd.replace(".claude/", os.path.expanduser("~/.claude/"))
+                    cmd = cmd.replace(".claude/", "~/.claude/")
                 new_hook = dict(hook)
                 new_hook["command"] = cmd
                 new_entry["hooks"].append(new_hook)
@@ -408,18 +408,20 @@ for mod_key in modules:
     if "statusLine" in merge:
         sl = dict(merge["statusLine"])
         if target == "global":
-            sl["command"] = sl["command"].replace(".claude/", os.path.expanduser("~/.claude/"))
+            sl["command"] = sl["command"].replace(".claude/", "~/.claude/")
         settings["statusLine"] = sl
 
 # Handle notification module — replace __NOTIFICATION_SCRIPT__ placeholder
 import platform
 os_name = platform.system()
+# Use ~/ prefix for global installs so allow rules match (bash expands ~ at runtime)
+cmd_prefix = "~/.claude" if target == "global" else hook_prefix
 if os_name == "Linux":
-    notif_cmd = f"bash {hook_prefix}/hooks/flash-notification.sh"
+    notif_cmd = f"bash {cmd_prefix}/hooks/flash-notification.sh"
 elif os_name == "Darwin":
-    notif_cmd = f"bash {hook_prefix}/hooks/flash-notification.sh"
+    notif_cmd = f"bash {cmd_prefix}/hooks/flash-notification.sh"
 elif os_name == "Windows":
-    notif_cmd = f"powershell -ExecutionPolicy Bypass -File {hook_prefix}/hooks/flash.ps1"
+    notif_cmd = f"powershell -ExecutionPolicy Bypass -File {cmd_prefix}/hooks/flash.ps1"
 else:
     notif_cmd = None
 
