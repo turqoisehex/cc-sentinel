@@ -4,7 +4,7 @@
 
 | Version | Supported |
 |---------|-----------|
-| Latest on `main` | Yes |
+| Latest on `master` | Yes |
 | Older releases | Best effort |
 
 ## Reporting a Vulnerability
