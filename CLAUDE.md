@@ -252,3 +252,25 @@ Based on installed modules, suggest first commands:
 - **With Context Awareness:** "Watch the status bar - it shows your context window usage in real time."
 
 Say: "cc-sentinel is installed and verified. Your sessions are now governed."
+
+## Uninstall
+
+If the user asks to uninstall cc-sentinel, use the uninstaller — never manually `rm -rf`. Determine the correct command based on OS:
+
+**macOS/Linux:**
+```bash
+bash "<this-repo-path>/uninstall.sh" --target "<target>"
+```
+
+**Windows:**
+```powershell
+powershell -File "<this-repo-path>/uninstall.ps1" -Target "<target>"
+```
+
+Replace `<this-repo-path>` with the cloned repo location (typically `~/.claude/cc-sentinel` or `/tmp/cc-sentinel`). If the repo was already deleted, clone it first:
+```bash
+git clone https://github.com/turqoisehex/cc-sentinel /tmp/cc-sentinel
+bash /tmp/cc-sentinel/uninstall.sh --target global
+```
+
+Add `--dry-run` to preview what would be removed without removing it.
