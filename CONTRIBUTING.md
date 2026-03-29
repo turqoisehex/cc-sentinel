@@ -64,7 +64,7 @@ Use the [Feature Request](https://github.com/turqoisehex/cc-sentinel/issues/new?
 ### Submitting Code
 
 1. Fork the repo
-2. Create a branch from `main`: `git checkout -b feat/your-feature`
+2. Create a branch from `master`: `git checkout -b feat/your-feature`
 3. Make changes with clear commits (conventional commits preferred):
    - `feat:` new feature
    - `fix:` bug fix
@@ -72,7 +72,7 @@ Use the [Feature Request](https://github.com/turqoisehex/cc-sentinel/issues/new?
    - `refactor:` code restructuring
    - `test:` test improvements
 4. Ensure tests pass: `for f in modules/*/tests/test_*.sh; do bash "$f"; done`
-5. Submit a PR against `main`
+5. Submit a PR against `master`
 
 ### Branch Naming
 
