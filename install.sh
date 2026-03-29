@@ -438,6 +438,63 @@ print(f"Settings merged successfully: {settings_file}")
 PYEOF
 }
 
+# --- Permission allow rules ---
+configure_permissions() {
+  log "Configuring allow rules for cc-sentinel scripts..."
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log "  WOULD ADD: allow rules to $SETTINGS_FILE"
+    return
+  fi
+
+  "$PYTHON" << 'PYEOF'
+import json, os
+
+settings_file = os.environ.get("SETTINGS_FILE", "")
+target = os.environ.get("TARGET", "project")
+
+with open(settings_file) as f:
+    settings = json.load(f)
+
+if "permissions" not in settings:
+    settings["permissions"] = {}
+if "allow" not in settings["permissions"]:
+    settings["permissions"]["allow"] = []
+
+existing = set(settings["permissions"]["allow"])
+
+if target == "global":
+    rules = [
+        "Bash(bash ~/.claude/hooks/:*)",
+        "Bash(bash ~/.claude/scripts/:*)",
+        "Bash(bash ~/.claude/cc-context-awareness/:*)",
+        "Bash(python3 ~/.claude/tools/:*)",
+    ]
+else:
+    rules = [
+        "Bash(bash .claude/hooks/:*)",
+        "Bash(bash scripts/:*)",
+        "Bash(bash .claude/cc-context-awareness/:*)",
+        "Bash(python3 ~/.claude/tools/:*)",
+    ]
+
+added = []
+for rule in rules:
+    if rule not in existing:
+        settings["permissions"]["allow"].append(rule)
+        added.append(rule)
+
+with open(settings_file, "w") as f:
+    json.dump(settings, f, indent=2)
+
+if added:
+    for r in added:
+        print(f"  Added: {r}")
+else:
+    print("  Allow rules already present")
+PYEOF
+}
+
 # --- .claudeignore generation ---
 generate_claudeignore() {
   log "Generating .claudeignore..."
@@ -647,6 +704,9 @@ fi
 
 # Merge settings
 merge_settings
+
+# Configure permissions (allow rules for cc-sentinel scripts)
+configure_permissions
 
 # Generate .claudeignore
 generate_claudeignore

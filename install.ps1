@@ -362,6 +362,60 @@ function Merge-Settings {
     Log "Settings merged: $SettingsFile"
 }
 
+function Configure-Permissions {
+    Log "Configuring allow rules for cc-sentinel scripts..."
+
+    if ($DryRun) {
+        Log "  WOULD ADD: allow rules to $SettingsFile"
+        return
+    }
+
+    $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
+
+    if (-not $settings.permissions) {
+        $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue @{} -Force
+    }
+    if (-not $settings.permissions.allow) {
+        $settings.permissions | Add-Member -NotePropertyName "allow" -NotePropertyValue @() -Force
+    }
+
+    $existing = @($settings.permissions.allow)
+
+    if ($Target -eq "global") {
+        $rules = @(
+            "Bash(bash ~/.claude/hooks/:*)",
+            "Bash(bash ~/.claude/scripts/:*)",
+            "Bash(bash ~/.claude/cc-context-awareness/:*)",
+            "Bash(python3 ~/.claude/tools/:*)"
+        )
+    } else {
+        $rules = @(
+            "Bash(bash .claude/hooks/:*)",
+            "Bash(bash scripts/:*)",
+            "Bash(bash .claude/cc-context-awareness/:*)",
+            "Bash(python3 ~/.claude/tools/:*)"
+        )
+    }
+
+    $added = @()
+    foreach ($rule in $rules) {
+        if ($existing -notcontains $rule) {
+            $settings.permissions.allow += $rule
+            $added += $rule
+        }
+    }
+
+    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile
+
+    if ($added.Count -gt 0) {
+        foreach ($r in $added) {
+            Log "  Added: $r"
+        }
+    } else {
+        Log "  Allow rules already present"
+    }
+}
+
 function New-Claudeignore {
     Log "Generating .claudeignore..."
 
@@ -502,6 +556,7 @@ if ($Target -eq "global" -and -not $DryRun) {
 
 Write-Host ""
 Merge-Settings
+Configure-Permissions
 New-Claudeignore
 Update-Gitignore
 

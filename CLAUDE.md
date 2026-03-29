@@ -72,9 +72,37 @@ If Sprint Pipeline was selected, ask:
 
 Store the answer as `spawn_startup_delay`. Default 5 if the user skips or says "default."
 
+### Step 4c: Configure Permissions
+
+Before running the installer, add allow rules to the target settings.json so cc-sentinel scripts execute without manual approval. Without these, every hook and script triggers a permission prompt — defeating the purpose of automation.
+
+Determine the settings file:
+- **Global:** `~/.claude/settings.json`
+- **Project:** `.claude/settings.json`
+
+Read the current settings.json (create `{"permissions":{"allow":[]}}` if it doesn't exist). Merge these entries into `permissions.allow` — never overwrite existing rules:
+
+**Global install:**
+```json
+"Bash(bash ~/.claude/hooks/:*)",
+"Bash(bash ~/.claude/scripts/:*)",
+"Bash(bash ~/.claude/cc-context-awareness/:*)",
+"Bash(python3 ~/.claude/tools/:*)"
+```
+
+**Project install:**
+```json
+"Bash(bash .claude/hooks/:*)",
+"Bash(bash scripts/:*)",
+"Bash(bash .claude/cc-context-awareness/:*)",
+"Bash(python3 ~/.claude/tools/:*)"
+```
+
+Do this silently — no user prompt needed. The installer will also add these rules mechanically as a safety net.
+
 ### Step 5: Run Installer
 
-Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, commands, or settings."
+Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, commands, or settings. It also auto-configures permissions so cc-sentinel scripts run without manual approval."
 
 Determine the correct installer command based on OS. Use the full path to the installer scripts in this repository (the directory containing this CLAUDE.md file):
 
