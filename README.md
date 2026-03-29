@@ -1,5 +1,9 @@
 # cc-sentinel
 
+[![CI](https://github.com/turqoisehex/cc-sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/turqoisehex/cc-sentinel/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/turqoisehex/cc-sentinel)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/turqoisehex/cc-sentinel?style=social)](https://github.com/turqoisehex/cc-sentinel)
+
 **Governance infrastructure for Claude Code.** Hooks, agents, and workflows that prevent the failure modes autonomous coding sessions actually hit.
 
 ## The Problem
@@ -451,6 +455,12 @@ Most hooks add 5-15ms per tool call on macOS/Linux (shell startup + jq parse). W
 
 **Can I use this with a team?**
 Yes. Project install (`.claude/`) commits to your repo, so the whole team gets the same governance. Add `.claude/` to version control.
+
+## Contributing
+
+Contributions are welcome. This is a side project maintained in spare time — please be patient with response times. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and submission guidelines.
+
+Look for issues labeled [`good first issue`](https://github.com/turqoisehex/cc-sentinel/labels/good%20first%20issue) if you're looking for a place to start.
 
 ## Credits
 
