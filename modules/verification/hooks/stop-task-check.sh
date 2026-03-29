@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop hook: blocks three categories of mistakes at session stop time (R1-R7).
+# Stop hook: three blocking checks (R1, R2, R7) with supporting behaviors (R3-R6).
 #
 # Glossary: CC = Claude Code, CT = CURRENT_TASK (the .md state files).
 #
@@ -11,8 +11,8 @@
 #   R2. Staleness gate — if any active CT file is >2 min stale, block and
 #       request progress update before stopping.
 #   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
-#       loops) must never be blocked. Detection: SENTINEL_LISTENER env var
-#       (primary, set by spawn.py) or "Watching _pending_(sonnet|opus)/"
+#       loops) must never be blocked. Detection: SENTINEL_LISTENER or
+#       WAKEFUL_LISTENER env var (primary, set by spawn.py) or "Watching _pending_(sonnet|opus)/"
 #       / "Waiting for work on ch[0-9]+" message patterns (fallback).
 #   R4. Channel scoping — each session only checks its own CT files.
 #       SENTINEL_CHANNEL=N or WAKEFUL_CHANNEL=N → shared CT + ch{N} CT.
@@ -49,7 +49,7 @@ PARSED="$(echo "$INPUT" | jq -r '[
   (.last_assistant_message // "")
 ] | join("\n")' 2>/dev/null | tr -d '\r')" || exit 0
 
-# Split into variables (IFS-safe: read stops at newline, last field gets remainder)
+# Split into variables by line number (last field captures lines 4+ for multiline messages)
 STOP_HOOK_ACTIVE="$(echo "$PARSED" | sed -n '1p')"
 LAST_MSG_LEN="$(echo "$PARSED" | sed -n '2p')"
 CWD="$(echo "$PARSED" | sed -n '3p')"
@@ -263,10 +263,11 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
       fi
     done
 
-    # NOTE: Blocks immediately on first incomplete squad dir found. If a newer
-    # passing squad also exists, the old one still blocks — clean up old squad
-    # dirs before claiming completion. This is the safe direction (false block,
-    # not false allow). The anti-loop (R5) limits this to one extra stop.
+    # NOTE: Blocks on first incomplete squad dir where at least one expected
+    # agent file exists. Empty/irrelevant dirs are skipped (the no-evidence
+    # block fires instead). If a newer passing squad also exists, the old one
+    # still blocks — clean up old dirs before claiming completion. Safe direction
+    # (false block, not false allow). The anti-loop (R5) limits to one extra stop.
     if [[ "$SQUAD_EXISTS" -gt 0 ]] && [[ "$SQUAD_PASS" -lt ${#SQUAD_EXPECTED[@]} ]]; then
       REASON="INCOMPLETE VERIFICATION SQUAD (${SQUAD_TAG}): Squad directory exists but not all ${#SQUAD_EXPECTED[@]} agents passed (${SQUAD_PASS}/${#SQUAD_EXPECTED[@]})."
       if [[ -n "$SQUAD_MISSING" ]]; then
@@ -289,7 +290,7 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
   done
 
   if [[ "$VERIFICATION_FOUND" == "false" ]]; then
-    REASON="COMPLETION WITHOUT VERIFICATION: No verification evidence found. Run the Verification Squad — it is required by default for all non-exempt work. The feeling of completion is a trigger to BEGIN verification, not end work. If this is not a task completion, ignore this and stop again."
+    REASON="COMPLETION WITHOUT VERIFICATION: No verification evidence found. Run the Verification Squad — it is required by default for all non-exempt work. The feeling of completion is a trigger to BEGIN verification, not end work. If the completion language in your message was incidental (not a real claim), you may stop again — the anti-loop (R5) always allows the second stop."
     REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
     echo "  -> BLOCK (completion without verification)" >> "$LOGFILE" 2>/dev/null
     echo "{\"decision\": \"block\", \"reason\": ${REASON_JSON}}"
