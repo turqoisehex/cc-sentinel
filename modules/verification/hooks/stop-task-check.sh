@@ -41,15 +41,27 @@ INPUT="$(cat)" || exit 0
   echo "$INPUT" | jq '{session_id, cwd, stop_hook_active, hook_event_name, msg_len: (.last_assistant_message | length)}' 2>/dev/null
 } >> "$LOGFILE" 2>/dev/null
 
+# Extract all needed fields from JSON in one jq call (avoids 4-5 subprocess forks)
+PARSED="$(echo "$INPUT" | jq -r '[
+  (.stop_hook_active // "false"),
+  (.last_assistant_message | length | tostring),
+  (.cwd // ""),
+  (.last_assistant_message // "")
+] | join("\n")' 2>/dev/null | tr -d '\r')" || exit 0
+
+# Split into variables (IFS-safe: read stops at newline, last field gets remainder)
+STOP_HOOK_ACTIVE="$(echo "$PARSED" | sed -n '1p')"
+LAST_MSG_LEN="$(echo "$PARSED" | sed -n '2p')"
+CWD="$(echo "$PARSED" | sed -n '3p')"
+LAST_MSG="$(echo "$PARSED" | sed -n '4,$p')"
+
 # Prevent infinite loops: if we already blocked once, allow the stop
-STOP_HOOK_ACTIVE="$(echo "$INPUT" | jq -r '.stop_hook_active // "false"' 2>/dev/null | tr -d '\r')" || exit 0
 if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
   echo "  -> ALLOW (stop_hook_active)" >> "$LOGFILE" 2>/dev/null
   exit 0
 fi
 
 # Guard: if no assistant message, this is startup/init — always allow
-LAST_MSG_LEN="$(echo "$INPUT" | jq -r '.last_assistant_message | length' 2>/dev/null | tr -d '\r')" || exit 0
 if [[ -z "$LAST_MSG_LEN" ]] || [[ "$LAST_MSG_LEN" -lt 1 ]]; then
   echo "  -> ALLOW (no assistant message / startup)" >> "$LOGFILE" 2>/dev/null
   exit 0
@@ -67,7 +79,6 @@ if [[ "$HOOK_LISTENER" == "true" ]]; then
 fi
 
 # Find project directory containing CURRENT_TASK.md
-CWD="$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null | tr -d '\r')" || true
 PROJECT_DIR=""
 for dir in "$CWD" "$(pwd)" "$(git rev-parse --show-toplevel 2>/dev/null || true)"; do
   [[ -z "$dir" ]] && continue
@@ -127,8 +138,7 @@ if [[ "$TASK_STATUS" == "none" ]]; then
 fi
 
 # --- CHECK 1: Completion claim without verification ---
-# Extract last assistant message
-LAST_MSG="$(echo "$INPUT" | jq -r '.last_assistant_message // ""' 2>/dev/null | tr -d '\r')" || true
+# LAST_MSG already extracted in consolidated jq call above
 
 # --- BYPASS: Waiting for agents ---
 if echo "$LAST_MSG" | grep -qiE "(agent|agents).*(still running|running|pending|remaining|waiting)|(waiting for).*(agent|results|report)" 2>/dev/null; then

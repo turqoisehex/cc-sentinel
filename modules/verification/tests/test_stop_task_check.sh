@@ -726,7 +726,7 @@ mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
 # First squad dir (alphabetically): incomplete
-create_failing_squad "$PROJECT" "squad_a_old" 3  # 2 pass, 3 fail
+create_failing_squad "$PROJECT" "squad_a_old" 3  # 3 pass, 3 fail
 # Second squad dir (alphabetically): all pass
 create_passing_squad "$PROJECT" "squad_b_new"
 INPUT=$(build_input "$PROJECT" "All work is done. Sprint is complete.")
@@ -902,6 +902,153 @@ INPUT=$(build_input "$PROJECT" "Updated the config file. Looks good.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_empty "no deferral = no block"
+teardown_temp
+
+# --- Test 34: Positive channel path (SENTINEL_CHANNEL + matching squad_chN_) ---
+echo ""
+echo "Test 34: SENTINEL_CHANNEL=2 + squad_ch2_sonnet (all PASS) -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+echo '**Channel:** 2' >> "$PROJECT/CURRENT_TASK_ch2.md"
+echo '**Status:** IN PROGRESS' >> "$PROJECT/CURRENT_TASK_ch2.md"
+touch_now "$PROJECT/CURRENT_TASK.md"
+touch_now "$PROJECT/CURRENT_TASK_ch2.md"
+create_passing_squad "$PROJECT" "squad_ch2_sonnet"
+INPUT=$(build_input "$PROJECT" "All done. Sprint complete.")
+SENTINEL_CHANNEL=2 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "channel-scoped squad satisfies gate"
+teardown_temp
+
+# --- Test 35: Cross-channel VERIFICATION_BLOCKED isolation ---
+echo ""
+echo "Test 35: VERIFICATION_BLOCKED in ch3 CT does not satisfy ch2 gate"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+echo '**Channel:** 2' >> "$PROJECT/CURRENT_TASK_ch2.md"
+echo '**Status:** IN PROGRESS' >> "$PROJECT/CURRENT_TASK_ch2.md"
+touch_now "$PROJECT/CURRENT_TASK.md"
+touch_now "$PROJECT/CURRENT_TASK_ch2.md"
+# VERIFICATION_BLOCKED in ch3 (not our channel)
+cat > "$PROJECT/CURRENT_TASK_ch3.md" << 'EOF'
+**Channel:** 3
+**Status:** IN PROGRESS
+VERIFICATION_BLOCKED — issues remain
+EOF
+INPUT=$(build_input "$PROJECT" "Sprint is complete and verified.")
+SENTINEL_CHANNEL=2 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "ch3 BLOCKED doesn't help ch2"
+teardown_temp
+
+# --- Test 36: Invalid JSON stdin -> fail-open ---
+echo ""
+echo "Test 36: Invalid JSON input -> exit 0 (fail-open)"
+setup_temp
+mkdir -p "$PROJECT"
+INPUT="this is not json at all {{{}"
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "invalid JSON = fail-open allow"
+teardown_temp
+
+# --- Tests 37-42: R7 deferral sub-pattern coverage ---
+echo ""
+echo "Test 37: 'later sprint' -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "We can handle that in a later sprint.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "later sprint triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 38: 'next sprint' -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "Moving this to the next sprint.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "next sprint triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 39: 'handle this later' -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "Let's handle this later when we have more context.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "handle this later triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 40: 'address this later' -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "We should address this later in a focused session.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "address this later triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 41: 'out of scope for now' -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "That feature is out of scope for now.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "out of scope for now triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 42: 'separate session needed' -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "A separate session needed for the deployment steps.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "separate session needed triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 43: 'deferred to next week' -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "Deferred to next week when the API is ready.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "deferred to triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 44: 'deferred as low priority' -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "Deferred as low priority for this sprint.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "deferred as triggers R7"
 teardown_temp
 
 # ==================== SUMMARY ====================
