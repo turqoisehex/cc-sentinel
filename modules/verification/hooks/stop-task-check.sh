@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop hook: blocks three specific mistakes at session stop time.
+# Stop hook: blocks three categories of mistakes at session stop time (R1-R7).
 #
 # Glossary: CC = Claude Code, CT = CURRENT_TASK (the .md state files).
 #
@@ -71,6 +71,7 @@ fi
 # Set by spawn.py for listener sessions at launch time. Unconditional bypass —
 # listeners are stateless service loops that must not touch CT files.
 # Accepts both SENTINEL_LISTENER (cc-sentinel) and WAKEFUL_LISTENER (Wakeful).
+# Value must be the string literal "true" (set by spawn.py at launch time).
 # The message pattern check below is a fallback for manual launches.
 HOOK_LISTENER="${SENTINEL_LISTENER:-${WAKEFUL_LISTENER:-}}"
 if [[ "$HOOK_LISTENER" == "true" ]]; then
@@ -140,13 +141,14 @@ fi
 # --- CHECK 1: Completion claim without verification ---
 # LAST_MSG already extracted in consolidated jq call above
 
-# --- BYPASS: Waiting for agents ---
+# --- BYPASS: Waiting for agents (fires before R1 — agents need time, not verification) ---
 if echo "$LAST_MSG" | grep -qiE "(agent|agents).*(still running|running|pending|remaining|waiting)|(waiting for).*(agent|results|report)" 2>/dev/null; then
   echo "  -> ALLOW (waiting for agents)" >> "$LOGFILE" 2>/dev/null
   exit 0
 fi
 
 # --- BYPASS: Listener sessions (message pattern — fallback for manual launches) ---
+# Fires before R1 — listeners are stateless and never claim completion.
 # Matches the idle announce line. Once the listener picks up work, the last
 # message changes and normal CT enforcement applies. (See R3 in header.)
 if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/|Waiting for work on ch[0-9]+" 2>/dev/null; then
@@ -159,7 +161,7 @@ COMPLETION_PATTERNS="(all (items |steps |tasks |work )?(are |is )?(done|complete
 
 # Completion signal: completion language in assistant message (REQUIRED).
 # COMPLETE status in CURRENT_TASK.md alone is NOT sufficient — it may be stale
-# from a previous task. The commit hook is the hard gate at commit time.
+# from a previous task. The commit hook (safe-commit.sh) is the hard gate at commit time.
 COMPLETION_CLAIMED="false"
 if echo "$LAST_MSG" | grep -qiE "$COMPLETION_PATTERNS" 2>/dev/null; then
   COMPLETION_CLAIMED="true"
@@ -342,6 +344,6 @@ if echo "$LAST_MSG" | grep -qiE "$DEFERRAL_PATTERNS" 2>/dev/null; then
   exit 0
 fi
 
-# No completion claim, no stale active files, no deferral — allow stop
+# All three checks passed (completion, staleness, deferral) — allow stop
 echo "  -> ALLOW (all checks passed)" >> "$LOGFILE" 2>/dev/null
 exit 0

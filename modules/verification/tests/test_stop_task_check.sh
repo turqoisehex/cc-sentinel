@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Test harness for stop-task-check.sh
-# Run: bash modules/verification/tests/test_stop_task_check.sh
+# Run from repo root: bash modules/verification/tests/test_stop_task_check.sh
 #
 # Creates temp directories with mock CT files and squad dirs,
 # pipes mock JSON stdin, asserts exit code and stdout content.
