@@ -779,6 +779,25 @@ assert_stdout_contains "Failed" "reports failed agents"
 assert_stdout_contains "3/6" "shows 3 of 6 passed"
 teardown_temp
 
+# Note: Tests 28-29 were replaced by the T_manifest_* series below.
+
+# --- Test T_all_done: "ALL DONE" status treated as complete ---
+echo ""
+echo "Test T_all_done: ALL DONE status -> complete (not active)"
+setup_temp
+mkdir -p "$PROJECT"
+cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
+# CURRENT TASK
+**Status:** ALL DONE — sprint finalized.
+**Phase:** /5 complete
+EOF
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "Session cleanup finished.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "ALL DONE = complete, no block"
+teardown_temp
+
 # --- Test T_manifest_valid: manifest.json with 2 listed agents -> uses 2-agent squad ---
 echo ""
 echo "Test T_manifest_valid: manifest.json valid -> 2-agent squad satisfies gate"
@@ -878,17 +897,18 @@ assert_stdout_contains '"decision".*"block"' "deferral language blocked"
 assert_stdout_contains "DEFERRAL" "reason identifies deferral"
 teardown_temp
 
-# --- Test 32: Deferral with "future sprint" in message -> BLOCK ---
+# --- Test 32: Deferral with "future sprint" (IN PROGRESS, no completion language) -> R7 BLOCK ---
+# Uses IN PROGRESS status and NO completion language so R1 is not reached — pure R7 test.
 echo ""
-echo "Test 32: 'future sprint' deferral -> BLOCK"
+echo "Test 32: 'future sprint' deferral (R7 path) -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
-create_ct "$PROJECT" "COMPLETE"
+create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
-INPUT=$(build_input "$PROJECT" "All done. The remaining items can wait for a future sprint.")
+INPUT=$(build_input "$PROJECT" "Finished reviewing. Some items can wait for a future sprint.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_contains '"decision".*"block"' "future sprint deferral blocked"
+assert_stdout_contains "DEFERRAL" "future sprint triggers R7 deferral gate"
 teardown_temp
 
 # --- Test 33: No deferral language -> ALLOW ---

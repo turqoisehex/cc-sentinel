@@ -12,8 +12,8 @@
 #       request progress update before stopping.
 #   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
 #       loops) must never be blocked. Detection: SENTINEL_LISTENER env var
-#       (primary, set by spawn.py) or "Watching _pending_..."/"Waiting for
-#       work on chN" message patterns (fallback for manual launches).
+#       (primary, set by spawn.py) or "Watching _pending_(sonnet|opus)/"
+#       / "Waiting for work on ch[0-9]+" message patterns (fallback).
 #   R4. Channel scoping — each session only checks its own CT files.
 #       SENTINEL_CHANNEL=N or WAKEFUL_CHANNEL=N → shared CT + ch{N} CT.
 #       Unset → shared CT only. Squad evidence scoped to active channels.
