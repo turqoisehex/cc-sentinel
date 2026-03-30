@@ -47,6 +47,7 @@ PUNT="$PUNT|deferred —|deferred [(]|deferred as |deferred to "
 PUNT="$PUNT|TODO.*(later|future|someday|eventually)"
 PUNT="$PUNT|revisit in a future|we can revisit"
 PUNT="$PUNT|next session|next conversation|separate session"
+PUNT="$PUNT|note.*(for|it).*(next|later)|note this for|flag.*(for|it).*(next|later)"
 
 # Tier 2: Soft minimization — CC downplaying severity to avoid fixing
 HEDGE="not urgent|not critical|minor issue|low priority"
