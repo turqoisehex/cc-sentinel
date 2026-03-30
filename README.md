@@ -31,7 +31,7 @@ Claude Code: I see this is a Python/Django project with pytest. Here's what I re
 
   [x] Core (required) -- context loss prevention, anti-deferral, state management
   [x] Context Awareness -- visual context meter in your status bar
-  [ ] Verification -- up to 6-agent verification squad before completion claims
+  [ ] Verification -- up to 5-agent verification squad before completion claims
   [x] Commit Enforcement -- test gating, auto-format, diff review
   [ ] Sprint Pipeline -- structured /1 through /5 workflow
   [x] Governance Protection -- protect CLAUDE.md and config from mid-session edits
@@ -132,16 +132,15 @@ Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the lo
 
 ### Verification
 
-Up to 6-agent verification squad that independently audits work before any completion claim. Each agent has a different adversarial perspective:
+Up to 5-agent verification squad that independently audits work before any completion claim. Each agent has a different adversarial perspective:
 
 | Agent | What It Catches |
 |---|---|
-| **Mechanical Auditor** | Wrong file paths, constants, enum values, counts -- anything greppable |
-| **Adversarial Reader** | Spec contradictions, hallucinated content, rule violations |
+| **Mechanical Auditor** | Wrong file paths, constants, enum values, counts, performance issues -- anything greppable |
+| **Adversarial Reader** | Spec contradictions, hallucinated content, rule violations, regressions |
 | **Completeness Scanner** | Missing requirements, unassigned items, spec gaps |
 | **Dependency Tracer** | Missing migrations, untraced call sites, silent default changes |
 | **Cold Reader** | Semantic errors invisible to the author -- reads with zero context |
-| **Performance Auditor** | Algorithm complexity, unbounded memory, N+1 queries, blocking in async |
 
 The `stop-task-check.sh` hook fires when Claude tries to stop, requiring verification evidence before allowing completion claims through. Self-attestation ("I verified this") is explicitly rejected -- the hook checks for actual squad output files on disk.
 
@@ -287,7 +286,7 @@ cc-sentinel/
   modules/
     core/                # Required -- hooks, templates, /cold, /cleanup, /status
     context-awareness/   # Status bar meter, graduated warnings
-    verification/        # up to 6-agent squad, /verify, /grill
+    verification/        # up to 5-agent squad, /verify, /grill
     commit-enforcement/  # safe-commit, auto-format, channel routing
     sprint-pipeline/     # /1-/5 workflow, /spawn multi-session
     governance-protection/ # file-protection, /mistake, /prune-rules
@@ -365,7 +364,7 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 | Governance protection | Not mentioned | Protected files list + authorization marker protocol |
 | Cold-start protocol | CLAUDE.md as ground truth | CURRENT_TASK as complete cold-start survival document |
 | Multi-channel coordination | Parallel sessions (independent) | File-signal coordination between orchestrator + executor |
-| Verification depth | 2-layer review (check + challenge) | Up to 6 independent agents + per-commit agents + stop hook gate |
+| Verification depth | 2-layer review (check + challenge) | Up to 5 independent agents + per-commit agents + stop hook gate |
 | Plan enforcement | Plan mode discipline (manual) | /design forces brainstorm, spec, adversarial review, user gate |
 | Completion loops | ralph-loop plugin (re-feed until done) | Stop hook + verification evidence gate + anti-deferral hook (three independent mechanisms) |
 | Permission model | Pre-approved allow list (manual) | Same + file-protection hook for governance files + authorization marker protocol |

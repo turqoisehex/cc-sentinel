@@ -40,7 +40,7 @@ python3 -m pytest modules/sprint-pipeline/tests/
 modules/              # 7 independent modules
   core/               # Anti-deferral, state management, context loss prevention
   context-awareness/  # Visual context window meter
-  verification/       # Up-to-6-agent verification squad
+  verification/       # Up-to-5-agent verification squad
   commit-enforcement/ # Test gating, auto-format, diff review
   sprint-pipeline/    # Structured /1-/5 workflow phases
   governance-protection/ # Protected files, authorization markers

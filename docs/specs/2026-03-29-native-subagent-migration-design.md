@@ -14,7 +14,7 @@ Change the default /2 and /3 workflow so that:
 2. **Duo mode**: Reserved for special cases where there is a high volume of both Opus-judgment AND Sonnet-mechanical work, and the Sonnet sessions benefit from persistence across Opus compaction cycles.
 3. **All agents continue writing results to disk** — the file-based audit trail is preserved. Agents write their full findings to the existing file paths, then pass a concise summary back to the parent. The parent's context stays light; the detailed files remain available for investigation.
 4. **Opus sessions can still be spawned in parallel** via `/spawn opus N`. Each Opus session independently spawns its own Sonnet subagents when needed.
-5. **No quality changes** — all sessions remain at high effort. Sonnet handles mechanical work, Opus handles judgment. The verification squad (up to 6 agents) continues unchanged in scope and rigor.
+5. **No quality changes** — all sessions remain at high effort. Sonnet handles mechanical work, Opus handles judgment. The verification squad (up to 5 agents) continues unchanged in scope and rigor.
 
 ## Budget Rationale
 
@@ -64,7 +64,7 @@ Executes well-specified implementation tasks. Use for [SONNET] classified work w
 ```markdown
 ## Purpose
 
-Runs the verification squad against completed work. Spawns up to 6 parallel verification agents, collects results to disk, returns consolidated summary to parent.
+Runs the verification squad against completed work. Spawns up to 5 parallel verification agents, collects results to disk, returns consolidated summary to parent.
 
 ## Process
 
@@ -73,7 +73,7 @@ Runs the verification squad against completed work. Spawns up to 6 parallel veri
    - Docs only (.md, .txt, .rst) -> cold_reader only
    - Tests only -> mechanical, completeness
    - Config only (.json, .yaml, .toml) -> adversarial, dependency
-   - Source code / mixed -> All 6: mechanical, adversarial, completeness, dependency, cold_reader, performance
+   - Source code / mixed -> all 5: mechanical, adversarial, completeness, dependency, cold_reader
 3. Write a manifest.json to the squad output directory recording which agents were launched and why.
 4. Spawn each verification agent in parallel (run_in_background: true).
 5. Each agent writes its findings to its designated file path (e.g., `verification_findings/squad_chN_sonnet/mechanical.md`).
@@ -142,7 +142,7 @@ New execution flow:
    - If PASS/WARN: proceed with commit via `channel_commit.sh --local-verify`.
    - If FAIL: present findings to Opus for judgment.
 6. At phase end: spawn `sonnet-verifier` subagent via `Agent(model: "sonnet")`.
-   - The subagent coordinates the full squad (up to 6 agents), writes all findings to disk, returns consolidated summary.
+   - The subagent coordinates the full squad (up to 5 agents), writes all findings to disk, returns consolidated summary.
 
 ### 4. Changes to channel_commit.sh
 
@@ -211,7 +211,7 @@ When spawning Sonnet subagents, always set `model: "sonnet"` explicitly. Omitted
 ## What This Does NOT Change
 
 - Quality floor: everything stays at high effort, Opus for judgment, Sonnet for mechanical work
-- Verification rigor: same 6-agent squad, same 2-agent commit checks, same stop hook gates
+- Verification rigor: same 5-agent squad, same 2-agent commit checks, same stop hook gates
 - File-based audit trail: all agents still write to disk at the same paths
 - Context management: parent context stays light (summaries only), full details on disk
 - Governance hooks: anti-deferral, file-protection, compaction survival all unchanged

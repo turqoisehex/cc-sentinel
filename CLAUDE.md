@@ -35,7 +35,7 @@ Present ALL of these problems as a table. Do NOT filter or select a subset. Show
 
 | # | Problem | Solution |
 |---|---------|----------|
-| 1 | "It said it was done, but it wasn't." | Verification — up to 6-agent squad audits before completion |
+| 1 | "It said it was done, but it wasn't." | Verification — up to 5-agent squad audits before completion |
 | 2 | "It slammed into auto-compact and lost its work." | Context Awareness — visual status bar with 5 graduated warnings |
 | 3 | "It deferred instead of fixing." | Core — anti-deferral hook scans every write |
 | 4 | "After compaction, it forgot everything." | Core — CURRENT_TASK.md state survives compaction |

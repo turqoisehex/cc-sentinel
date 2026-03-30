@@ -197,7 +197,7 @@
     },
     "verification": {
       "name": "Verification",
-      "description": "Up to 6-agent /verify squad, adversarial self-check, completion gate",
+      "description": "Up to 5-agent /verify squad, adversarial self-check, completion gate",
       "required": false,
       "dependencies": [
         "core"
@@ -351,6 +351,11 @@
         ],
         "tests": [
           "test_spawn.py"
+        ],
+        "agents": [
+          "sonnet-implementer.md",
+          "sonnet-verifier.md",
+          "commit-verifier.md"
         ],
         "reference": [
           "spec-verification.md"

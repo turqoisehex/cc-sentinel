@@ -7,7 +7,7 @@ description: "Launch up to 5-agent verification squad against a scope of work. A
 
 **Trigger:** `/verify [scope]`
 
-Run the Verification Squad (up to 6 parallel agents) against a specified scope of work.
+Run the Verification Squad (up to 5 parallel agents) against a specified scope of work.
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix.
 
@@ -79,7 +79,7 @@ Write `manifest.json` to the squad directory. Agent names MUST include the `.md`
 {"launched": ["cold_reader.md"], "reason": "docs-only scope", "timestamp": "ISO"}
 ```
 
-If all files are source code (or mixed), launch all 6 and **delete any existing manifest.json** in the squad directory (to prevent stale partial-run manifests from affecting the commit gate).
+If all files are source code (or mixed), launch all 5 and **delete any existing manifest.json** in the squad directory (to prevent stale partial-run manifests from affecting the commit gate).
 
 **Duo mode dispatch sequence** (when using file-based dispatch):
 1. Update CT — cold-start ready.
@@ -116,7 +116,7 @@ Do not idle. Proceed with queued work or run `/grill`.
 
 When all expected result files present:
 
-1. Read all launched agent output files (may be fewer than 6 if smart filtering was applied).
+1. Read all launched agent output files (may be fewer than 5 if smart filtering was applied).
 2. Present consolidated summary: each agent PASS/FAIL with issue count.
 3. ALL PASS or WARN -> write `VERIFICATION_PASSED` + summary to CT.
 4. ANY FAIL -> list issues, ask user whether to fix and re-run.

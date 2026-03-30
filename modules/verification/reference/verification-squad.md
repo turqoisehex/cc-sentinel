@@ -395,7 +395,7 @@ Output: `verification_findings/SQUAD_DIR/cold_reader.md`
 ```
 CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
 
-Read the work product AS IF YOU HAVE NEVER SEEN IT BEFORE with ZERO KNOWLEDGE of intent. You are the most important agent — the only one that reads cold. The other five verify with knowledge of intent.
+Read the work product AS IF YOU HAVE NEVER SEEN IT BEFORE with ZERO KNOWLEDGE of intent. You are the most important agent — the only one that reads cold. The other four verify with knowledge of intent.
 
 WORK PRODUCT: [paste path(s)]
 SCOPE: [paste one-sentence scope]
