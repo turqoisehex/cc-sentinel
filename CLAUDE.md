@@ -89,7 +89,9 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Bash(bash ~/.claude/cc-context-awareness/*)",
 "Bash(python3 ~/.claude/tools/*)",
 "Bash(mkdir -p verification_findings/*)",
-"Bash(ls verification_findings/*)"
+"Bash(mkdir -p verification_findings/*/*)",
+"Bash(ls verification_findings/*)",
+"Bash(ls verification_findings/*/*)"
 ```
 
 **Project install:**
@@ -99,7 +101,9 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Bash(bash .claude/cc-context-awareness/*)",
 "Bash(python3 ~/.claude/tools/*)",
 "Bash(mkdir -p verification_findings/*)",
-"Bash(ls verification_findings/*)"
+"Bash(mkdir -p verification_findings/*/*)",
+"Bash(ls verification_findings/*)",
+"Bash(ls verification_findings/*/*)"
 ```
 
 Do this silently — no user prompt needed. The installer will also add these rules mechanically as a safety net.

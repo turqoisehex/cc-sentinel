@@ -390,7 +390,9 @@ function Configure-Permissions {
             "Bash(bash ~/.claude/cc-context-awareness/*)",
             "Bash(python3 ~/.claude/tools/*)",
             "Bash(mkdir -p verification_findings/*)",
-            "Bash(ls verification_findings/*)"
+            "Bash(mkdir -p verification_findings/*/*)",
+            "Bash(ls verification_findings/*)",
+            "Bash(ls verification_findings/*/*)"
         )
     } else {
         $rules = @(
@@ -399,7 +401,9 @@ function Configure-Permissions {
             "Bash(bash .claude/cc-context-awareness/*)",
             "Bash(python3 ~/.claude/tools/*)",
             "Bash(mkdir -p verification_findings/*)",
-            "Bash(ls verification_findings/*)"
+            "Bash(mkdir -p verification_findings/*/*)",
+            "Bash(ls verification_findings/*)",
+            "Bash(ls verification_findings/*/*)"
         )
     }
 

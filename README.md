@@ -120,7 +120,7 @@ context [████████████░░░░░░░░] 62%
 Thresholds trigger automatic reminders:
 - **50%** -- "Documenting as you go?"
 - **65%** -- "Could a fresh session resume from your state files?"
-- **75%** -- "Documentation checkpoint. Keep working at full quality."
+- **75%** -- "Document comprehensively and get cold-start ready. Continue working methodically until compaction at ~84%."
 - **85%** -- "Commit all changes. State files must be current."
 - **92%** -- "Auto-compaction imminent. State files must be complete."
 
@@ -443,13 +443,52 @@ The cc-sentinel installer checks for `jq`, `python3`, and `bash` before proceedi
 
 Both installers (`install.sh` for Unix, `install.ps1` for Windows) handle platform differences automatically. Windows hooks normalize CRLF via `tr -d '\r'` on jq output. The bundled context-awareness module is the only known Windows-compatible version.
 
+## Uninstalling
+
+The uninstaller removes all cc-sentinel files, cleans hook and permission entries from settings.json, strips the rules block from CLAUDE.md, and removes empty directories. Your non-sentinel hooks, settings, and CLAUDE.md content are preserved.
+
+**From a Claude Code session:**
+
+```
+Uninstall cc-sentinel
+```
+
+Claude reads the CLAUDE.md uninstall instructions and runs the appropriate command.
+
+**Manual (macOS/Linux):**
+
+```bash
+# If you still have the repo cloned:
+bash ~/.claude/cc-sentinel/uninstall.sh --target global
+
+# If the repo was deleted, clone it first:
+git clone https://github.com/turqoisehex/cc-sentinel /tmp/cc-sentinel
+bash /tmp/cc-sentinel/uninstall.sh --target global
+
+# Preview what would be removed without removing it:
+bash ~/.claude/cc-sentinel/uninstall.sh --target global --dry-run
+```
+
+**Manual (Windows PowerShell):**
+
+```powershell
+powershell -File "$env:USERPROFILE\.claude\cc-sentinel\uninstall.ps1" -Target global
+
+# Or with dry run:
+powershell -File "$env:USERPROFILE\.claude\cc-sentinel\uninstall.ps1" -Target global -DryRun
+```
+
+Replace `global` with `project` if you installed to `.claude/` in a specific project directory.
+
+Restart Claude Code after uninstalling for changes to take effect.
+
 ## FAQ
 
 **Does this replace CLAUDE.md?**
 No. cc-sentinel adds rules to your existing CLAUDE.md (with clear delimiters) and registers hooks in settings.json. Your existing configuration is preserved.
 
-**Can I uninstall a module?**
-Remove its files from `.claude/` and its hook entries from `.claude/settings.json`. An `--uninstall` flag is planned.
+**Can I uninstall cc-sentinel?**
+Yes. See [Uninstalling](#uninstalling) below. The uninstaller removes all sentinel files, cleans hooks and allow rules from settings.json, and strips the rules block from CLAUDE.md.
 
 **Does this work with Claude Code plugins?**
 Yes. cc-sentinel hooks and plugins coexist. The sprint-pipeline module recommends complementary plugins but does not require them.
