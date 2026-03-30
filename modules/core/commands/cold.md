@@ -89,7 +89,7 @@ tasks:
 >
 > Orphan = failure. Zero orphans is the target. Also grep every file path referenced in CT to verify it exists on disk.
 >
-> **Placement guidance for backlog/plan writes:** When writing items to backlog, add them under the current sprint's section (find the sprint number in CT's header). When writing to plan, add under the relevant feature area or create a "Deferred from Sprint N" section if no area fits. Match the surrounding document's format (checkboxes for backlog, bullet descriptions for CIP).
+> **Placement guidance for backlog/plan writes:** When writing items to backlog, add them under the current sprint's section (find the sprint number in CT's header). When writing to plan, add under the relevant feature area or create a "Deferred from Sprint N" section if no area fits. Match the surrounding document's format (checkboxes for backlog, bullet descriptions for plan files).
 >
 > **B. Cold-start quality pass on CT.** Update CT so a zero-context session can execute every item. For each plan step verify:
 > 1. Self-contained context — no "as discussed" or "per earlier decision." State the decision inline.
@@ -160,7 +160,7 @@ When both results appear, read them. Unresolvable issues → add to CT as flagge
 
 ### Step 2: Grill
 
-Read both agent result files and CT. For each grill question, verify checkable answers with grep/read. Fix CT problems directly; for backlog/plan problems, add flagged items to CT (e.g., "FIX IN SC: [description]") — do NOT read backlog/plan in parent.
+Read both agent result files and CT. For each grill question, verify checkable answers with grep/read. Fix CT problems directly; for backlog/plan problems, add flagged items to CT (e.g., "FIX IN BACKLOG: [description]") — do NOT read backlog/plan in parent.
 
 1. **"Where does this break?"** — Different day, sprint phase, or post-compaction start. What assumptions are baked in?
 2. **"What have I not checked?"** — Zero stale references? Recent commits (`git log --oneline -3`) reflected in CT?
