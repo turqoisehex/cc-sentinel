@@ -102,6 +102,7 @@ Prevents the three most common failure modes: context loss, work deferral, and a
 | `pre-compact-state-save.sh` | PreCompact | Last-chance hook before context compaction. Reminds Claude to write all in-progress state to CURRENT_TASK.md. |
 | `post-compact-reorient.sh` | SessionStart (compact) | After compaction, re-injects task state so Claude can resume without re-reading files. |
 | `agent-file-reminder.sh` | PreToolUse | Reminds agents to write results to files, not just return them in memory (which is lost after the agent exits). |
+| `auto-checkpoint.sh` | Stop, PreCompact | Auto-commits work-in-progress when a session ends or context compacts, preventing silent work loss. |
 
 Also includes:
 - **CURRENT_TASK.md template** -- structured state file that survives compaction
@@ -316,7 +317,7 @@ Claude's self-assessment of its own work is structurally unreliable. Cherny's wo
 
 > "Say 'Grill me on these changes and don't make a PR until I pass your test.'" -- Cherny
 
-**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Up to six independent verification agents (mechanical, adversarial, completeness, dependency, cold-reader, performance) audit in parallel. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
+**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Up to five independent verification agents (mechanical, adversarial, completeness, dependency, cold-reader) audit in parallel. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
 
 ### Context is infrastructure, not conversation
 

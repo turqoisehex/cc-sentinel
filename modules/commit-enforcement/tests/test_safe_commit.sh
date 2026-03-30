@@ -608,7 +608,7 @@ assert_file_not_exists "verification_findings/commit_cold_read_ch2.md" "channel 
 unset SENTINEL_CHANNEL
 teardown_repo
 
-# --- Test 28: Missing one of six squad agents -> BLOCKED ---
+# --- Test 28: Missing one of five squad agents -> BLOCKED ---
 echo ""
 echo "Test 28: Incomplete squad (missing dependency.md) -> BLOCKED"
 setup_repo

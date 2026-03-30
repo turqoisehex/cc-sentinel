@@ -10,7 +10,7 @@ This eliminates the primary reason the duo terminal-pair architecture existed: t
 
 Change the default /2 and /3 workflow so that:
 
-1. **Default mode**: Opus sessions spawn Sonnet subagents directly using `Agent(model: "sonnet")` for all [SONNET] and [AGENT] classified tasks, as well as verification squads.
+1. **Default mode**: Opus sessions spawn Sonnet subagents directly using `Agent(model: "sonnet")` for all [SONNET] classified tasks, as well as verification squads.
 2. **Duo mode**: Reserved for special cases where there is a high volume of both Opus-judgment AND Sonnet-mechanical work, and the Sonnet sessions benefit from persistence across Opus compaction cycles.
 3. **All agents continue writing results to disk** — the file-based audit trail is preserved. Agents write their full findings to the existing file paths, then pass a concise summary back to the parent. The parent's context stays light; the detailed files remain available for investigation.
 4. **Opus sessions can still be spawned in parallel** via `/spawn opus N`. Each Opus session independently spawns its own Sonnet subagents when needed.

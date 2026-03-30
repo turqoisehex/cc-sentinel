@@ -58,7 +58,7 @@ The subagent:
 **Duo mode** (`CC_DUO_MODE=1` or Sonnet listener active):
 Write squad prompt to `_pending_sonnet/[chN/]squad_<timestamp>.md` with YAML frontmatter. Wait via `bash scripts/wait_for_results.sh` (run_in_background: true).
 
-**Sonnet sessions** (detected by `SENTINEL_LISTENER=true` env var): Spawn the verification agents directly with `run_in_background: true` and write to the squad directory. Do NOT follow the delegation block. Detection: persistent Sonnet listeners set `SENTINEL_LISTENER=true` (injected by spawn.py at line 1249). Native Sonnet subagents do NOT have this var — they follow the default mode path and return results to their parent.
+**Sonnet sessions** (detected by `SENTINEL_LISTENER=true` env var): Spawn the verification agents directly with `run_in_background: true` and write to the squad directory. Do NOT follow the delegation block. Detection: persistent Sonnet listeners set `SENTINEL_LISTENER=true` (injected by spawn.py during session launch). Native Sonnet subagents do NOT have this var — they follow the default mode path and return results to their parent.
 
 **`/verify local <scope>`:** Preserved as an explicit override. Forces local agent execution regardless of mode — equivalent to default-mode behavior even in a duo session. Useful for quick single-agent re-runs where file-based dispatch is unnecessary overhead.
 
@@ -123,7 +123,7 @@ When all expected result files present:
 
 ### Step 6: Fix loop (if needed)
 
-**Fix ALL findings before launching the next round.** This includes FAIL, WARN, MEDIUM, LOW, and pre-existing issues surfaced by agents. Only INFO items may be deferred. The standard is: a fresh squad should return nothing but INFOs. Selectively fixing only FAILs or HIGHs while leaving LOWs creates a moving baseline that never converges.
+**Fix ALL findings before launching the next round.** This includes findings from agents that returned FAIL or WARN, and any pre-existing issues surfaced by agents. The standard is: a fresh squad should return all PASS. Selectively fixing only FAILs while leaving WARN findings creates a moving baseline that never converges.
 
 Fix issues -> re-run ONLY failed agent(s). Max 3 rounds total. After round 3: write `VERIFICATION_BLOCKED` + remaining issues to CT, present to user.
 

@@ -43,8 +43,13 @@ DELEGATE four agents. Report only. YAML frontmatter required.
 ### 5. Scrap and rewrite
 
 **5a** Design -> user gate.
-**5b** DELEGATE build. Sonnet: scaffolding. Opus: judgment.
-**5c** DELEGATE swap. Rename, update imports, delete old.
+**5b** DELEGATE build.
+**Default mode:** Spawn `sonnet-implementer` via `Agent(model: "sonnet")`. `_v2` suffix. TDD. One commit per unit via `channel_commit.sh`.
+**Duo mode:** Write to `_pending_sonnet/[chN/]perfect_rewrite_<timestamp>.md`.
+
+**5c** DELEGATE swap.
+**Default mode:** Spawn `sonnet-implementer` via `Agent(model: "sonnet")`. Rename, update imports, delete old. Atomic commit.
+**Duo mode:** Write to `_pending_sonnet/[chN/]perfect_swap_<timestamp>.md`.
 **5d** Same as Step 4 scoped to new code.
 **5e** Prove equivalence.
 
