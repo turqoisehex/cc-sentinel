@@ -22,7 +22,7 @@ Quick reference for running CC sessions with cc-sentinel governance.
 | `/grill` | Adversarial self-check (4 questions, verify each) |
 | `/verify [scope]` | up to 6-agent verification (default/full/last N/since/on) |
 | `/cold` | Prepare CURRENT_TASK.md for cold start |
-| `/sonnet` | Verification listener (run in Sonnet terminal) |
+| `/sonnet` | Verification listener (duo mode only — run in Sonnet terminal) |
 | `/rewrite` | Ground-up rewrite of a subsystem |
 | `/mistake` | Capture CC error into governance rules |
 | `/prune-rules` | Review accumulated corrections — promote, merge, or delete |

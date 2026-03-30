@@ -55,7 +55,7 @@ Anti-lost-in-the-middle: write in segments of ~7 items, count structural element
 
 Agent writes to `verification_findings/plan_adversarial[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/plan_adversarial[_chN].md` (`run_in_background: true`). Checks: plan↔design doc match, classification correctness, missing dependencies, cross-model dependencies. Fix issues before proceeding.
 
-### Step 6: Generate Sonnet prompt (MANDATORY)
+### Step 6: Generate Sonnet task specifications (MANDATORY)
 
 Always classify. Always generate. If Step 2b found zero [SONNET] tasks, state why and skip.
 

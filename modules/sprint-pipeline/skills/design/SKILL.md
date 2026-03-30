@@ -34,7 +34,7 @@ Review every task. Classify each as `[OPUS]`, `[SONNET]`, or `[PARENT]`:
 Classification rules:
 1. If a task has clear inputs (file paths), clear outputs (acceptance criteria), and requires no design judgment → `[SONNET]`.
 2. When in doubt between OPUS and SONNET → `[OPUS]`. Budget waste from over-classifying as OPUS is recoverable; broken output from under-classifying is not.
-3. Everything else → `[SONNET]`. If in doubt between OPUS and SONNET, classify as OPUS.
+3. Tasks not matching rules 1-2 default to `[SONNET]`.
 
 Annotate each task heading with its tag. Add summary table at top. MANDATORY — every plan with >5 tasks has Sonnet-eligible work.
 
