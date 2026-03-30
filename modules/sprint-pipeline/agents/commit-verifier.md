@@ -10,7 +10,7 @@ Runs commit verification against a staged diff. Adversarial always runs; cold-re
 4. Spawn agent(s):
    - **Always:** commit-adversarial — reviews diff for logic errors, spec violations, regressions.
    - **Non-trivial diffs only:** commit-cold-reader — reads diff with zero project context, flags anything broken or nonsensical.
-   - **Trivial diffs:** Skip cold-reader. Write stub cold-read file (see step 5) with `VERDICT: PASS`, `HASH: <hash>`, and `Skipped: trivial diff (≤5 lines, formatting only)`.
+   - **Trivial diffs:** Skip cold-reader. Write stub to `verification_findings/commit_cold_read_ch<N>.md` with `VERDICT: PASS`, `HASH: <hash>`, and `Skipped: trivial diff (≤5 lines, formatting only)`.
 5. Each agent writes to exactly these paths (required by `validate_results()` hash check). Substitute `N` with the actual channel number from the task prompt:
    - Adversarial: `verification_findings/commit_check_ch<N>.md`
    - Cold-reader: `verification_findings/commit_cold_read_ch<N>.md`
