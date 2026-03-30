@@ -19,10 +19,9 @@ For each step in CT:
 1. Read CT for current step.
 
 2. Execute by classification:
-   - **`[AGENT]`**: Spawn subagent with step description, acceptance criteria, file paths, targeted context. Reference section headers, not line numbers.
    - **`[OPUS]`**: Execute directly. Requires conversation context or design judgment.
    - **`[PARENT]`**: Execute directly. Orchestration or user-facing decision.
-   - **`[SONNET]`**: Dispatch to `_pending_sonnet/[chN/]`. Use dispatch file from `/2`. Wait via `wait_for_results.sh` (background). Do NOT execute yourself.
+   - **`[SONNET]`**: Spawn via `Agent(model: "sonnet")` (default mode) or dispatch to `_pending_sonnet/[chN/]` (duo mode). Use dispatch file from `/2` for duo mode. Wait via `wait_for_results.sh` (background). Do NOT execute yourself.
 
 3. Update CT — cold-start ready, mark completed steps.
 
@@ -40,7 +39,7 @@ For each step in CT:
 
 Commit once per logical unit, not per step. Each commit spawns 2 verification agents + test suite — keep the ratio of work to verification high.
 
-**Commit after:** completing a task group or phase boundary, finishing all steps that touch the same file set, completing a batch of related `[AGENT]`/`[SONNET]` tasks, or before switching to a different subsystem.
+**Commit after:** completing a task group or phase boundary, finishing all steps that touch the same file set, completing a batch of related `[SONNET]` tasks, or before switching to a different subsystem.
 
 **Do not commit after:** each individual step, CT-only status updates mid-phase, or trivially small changes that will be followed by more in the same area.
 

@@ -12,9 +12,11 @@ If `$ARGUMENTS` is empty, run `--check` to show environment status. If spawn.jso
 
 ## Modes
 
-- **opus N** — N Opus sessions in one terminal window (tabs)
-- **sonnet N** — N Sonnet sessions in one terminal window (tabs)
-- **duo N** — N Sonnet + N Opus in separate named windows (Sonnet launches first). Creates channel infrastructure if missing.
+| Mode | Sessions | Recommended | Notes |
+|------|----------|-------------|-------|
+| `opus N` | N Opus | **Yes (default)** | Native Sonnet subagent dispatch. No persistent listener overhead. |
+| `sonnet N` | N Sonnet | Specialized | For high-volume Sonnet-only workloads. |
+| `duo N` | N Sonnet + N Opus | Legacy/specialized | Persistent listeners via file-based IPC. Use when Sonnet sessions need their own persistent context. |
 
 ## Cross-Platform Support
 

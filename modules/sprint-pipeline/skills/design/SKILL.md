@@ -23,14 +23,18 @@ Let the skill complete fully before proceeding.
 
 ### Step 2b: Classify tasks for Opus/Sonnet split
 
-Review every task. Classify each as `[AGENT]`, `[OPUS]`, `[SONNET]`, or `[PARENT]`:
+Review every task. Classify each as `[OPUS]`, `[SONNET]`, or `[PARENT]`:
 
 | Tag | When to use |
 |-----|------------|
-| `[AGENT]` | Self-contained with clear file paths + acceptance criteria. Runs as Opus subagent. |
-| `[SONNET]` | Mechanical, pattern-following: spec-to-const definitions, scaffolding, bulk rename, test implementation. |
-| `[OPUS]` | Requires parent context, judgment, or design decisions. |
-| `[PARENT]` | Requires conversation context or orchestration. |
+| `[SONNET]` | Self-contained with clear file paths + acceptance criteria. Spawned as Sonnet subagent via `Agent(model: "sonnet")`. |
+| `[OPUS]` | Requires parent context, judgment, or design decisions. Executed directly by Opus. |
+| `[PARENT]` | Requires conversation context, orchestration, or user-facing decisions. |
+
+Classification rules:
+1. If a task has clear inputs (file paths), clear outputs (acceptance criteria), and requires no design judgment → `[SONNET]`.
+2. When in doubt between OPUS and SONNET → `[OPUS]`. Budget waste from over-classifying as OPUS is recoverable; broken output from under-classifying is not.
+3. Everything else → `[SONNET]`. If in doubt between OPUS and SONNET, classify as OPUS.
 
 Annotate each task heading with its tag. Add summary table at top. MANDATORY — every plan with >5 tasks has Sonnet-eligible work.
 

@@ -1,6 +1,6 @@
 ---
 name: build
-description: "Automated build execution from approved plan. Routes tasks by classification (Agent/Opus/Sonnet/Parent), commits at logical boundaries. Phase /3 of the sprint pipeline. Also invoked as /3."
+description: "Automated build execution from approved plan. Routes tasks by classification (Opus/Sonnet/Parent), commits at logical boundaries. Phase /3 of the sprint pipeline. Also invoked as /3."
 ---
 
 # /build — Build (alias: /3)

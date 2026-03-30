@@ -5,6 +5,8 @@ description: "Verification listener service loop. Waits for work files in _pendi
 
 # /sonnet — Verification Listener
 
+> **Duo mode only.** This skill runs a persistent Sonnet listener for file-based IPC dispatch. In default mode (no `CC_DUO_MODE`), Sonnet subagents are spawned natively via `Agent(model: "sonnet")` — no persistent listener needed. Use `/spawn duo N` to enter duo mode.
+
 Infinite service loop. Wait for work -> execute -> wait again. Never initiate. Never stop.
 
 ## Startup

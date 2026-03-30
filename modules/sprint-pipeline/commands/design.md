@@ -18,11 +18,10 @@ Let the skill complete fully before proceeding.
 
 ### Step 2b: Classify tasks for Opus/Sonnet split
 
-Review every task. Classify each as `[AGENT]`, `[OPUS]`, `[SONNET]`, or `[PARENT]`:
+Review every task. Classify each as `[OPUS]`, `[SONNET]`, or `[PARENT]`:
 
 | Tag | When to use |
 |-----|------------|
-| `[AGENT]` | Self-contained with clear file paths + acceptance criteria. Runs as Opus subagent. |
 | `[SONNET]` | Mechanical, pattern-following: spec-to-const definitions, scaffolding from template, bulk rename, test implementation from pattern. |
 | `[OPUS]` | Requires parent context, judgment, or design decisions: enriching/rewriting code, refactoring logic, cross-cutting propagation, design invariants, domain-specific UX, architecture. |
 | `[PARENT]` | Requires conversation context or orchestration: final verification, squad, user-facing decisions. |
@@ -45,19 +44,26 @@ Risk: brainstorming generates the most decisions per turn. They feel captured be
 
 "Knowing everything you know now, scrap the initial CT and write the thorough, complete, cold-start-ready version with full plan."
 
-Required sections: numbered steps with checkboxes + acceptance criteria, key file paths + infrastructure status, design decisions with rationale, out-of-scope list, each task classified `[AGENT]`/`[OPUS]`/`[SONNET]`/`[PARENT]` (default `[OPUS]`).
+Required sections: numbered steps with checkboxes + acceptance criteria, key file paths + infrastructure status, design decisions with rationale, out-of-scope list, each task classified `[OPUS]`/`[SONNET]`/`[PARENT]` (default `[OPUS]`).
 
 Anti-lost-in-the-middle: write in segments of ~7 items, count structural elements, cross-check against plan headings, reverse-scan last third.
 
 ### Step 5: Phase-gate verification
 
-MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]plan_adversarial_<timestamp>.md`. Agent writes to `verification_findings/plan_adversarial[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/plan_adversarial[_chN].md` (`run_in_background: true`). Checks: plan↔design doc match, classification correctness, missing dependencies, cross-model dependencies. Fix issues before proceeding.
+**Default mode:** Spawn Sonnet subagent via `Agent(model: "sonnet")` with adversarial plan review prompt.
+**Duo mode:** MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]plan_adversarial_<timestamp>.md`.
+
+Agent writes to `verification_findings/plan_adversarial[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/plan_adversarial[_chN].md` (`run_in_background: true`). Checks: plan↔design doc match, classification correctness, missing dependencies, cross-model dependencies. Fix issues before proceeding.
 
 ### Step 6: Generate Sonnet prompt (MANDATORY)
 
 Always classify. Always generate. If Step 2b found zero [SONNET] tasks, state why and skip.
 
-For [SONNET] tasks, write dispatch-ready prompt to `verification_findings/_pending_sonnet/[chN/]sonnet_<feature>_<timestamp>.md`. Use `type: implementation` for code tasks, `type: squad` for analysis (see `channel-routing.md` Dispatch Type Selection).
+**Default mode:** Task specs are embedded directly in the /3 plan. No dispatch file or YAML frontmatter needed.
+
+**Duo mode:** Write dispatch-ready prompt to `verification_findings/_pending_sonnet/[chN/]sonnet_<feature>_<timestamp>.md` with YAML frontmatter.
+
+Use `type: implementation` for code tasks, `type: squad` for analysis (see `channel-routing.md` Dispatch Type Selection).
 
 YAML frontmatter required:
 ```yaml
