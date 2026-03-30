@@ -10,7 +10,7 @@
 7. **Verify differently than you create.** Extract to flat lists, cross-reference bidirectionally.
 8. **YAGNI for features, not infrastructure.** No unrequested features. DO build extensible infrastructure.
 9. **Simulate as end user.** Zero context, zero charitable interpretation.
-10. **Agent-first.** Parent orchestrates, agents execute. Agents write to files, never reason from agent output held in memory. Before writing implementation code directly, ask: can this be dispatched to a Sonnet subagent? If it has clear acceptance criteria, the answer is yes. Exception: inline fixes under 5 lines of diff touching a single file.
+10. **Agent-first.** Parent orchestrates, agents execute. Agents write to files, never reason from agent output held in memory. Before writing implementation code directly, ask: can this be dispatched to a Sonnet subagent? If it has clear acceptance criteria, the answer is yes. Exception: inline fixes under 5 changed lines touching a single file.
 
 ## Universal Corrections
 
