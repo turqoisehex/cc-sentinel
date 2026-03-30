@@ -24,21 +24,30 @@ For each step in CT:
 1. Read CT for current step.
 
 2. Execute by classification:
-   - **`[AGENT]`**: Spawn subagent with step description, acceptance criteria, file paths, targeted context.
+   - **`[SONNET]`**: Spawn `sonnet-implementer` subagent via `Agent(model: "sonnet")`. Pass: spec reference, file paths, acceptance criteria, output paths. Subagent writes results to disk, returns concise summary. For parallel tasks: spawn multiple with `run_in_background: true`.
    - **`[OPUS]`**: Execute directly. Requires conversation context or design judgment.
    - **`[PARENT]`**: Execute directly. Orchestration or user-facing decision.
-   - **`[SONNET]`**: Dispatch to `_pending_sonnet/[chN/]`. Wait via `wait_for_results.sh` (background). Do NOT execute yourself.
+
+   **Duo mode fallback:** If `CC_DUO_MODE=1` is set and a Sonnet listener is active, `[SONNET]` tasks may be dispatched via file-based IPC to `_pending_sonnet/[chN/]` instead.
 
 3. Update CT — cold-start ready, mark completed steps.
 
 4. Repeat until a **commit boundary** (see below).
 
-5. Commit at boundary:
-   ```bash
-   bash scripts/channel_commit.sh --channel N --files "<files>" -m "<message>" --skip-squad
-   ```
+5. Verify before commit:
+   Stage all files you intend to commit first. Do not stage additional files after this point.
+   Pre-compute the diff hash: `git diff --cached > verification_findings/diff_chN.tmp && git hash-object --stdin < verification_findings/diff_chN.tmp`. Pass this value to `commit-verifier` as the `commit hash` field.
+   Spawn `commit-verifier` subagent via `Agent(model: "sonnet")`. Pass: channel, staged diff path, commit hash.
+   IMPORTANT: Do not stage additional files between running the verifier and calling channel_commit.sh — the hash in the verifier output must match the live diff at commit time.
+   The subagent must write `HASH: <hash>` into its output files so `validate_results()` can confirm integrity.
+   - PASS/WARN: proceed with `bash scripts/channel_commit.sh --channel N --files "<files>" -m "<message>" --local-verify`
+   - FAIL: review findings, fix, re-verify.
+
+   **Duo mode fallback:** Omit `--local-verify` — channel_commit.sh dispatches to the Sonnet listener automatically.
 
 6. Repeat from step 1.
+
+In default mode, /verify spawns `sonnet-verifier` natively. In duo mode, /verify dispatches to the Sonnet listener.
 
 ### Commit boundaries
 
