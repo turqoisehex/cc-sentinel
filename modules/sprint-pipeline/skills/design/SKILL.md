@@ -27,7 +27,7 @@ Review every task. Classify each as `[OPUS]`, `[SONNET]`, or `[PARENT]`:
 
 | Tag | When to use |
 |-----|------------|
-| `[SONNET]` | Self-contained with clear file paths + acceptance criteria. Spawned as Sonnet subagent via `Agent(model: "sonnet")`. |
+| `[SONNET]` | Self-contained with clear file paths + acceptance criteria, OR mechanical/pattern-following work. Spawned as Sonnet subagent via `Agent(model: "sonnet")`. |
 | `[OPUS]` | Requires parent context, judgment, or design decisions. Executed directly by Opus. |
 | `[PARENT]` | Requires conversation context, orchestration, or user-facing decisions. |
 
