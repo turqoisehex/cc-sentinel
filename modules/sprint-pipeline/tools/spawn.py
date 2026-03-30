@@ -128,6 +128,7 @@ class KeySender(abc.ABC):
     def type_line(self, text: str) -> None:
         """Type text and press Enter."""
         self.type_text(text)
+        time.sleep(0.15)  # Let terminal process typed text before Enter
         self.press_enter()
 
 
