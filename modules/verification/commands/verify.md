@@ -100,12 +100,10 @@ agents:
     output_path: verification_findings/squad_[chN_]sonnet/dependency.md
   - name: cold_reader
     output_path: verification_findings/squad_[chN_]sonnet/cold_reader.md
-  - name: performance
-    output_path: verification_findings/squad_[chN_]sonnet/performance.md
 ---
 ```
 
-After frontmatter, include: WORK_PRODUCT, SOURCE_SPEC, SCOPE_SUMMARY from Step 3, and the full 6-agent prompts from the verification squad reference.
+After frontmatter, include: WORK_PRODUCT, SOURCE_SPEC, SCOPE_SUMMARY from Step 3, and the full 5-agent prompts from the verification squad reference.
 
 For `on <files>`: agents focus only on specified files.
 For `full`: agents may batch-process if diff is large.

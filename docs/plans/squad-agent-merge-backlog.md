@@ -1,27 +1,33 @@
-# Squad Agent Merge — Backlog Item
+# Squad Agent Merge — COMPLETE (2026-03-30)
 
-**Status:** Deferred until native subagent migration is installed and tested.
+**Status:** Implemented. 6→5 agents.
 
-## Intent
+## Decision
 
-Reduce the 6-agent verification squad to 3 agents by merging overlapping concerns:
+Evidence-based analysis of 8-9 verification rounds across 6 squad directories showed each agent catches genuinely unique findings that other agents miss. Only performance→mechanical was safe to merge without quality loss.
 
-| Current Agent | Merge Into | Rationale |
-|--------------|-----------|-----------|
-| mechanical | Keep | Unique: literal spec compliance, syntax, formatting |
-| adversarial | adversarial (expanded) | Absorbs regression checks: loss-of-functionality, behavioral regressions, silent breakage |
-| completeness | Keep | Unique: coverage gaps, missing edge cases |
-| dependency | Fold into adversarial | Dependency issues are adversarial in nature |
-| cold_reader | cold_reader (expanded) | Absorbs regression-adjacent readability: does the diff make sense to someone with zero context? |
-| performance | Fold into mechanical | Performance is a mechanical property |
+## Final Agent Set (5)
 
-## Design Constraints
+| Agent | Absorbed | Unique Value |
+|-------|----------|-------------|
+| mechanical | + performance | Byte-level propagation parity, parameter ranges, enum validity, O(n²)+, N+1 queries, hot-path allocation |
+| adversarial | + regression pre-pass | Env var edge cases, subagent env inheritance, voice compliance, mandatory regression checking (callers, stale refs, changed defaults) |
+| completeness | (unchanged) | Exhaustive dispatch site tables, spec §-by-§ coverage maps, out-of-scope negative guards, gap closure tracking |
+| dependency | (unchanged) | File collision matrices, DAG proofs, write hazards, end-to-end chain tracing |
+| cold_reader | (unchanged) | Zero-context readability, orphaned context, outcome claims, jargon, presuppositions |
 
-- The regression agent (used in R7 of the migration) proved its value — its checks must not be lost, only redistributed.
-- "Fold into adversarial+cold_reader" means: adversarial gets the behavioral regression checks (does this break existing functionality?), cold_reader gets the readability regression checks (would a newcomer understand what changed and why?).
-- Agent prompts must be updated, not just renamed. The merged agents need explicit instructions covering the absorbed concerns.
-- The `manifest.json` smart filtering (doc-only → cold_reader, tests → mechanical+completeness, etc.) must be updated for the new agent set.
+## Why Not 3
+
+Original plan was 6→3 (fold dependency→adversarial, completeness→adversarial, performance→mechanical). Analysis of actual findings showed:
+- **dependency** uniquely caught Wayland SENTINEL_LISTENER gap, file collision matrices, SONNET-before-OPUS write hazards — adversarial never finds these
+- **completeness** uniquely caught missing DB tables, exhaustive dispatch site enumeration, Implementation Status Maps — adversarial focuses on what's wrong, not what's missing
+
+## Changes Made
+
+- `verification-squad.md`: Agent 6 (performance) removed, performance checks merged into Agent 1 (mechanical) prompt
+- Adversarial: Step 4 "Regression Pre-Pass" added as mandatory for all code changes — caller tracing, stale reference grep, changed-default consumer verification
+- Propagated to `~/.claude/reference/verification-squad.md`
 
 ## Origin
 
-User decision during native subagent migration /4 squad R7 (2026-03-29). CT recorded: "regression agent → fold into adversarial+cold_reader (6→3 agents post-migration)."
+User decision during native subagent migration /5 finalize (2026-03-30). Original 6→3 intent from /4 R7 (2026-03-29), revised after evidence-based analysis.

@@ -72,7 +72,7 @@ Opus reviews all four → `verification_findings/perfect_simplify_report[_chN].m
 
 ## Phase 3: Squad Loop (max 3 rounds)
 
-DELEGATE `perfect_squad_<timestamp>.md` with 6-agent prompts from `.claude/reference/verification-squad.md` → `verification_findings/squad_[chN_]sonnet/`.
+DELEGATE `perfect_squad_<timestamp>.md` with 5-agent prompts from `.claude/reference/verification-squad.md` → `verification_findings/squad_[chN_]sonnet/`.
 
 All agents must `VERDICT: PASS` or `VERDICT: WARN`. FAIL: fix → re-run failed agents only. Repeat until clean or 3 rounds. After round 3, present remaining to user.
 

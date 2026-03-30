@@ -224,7 +224,7 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     fi
     [[ "$SQUAD_ALLOWED" == "false" ]] && continue
     # Source of truth for agent names: modules/verification/reference/verification-squad.md
-    SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+    SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md")
 
     # Check for manifest.json (smart filtering) — overrides default SQUAD_EXPECTED
     if [[ -f "$SQUAD_DIR/manifest.json" ]]; then
@@ -240,7 +240,7 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
           done <<< "$MANIFEST_AGENTS"
           # If we ended up with empty array, restore default
           if [[ ${#SQUAD_EXPECTED[@]} -eq 0 ]]; then
-            SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+            SQUAD_EXPECTED=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md")
           fi
         fi
       fi

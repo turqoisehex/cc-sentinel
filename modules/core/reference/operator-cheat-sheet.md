@@ -20,7 +20,7 @@ Quick reference for running CC sessions with cc-sentinel governance.
 |---------|-------------|
 | `/opus N` | Set channel for multi-Opus parallel sessions |
 | `/grill` | Adversarial self-check (4 questions, verify each) |
-| `/verify [scope]` | up to 6-agent verification (default/full/last N/since/on) |
+| `/verify [scope]` | up to 5-agent verification (default/full/last N/since/on) |
 | `/cold` | Prepare CURRENT_TASK.md for cold start |
 | `/sonnet` | Verification listener (duo mode only — run in Sonnet terminal) |
 | `/rewrite` | Ground-up rewrite of a subsystem |
@@ -93,7 +93,7 @@ Each channel pair is isolated: Opus N dispatches to `_pending_sonnet/chN/`, Sonn
 |------|---------|
 | **TaskCreate** | Claude Code's built-in task tracking tool. Commands use "TaskCreate every step" to mean: create a checklist of tasks and mark them in_progress → completed as you go. |
 | **CT** | CURRENT_TASK.md — the session state file. |
-| **Squad** | The verification squad — up to 6 agents (mechanical, adversarial, completeness, dependency, cold reader, performance). Invoked via `/verify`. |
+| **Squad** | The verification squad — up to 5 agents (mechanical, adversarial, completeness, dependency, cold reader). Performance checks integrated into mechanical. Invoked via `/verify`. |
 
 ---
 

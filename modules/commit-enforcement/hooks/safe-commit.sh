@@ -54,8 +54,8 @@ done
 
 # --- Manifest-aware agent list ---
 # Reads manifest.json from a squad directory. Sets SQUAD_EXPECTED array.
-# If manifest is missing, invalid, or empty: uses default 6-agent list.
-DEFAULT_AGENTS=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md" "performance.md")
+# If manifest is missing, invalid, or empty: uses default 5-agent list.
+DEFAULT_AGENTS=("mechanical.md" "adversarial.md" "completeness.md" "dependency.md" "cold_reader.md")
 parse_manifest_agents() {
   local squad_dir="$1"
   SQUAD_EXPECTED=("${DEFAULT_AGENTS[@]}")

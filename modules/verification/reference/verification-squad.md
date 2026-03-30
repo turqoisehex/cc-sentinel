@@ -2,18 +2,17 @@
 
 **Trigger:** Before ANY completion claim. Squad is the **default** — you must actively qualify for an exemption to skip it. If unsure, run it.
 
-### The Six Agents
+### The Five Agents
 
 Launch all applicable agents in parallel (`run_in_background: true`). Write to `squad_opus/` or `squad_sonnet/` (per session-bound dirs rule below). Smart filtering may reduce the set — see `/verify` SKILL.md for filtering rules.
 
 | Agent | File | What It Catches |
 |---|---|---|
-| Mechanical Auditor | `mechanical.md` | Wrong file paths, constants, enum values, counts, **API signatures** — anything greppable against disk |
+| Mechanical Auditor | `mechanical.md` | Wrong file paths, constants, enum values, counts, **API signatures**, **O(n²)+, N+1 queries, unbounded memory** — anything greppable or measurable against disk |
 | Adversarial Reader | `adversarial.md` | **Spec sanity (hallucinated content)**, contradictions, rule violations, impossible instructions, charity bias |
 | Completeness Scanner | `completeness.md` | Missing requirements, unassigned items, spec gaps. **Sequential batches of 7 for >20 items.** |
 | Dependency Tracer | `dependency.md` | **Missing migrations, silent default changes, untraced call sites** — every change traced one level out |
 | Cold Reader | `cold_reader.md` | **Semantic errors invisible to the author** — nonsense, broken/dead instructions, orphaned context, stale language. Reads with zero intent knowledge. |
-| Performance Auditor | `performance.md` | **CRITICAL/HIGH performance issues** — O(n²)+, N+1 queries, unbounded memory, sync blocking in async context |
 
 Each agent MUST end with `VERDICT: PASS`, `VERDICT: WARN` + issue count, or `VERDICT: FAIL` + issue count. WARN indicates issues found but none severe enough to block — the commit gate treats WARN as passing.
 
@@ -127,9 +126,16 @@ Claimed, found, searched
 - Check project rules files (`.claude/rules/design-invariants.md`, terminology, etc.) if they exist
 - Grep changes against any project-specific invariants
 
+**Performance checks (integrated from performance auditor):**
+- For each function/method/algorithm: assess time/space complexity. Flag O(n²)+ where O(n) exists, unbounded memory growth, N+1 queries.
+- For each I/O operation: check for batching, caching, streaming.
+- For each synchronous operation: check if it blocks an async context.
+- Mark: `[P]` PERFORMANCE_ISSUE (CRITICAL/HIGH only), `[OK]` CHECKED_CLEAN.
+- Only CRITICAL (O(n²)+, unbounded memory, N+1, sync blocking async) and HIGH (missing batching, lock contention, hot-path allocations, redundant I/O) are reported.
+
 **Two-layer verification:** After finding issues, challenge each one. Is this a real violation or a false positive? Discard false positives before reporting. Only genuine issues count toward VERDICT.
 
-VERDICT is PASS only if Issues = 0. `[X]` (unverified) = FAIL. `[~]` (approximate) = FAIL if the difference is material (wrong count, wrong type); PASS if cosmetic (e.g., formatting difference). State reasoning for each `[~]`.
+VERDICT is PASS only if Issues = 0 AND no CRITICAL performance issues. `[X]` (unverified) = FAIL. `[~]` (approximate) = FAIL if the difference is material (wrong count, wrong type); PASS if cosmetic. `[P]` CRITICAL = FAIL. `[P]` HIGH = WARN. State reasoning for each `[~]`.
 ```
 
 ---
@@ -158,15 +164,23 @@ SCOPE: [paste one-sentence scope]
    - Flag zero-provenance: no git blame, no design doc, no user request
    - Flagged → mark SUSPECT. May invalidate downstream verification.
 
-4. Check CONTRADICTIONS: instruction A makes B impossible? Pre-verified fact contradicts later task? Two agents writing same file? X in one place, NOT-X in another?
+4. **REGRESSION PRE-PASS** (mandatory for all code changes):
+   - Identify baseline: what behavior existed before these changes? Read the diff (`git diff` or `git show`), note every function/method/class modified.
+   - For each modified function: grep for ALL callers. Verify callers still receive expected return types, argument counts, and side effects.
+   - For each deleted or renamed symbol: grep entire codebase for stale references.
+   - For each changed default value, enum member, or constant: trace all consumers and verify they handle the new value.
+   - Check 3-5 adjacent behaviors (functions in the same file, same class, same module) for unintended side effects.
+   - Mark: `[R]` REGRESSION (behavior that worked before now broken), `[~R]` REGRESSION_RISK (not proven broken but callers exist that weren't updated).
 
-5. Check RULE VIOLATIONS: design invariants, terminology, operational procedures.
+5. Check CONTRADICTIONS: instruction A makes B impossible? Pre-verified fact contradicts later task? Two agents writing same file? X in one place, NOT-X in another?
 
-6. Check IMPOSSIBLE INSTRUCTIONS: nonexistent APIs (grep), agent type lacking capabilities, circular dependencies, instructions requiring unstated context.
+6. Check RULE VIOLATIONS: design invariants, terminology, operational procedures.
 
-7. Check CHARITY BIAS: vague instructions sounding complete, "verify" without what/how, "update" without file/field/value, "handle edge cases" without listing them.
+7. Check IMPOSSIBLE INSTRUCTIONS: nonexistent APIs (grep), agent type lacking capabilities, circular dependencies, instructions requiring unstated context.
 
-8. Write via atomic protocol: `.tmp` then `mv -f` to final path.
+8. Check CHARITY BIAS: vague instructions sounding complete, "verify" without what/how, "update" without file/field/value, "handle edge cases" without listing them.
+
+9. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
 VERDICT: PASS | WARN (N issues) | FAIL (N issues)
@@ -174,7 +188,7 @@ Work product: [path]
 
 ## Summary (parent reads THIS section only)
 1. [CATEGORY] One-line — file:line or rule
-Categories: [SPEC_SANITY], [CONTRADICTION], [RULE_VIOLATION], [IMPOSSIBLE], [CHARITY_BIAS]
+Categories: [SPEC_SANITY], [REGRESSION], [CONTRADICTION], [RULE_VIOLATION], [IMPOSSIBLE], [CHARITY_BIAS]
 
 ---
 ## Detail (parent reads ONLY for judgment on specific finding)
@@ -446,65 +460,9 @@ VERDICT is PASS only if Total issues = 0.
 
 ---
 
-## Agent 6: Performance Auditor
-
-Output: `verification_findings/SQUAD_DIR/performance.md`
-
-```
-CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
-
-Flag performance issues in the work product. Only report CRITICAL and HIGH severity.
-
-WORK PRODUCT: [paste path(s)]
-SCOPE: [paste one-sentence scope]
-
-### What to flag
-
-- **CRITICAL:** O(n^2) or worse where O(n) exists, unbounded memory growth, N+1 queries, synchronous blocking in async context
-- **HIGH:** Missing batching opportunities, lock contention, unnecessary allocations in hot paths, redundant I/O
-- **MEDIUM:** Suboptimal but functional — e.g., linear search where hash lookup exists, repeated string concatenation
-- **LOW:** Style-level — e.g., could use const, unnecessary intermediate variable
-
-Only CRITICAL and HIGH are reported. MEDIUM and LOW are rated internally but not included in the output — their purpose is to ensure the agent consciously considers and discards lower-severity findings rather than missing them.
-
-### Procedure
-
-1. Read work product in full.
-
-2. For each function, method, or algorithm: assess time/space complexity. Flag if a more efficient approach exists and the scale warrants it.
-
-3. For each I/O operation: check for batching, caching, streaming. Flag N+1 patterns.
-
-4. For each synchronous operation: check if it blocks an async context.
-
-5. Mark: [P] PERFORMANCE_ISSUE (with severity), [~] POTENTIAL (context-dependent), [OK] CHECKED_CLEAN.
-
-6. Write via atomic protocol: `.tmp` then `mv -f` to final path.
-
-Output format:
-
-    VERDICT: PASS | WARN (N issues) | FAIL (N issues)
-    Work product: [path]
-
-    ## Summary (parent reads THIS section only)
-    1. [SEVERITY] One-line — file:function or line
-    Categories: [CRITICAL], [HIGH]
-
-    ---
-    ## Detail (parent reads ONLY for judgment on specific finding)
-    ### Finding 1: [title]
-    Location, current complexity, suggested alternative, evidence
-
-Two-layer verification: After finding issues, challenge each one. Is the scale large enough to matter? Is the suggested alternative actually feasible? Only report genuine CRITICAL and HIGH.
-
-VERDICT is PASS if CRITICAL = 0 AND HIGH = 0. WARN if HIGH > 0 but CRITICAL = 0. FAIL if any CRITICAL.
-```
-
----
-
 ## After All Launched Agents Complete
 
-1. Read **every** launched agent output file (may be fewer than 6 if smart filtering was applied)
+1. Read **every** launched agent output file (may be fewer than 5 if smart filtering was applied)
 2. For each file: confirm it contains a `VERDICT:` line. Missing VERDICT → treat as FAIL, re-read full content, action all findings.
 3. If ALL PASS or WARN: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
 4. If ANY FAIL: fix the issues, **then re-read ALL agent outputs** (not just the failed agent's), then re-run ONLY the failed agent(s). A fix for one agent's finding does not resolve findings from other agents.

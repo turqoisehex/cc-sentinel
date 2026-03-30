@@ -66,7 +66,7 @@ Handles: staging lock, diff capture, Sonnet dispatch, validation, retry, tests, 
 | Work | Type | Executed by |
 |------|------|-------------|
 | Check staged diff before commit | `commit-verification` | Parallel agents (read-only) |
-| Verify work product (up to 6-agent squad) | `squad` | Parallel agents (read-only) |
+| Verify work product (up to 5-agent squad) | `squad` | Parallel agents (read-only) |
 | Edit code, create files, run tests | `implementation` | One agent per task (full access) |
 
 ## Git Conflict Resolution

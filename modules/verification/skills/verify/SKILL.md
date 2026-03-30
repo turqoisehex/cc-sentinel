@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "Launch up to 6-agent verification squad against a scope of work. Agents check mechanics, adversarial cases, completeness, dependencies, cold-readability, and performance. Use after completing work or before claiming done."
+description: "Launch up to 5-agent verification squad against a scope of work. Agents check mechanics+performance, adversarial+regression, completeness, dependencies, and cold-readability. Use after completing work or before claiming done."
 ---
 
 # /verify — Launch Verification Squad
@@ -71,7 +71,7 @@ Before launching agents, classify the changed files to determine which agents ar
 | Docs only (.md, .txt, .rst) | cold_reader.md |
 | Tests only (*_test.*, *_spec.*, test_*) | mechanical.md, completeness.md |
 | Config only (.json, .yaml, .toml, .env*) | adversarial.md, dependency.md |
-| Source code (everything else) | all 6 |
+| Source code (everything else) | all 5 |
 | Mixed | union of matching categories |
 
 Write `manifest.json` to the squad directory. Agent names MUST include the `.md` extension (the commit gate checks filenames directly):
@@ -103,12 +103,10 @@ agents:
     output_path: verification_findings/squad_[chN_]sonnet/dependency.md
   - name: cold_reader
     output_path: verification_findings/squad_[chN_]sonnet/cold_reader.md
-  - name: performance
-    output_path: verification_findings/squad_[chN_]sonnet/performance.md
 ---
 ```
 
-After frontmatter, include: WORK_PRODUCT, SOURCE_SPEC, SCOPE_SUMMARY, and the full 6-agent prompts from the verification squad reference.
+After frontmatter, include: WORK_PRODUCT, SOURCE_SPEC, SCOPE_SUMMARY, and the full 5-agent prompts from the verification squad reference.
 
 ### Step 4b: While agents run
 

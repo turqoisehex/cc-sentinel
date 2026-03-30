@@ -9,7 +9,7 @@ Check triggers BEFORE starting work. Detect and invoke automatically — never a
 | New feature / UI change / behavior mod | `superpowers:brainstorming` before implementation |
 | Multi-step task with spec | `superpowers:writing-plans` before code |
 | Bug / test failure / unexpected behavior | `superpowers:systematic-debugging` before fixes |
-| Mid-sprint completion claim | Verification Squad (`/verify`) — up to 6 agents, hook-enforced |
+| Mid-sprint completion claim | Verification Squad (`/verify`) — up to 5 agents, hook-enforced |
 | Implementing feature/bugfix | `superpowers:test-driven-development` before code |
 | Plan with independent tasks | `superpowers:subagent-driven-development` |
 | 2+ independent tasks, no shared state | `superpowers:dispatching-parallel-agents` |
