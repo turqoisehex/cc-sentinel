@@ -26,6 +26,8 @@ Read the spec section **in full, start to finish**. Extract every discrete featu
 
 5. **Reverse-scan the last third.** Items in the final third of any document are most likely to be missed. After completing the full extraction, re-read the last 30% of the spec and verify every item appears in your checklist.
 
+6. **Cross-section verb scan.** After extraction, grep for UI verbs (`shows`, `displays`, `renders`, `presents`) in non-UI sections (engine, data, API, model). Each hit is a cross-cutting requirement: the data layer must compute it AND the UI layer must display it. Verify both sides independently. "Engine tracks X" ≠ "UI shows X."
+
 Output: numbered flat list with source file:lines and item count.
 
 ### Phase 3: Verify Each Item Against Code

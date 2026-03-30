@@ -20,13 +20,15 @@ Each agent MUST end with `VERDICT: PASS`, `VERDICT: WARN` + issue count, or `VER
 ### Rules
 
 1. **All agents must PASS or WARN** before claiming completion. Any FAIL → fix issues → re-run only the failed agent(s).
-2. **Max 3 rounds.** Initial run + 2 re-runs. If any agent still FAILs after round 3: stop fixing. Delete the squad directory. Write remaining issues to CURRENT_TASK.md with `VERIFICATION_BLOCKED` marker and present to user with the list of unresolved issues and recommended actions. Do not attempt further autonomous fixes — remaining issues likely require design judgment.
-3. **After all launched agents PASS or WARN:** Write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md. Note: this is documentation only — hooks do NOT accept it as enforcement evidence. Only actual squad files satisfy the commit gate.
-4. **Squad files are ephemeral.** Gitignored. The commit hook cleans only COMPLETED squad directories (all expected files with VERDICT: PASS or WARN) after successful commit. In-progress or failed directories from other sessions are left untouched.
-5. **Replaces ad-hoc verification.** No extra agents unless Squad flags areas needing deeper investigation.
-6. **Hook-enforced.** The commit hook blocks non-exempt commits without all PASS/WARN in `squad_*/`. Use `--skip-squad` for WIP only.
-7. **Session-bound dirs.** `squad_opus/` or `squad_sonnet/` — no default `squad/`.
-8. **Source spec rule.** Completeness Scanner SOURCE_SPEC = authoritative spec or user request, never just CURRENT_TASK.md.
+2. **After fixing ANY agent FAIL, re-read ALL agent output files** before declaring the round resolved. Fixing one agent's issues does not resolve others — a different agent may have caught a separate problem in the same round. Never assume one fix covers all agents.
+3. **Missing VERDICT = FAIL.** If any agent output file lacks a `VERDICT:` line, treat it as FAIL. Re-read the full content and action all findings. Malformed output masks real issues.
+4. **Max 3 rounds.** Initial run + 2 re-runs. If any agent still FAILs after round 3: stop fixing. Delete the squad directory. Write remaining issues to CURRENT_TASK.md with `VERIFICATION_BLOCKED` marker and present to user with the list of unresolved issues and recommended actions. Do not attempt further autonomous fixes — remaining issues likely require design judgment.
+5. **After all launched agents PASS or WARN:** Write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md. Note: this is documentation only — hooks do NOT accept it as enforcement evidence. Only actual squad files satisfy the commit gate.
+6. **Squad files are ephemeral.** Gitignored. The commit hook cleans only COMPLETED squad directories (all expected files with VERDICT: PASS or WARN) after successful commit. In-progress or failed directories from other sessions are left untouched.
+7. **Replaces ad-hoc verification.** No extra agents unless Squad flags areas needing deeper investigation.
+8. **Hook-enforced.** The commit hook blocks non-exempt commits without all PASS/WARN in `squad_*/`. Use `--skip-squad` for WIP only.
+9. **Session-bound dirs.** `squad_opus/` or `squad_sonnet/` — no default `squad/`.
+10. **Source spec rule.** Completeness Scanner SOURCE_SPEC = authoritative spec or user request, never just CURRENT_TASK.md.
 
 ### Exemptions (ALL conditions must be true to skip)
 
@@ -247,9 +249,11 @@ SCOPE: [paste one-sentence scope]
 
 3. For EACH requirement: `[A]` ADDRESSED (cite section/line), `[G]` GAP (not addressed), `[P]` PARTIAL (missing detail — state what).
 
-4. Scan for ORPHANED ITEMS: TODO/TBD/"deferred" without owner, agent tasks without output paths, steps referencing unspecified input file paths.
+4. **Cross-section requirements:** Scan for UI verbs (shows, displays, renders, presents) in non-UI spec sections (engine, data, API). These are cross-cutting requirements — verify the UI layer actually implements them, not just the data layer. "Engine tracks X" ≠ "UI shows X."
 
-5. Reverse check: work product items NOT in spec → `[U]` UNSPECIFIED (flag, don't FAIL).
+5. Scan for ORPHANED ITEMS: TODO/TBD/"deferred" without owner, agent tasks without output paths, steps referencing unspecified input file paths.
+
+6. Reverse check: work product items NOT in spec → `[U]` UNSPECIFIED (flag, don't FAIL).
 
 6. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
@@ -500,7 +504,8 @@ VERDICT is PASS if CRITICAL = 0 AND HIGH = 0. WARN if HIGH > 0 but CRITICAL = 0.
 
 ## After All Launched Agents Complete
 
-1. Read all launched agent output files (may be fewer than 6 if smart filtering was applied)
-2. If ALL PASS or WARN: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
-3. If ANY FAIL: fix the issues, then re-run ONLY the failed agent(s)
-4. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`) are cleaned up automatically by the commit hook after a successful commit
+1. Read **every** launched agent output file (may be fewer than 6 if smart filtering was applied)
+2. For each file: confirm it contains a `VERDICT:` line. Missing VERDICT → treat as FAIL, re-read full content, action all findings.
+3. If ALL PASS or WARN: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
+4. If ANY FAIL: fix the issues, **then re-read ALL agent outputs** (not just the failed agent's), then re-run ONLY the failed agent(s). A fix for one agent's finding does not resolve findings from other agents.
+5. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`) are cleaned up automatically by the commit hook after a successful commit
