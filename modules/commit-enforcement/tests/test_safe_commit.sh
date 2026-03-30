@@ -102,7 +102,7 @@ create_squad_evidence() {
   local prefix="${1:-squad_run1}"
   local dir="verification_findings/${prefix}"
   mkdir -p "$dir"
-  for agent in mechanical.md adversarial.md completeness.md dependency.md cold_reader.md performance.md; do
+  for agent in mechanical.md adversarial.md completeness.md dependency.md cold_reader.md; do
     printf 'VERDICT: PASS\n' > "$dir/$agent"
   done
 }
@@ -314,9 +314,9 @@ setup_repo
 stage_code_file "src/index.ts" "console.log('hi')"
 HASH=$(get_staged_hash)
 create_agent_evidence "$HASH"
-# Create squad dir with one FAIL verdict (all 6 agents present, one fails)
+# Create squad dir with one FAIL verdict (all 5 agents present, one fails)
 mkdir -p "verification_findings/squad_fail1"
-for agent in mechanical.md adversarial.md completeness.md dependency.md performance.md; do
+for agent in mechanical.md adversarial.md completeness.md dependency.md; do
   printf 'VERDICT: PASS\n' > "verification_findings/squad_fail1/$agent"
 done
 printf 'VERDICT: FAIL\n' > "verification_findings/squad_fail1/cold_reader.md"
@@ -353,7 +353,6 @@ printf 'VERDICT: WARN\n' > "verification_findings/squad_warnmix/adversarial.md"
 printf 'VERDICT: PASS\n' > "verification_findings/squad_warnmix/completeness.md"
 printf 'VERDICT: WARN\n' > "verification_findings/squad_warnmix/dependency.md"
 printf 'VERDICT: PASS\n' > "verification_findings/squad_warnmix/cold_reader.md"
-printf 'VERDICT: PASS\n' > "verification_findings/squad_warnmix/performance.md"
 run_hook --internal --skip-tests --local-verify -m "squad warn"
 assert_exit 0 "exits 0 with WARN verdicts"
 teardown_repo
@@ -616,12 +615,12 @@ setup_repo
 stage_code_file "partial.sh" "echo partial"
 HASH=$(get_staged_hash)
 create_agent_evidence "$HASH"
-# Create squad dir with only 4 of 6 agents (missing dependency.md and performance.md)
+# Create squad dir with only 4 of 5 agents (missing dependency.md)
 mkdir -p "verification_findings/squad_partial"
 for agent in mechanical.md adversarial.md completeness.md cold_reader.md; do
   printf 'VERDICT: PASS\n' > "verification_findings/squad_partial/$agent"
 done
-# dependency.md and performance.md are missing
+# dependency.md missing
 run_hook --internal --skip-tests --local-verify -m "partial squad"
 assert_exit 1 "exits 1 with incomplete squad"
 assert_stderr_contains "COMMIT BLOCKED" "BLOCKED for incomplete squad"
@@ -662,19 +661,19 @@ run_hook --internal --skip-tests --local-verify -m "manifest filtered"
 assert_exit 0 "exits 0 with manifest-filtered 2-agent squad"
 teardown_repo
 
-# --- Test 31: manifest.json with invalid JSON -> falls through to default (all 6) ---
+# --- Test 31: manifest.json with invalid JSON -> falls through to default (all 5) ---
 echo ""
 echo "Test 31: manifest.json invalid JSON -> falls through to default"
 setup_repo
 stage_code_file "src/broken.sh" "echo broken"
 HASH=$(get_staged_hash)
 create_agent_evidence "$HASH"
-# Create squad with all 6 agents (default)
+# Create squad with all 5 agents (default)
 create_squad_evidence "squad_manifest_bad"
 # Add an invalid manifest.json
 printf '{invalid\n' > "verification_findings/squad_manifest_bad/manifest.json"
 run_hook --internal --skip-tests --local-verify -m "bad manifest"
-assert_exit 0 "exits 0 (invalid manifest falls back to default 6)"
+assert_exit 0 "exits 0 (invalid manifest falls back to default 5)"
 teardown_repo
 
 # --- Test 32: manifest.json with empty launched -> falls through to default ---
@@ -687,12 +686,12 @@ create_agent_evidence "$HASH"
 create_squad_evidence "squad_manifest_empty"
 printf '{"launched":[]}\n' > "verification_findings/squad_manifest_empty/manifest.json"
 run_hook --internal --skip-tests --local-verify -m "empty manifest"
-assert_exit 0 "exits 0 (empty launched array falls back to default 6)"
+assert_exit 0 "exits 0 (empty launched array falls back to default 5)"
 teardown_repo
 
-# --- Test 33: no manifest.json -> uses default 6 agents ---
+# --- Test 33: no manifest.json -> uses default 5 agents ---
 echo ""
-echo "Test 33: no manifest.json -> uses default 6 agents"
+echo "Test 33: no manifest.json -> uses default 5 agents"
 setup_repo
 stage_code_file "src/default.sh" "echo default"
 HASH=$(get_staged_hash)
@@ -700,7 +699,7 @@ create_agent_evidence "$HASH"
 create_squad_evidence "squad_no_manifest"
 # No manifest.json in squad dir
 run_hook --internal --skip-tests --local-verify -m "no manifest"
-assert_exit 0 "exits 0 (no manifest uses default 6)"
+assert_exit 0 "exits 0 (no manifest uses default 5)"
 teardown_repo
 
 # --- Test 34: cleanup respects manifest — only removes listed agents, squad dir cleaned ---
