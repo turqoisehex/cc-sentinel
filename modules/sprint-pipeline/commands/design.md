@@ -22,9 +22,13 @@ Review every task. Classify each as `[OPUS]`, `[SONNET]`, or `[PARENT]`:
 
 | Tag | When to use |
 |-----|------------|
-| `[SONNET]` | Mechanical, pattern-following: spec-to-const definitions, scaffolding from template, bulk rename, test implementation from pattern. |
-| `[OPUS]` | Requires parent context, judgment, or design decisions: enriching/rewriting code, refactoring logic, cross-cutting propagation, design invariants, domain-specific UX, architecture. |
-| `[PARENT]` | Requires conversation context or orchestration: final verification, squad, user-facing decisions. |
+| `[SONNET]` | Self-contained with clear file paths + acceptance criteria. Spawned as Sonnet subagent via `Agent(model: "sonnet")`. |
+| `[OPUS]` | Requires parent context, judgment, or design decisions. Executed directly by Opus. |
+| `[PARENT]` | Requires conversation context, orchestration, or user-facing decisions. |
+
+Classification rules:
+1. If a task has clear inputs (file paths), clear outputs (acceptance criteria), and requires no design judgment → `[SONNET]`.
+2. When in doubt between OPUS and SONNET → `[OPUS]`. Budget waste from over-classifying as OPUS is recoverable; broken output from under-classifying is not.
 
 Annotate each task heading with its tag. Add summary table at top. MANDATORY — every plan with >5 tasks has Sonnet-eligible work. If none qualifies, state why.
 
