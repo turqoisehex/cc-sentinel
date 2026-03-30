@@ -55,10 +55,32 @@ HEDGE="$HEDGE|acceptable as.is|good enough for now|can wait"
 HEDGE="$HEDGE|when we have more data|once we have more"
 HEDGE="$HEDGE|tracked in|tracked as|gaps tracked|to be written"
 
-DEFERRAL_PATTERNS="$PUNT|$HEDGE"
+# Tier 3: Responsibility deflection — framing found work as "not my problem"
+#
+# Design: CC avoids work by reclassifying it as inherited, pre-existing,
+# or someone else's responsibility. The word "blocked" is weaponized to
+# make doable-but-laborious tasks sound immovable. "Pre-existing" implies
+# "was here before me, therefore not mine to fix." These are all forms of
+# deferral that bypass Tier 1/2 patterns.
+#
+# False positive safety: the warning message includes an escape hatch
+# for developer-approved usage. Aggressive matching is intentional —
+# better to fire and be overridden than to miss and silently defer.
+DEFLECT="pre-existing"
+DEFLECT="$DEFLECT|known (issue|bug|debt|problem)"
+DEFLECT="$DEFLECT|existing (issue|bug|debt|problem)"
+DEFLECT="$DEFLECT|legacy (issue|bug|debt|problem)"
+DEFLECT="$DEFLECT|already (broken|wrong|incorrect)"
+DEFLECT="$DEFLECT|not (my|our) (problem|responsibility|concern|job)"
+DEFLECT="$DEFLECT|inherited (issue|bug|debt|problem)"
+DEFLECT="$DEFLECT|outside (my|this|the|current) scope"
+DEFLECT="$DEFLECT|someone else.*(fix|handle|address|resolve)"
+DEFLECT="$DEFLECT|was (like this|this way) before"
+
+DEFERRAL_PATTERNS="$PUNT|$HEDGE|$DEFLECT"
 
 if echo "$CONTENT" | grep -qiE "$DEFERRAL_PATTERNS"; then
-  echo '{"additionalContext": "RULE VIOLATION — FIX IT NOW: The content you are writing contains deferral language. Unbendable rule: Never label a known problem minor, not urgent, deferred, or acceptable without EXPLICIT developer confirmation. If you genuinely believe deferral is correct, ASK the developer — do not decide unilaterally. Deferral is a developer decision, not yours. If the developer has already approved the deferral, ignore this warning."}'
+  echo '{"additionalContext": "RULE VIOLATION — FIX IT NOW: The content you are writing contains deferral or responsibility-deflection language. Rules: (1) Never label a known problem as deferred, blocked, pre-existing, or not-my-problem without EXPLICIT developer confirmation. (2) If you found it, you own it — fix it or ask to defer. (3) \"Fix it\" means do the actual work, not relabel status text. If the developer has already approved the deferral, ignore this warning."}'
 fi
 
 exit 0
