@@ -36,9 +36,9 @@ Opus collects, deduplicates. For each decision: grep work product for evidence. 
 
 Review all issues found this sprint. For each: search CLAUDE.md for existing rule → strengthen/update. Not found → add as "Never X. Always Y." with rationale. Never duplicate.
 
-### 6. Generate test script
+### 6. Update manual test queue
 
-Write `test_script_sprint_N.md` — manual test scenarios for sprint deliverables.
+Read `MANUAL_TEST_QUEUE.md` (project root). Prune first: for each existing entry, search `test/` for automated coverage added since the entry was created — if now covered, remove it. Then review this sprint's deliverables for items meeting BOTH criteria: (1) cannot be verified by any automated test, script, or integration test, and (2) critically important — if broken, users will notice. Skip cosmetic, edge-case, or "nice to verify" items. For qualifying items not already in the queue, append a row: description, why not automatable, pass criteria, sprint added. If no items qualify, skip this step.
 
 ### 7. Final report
 
