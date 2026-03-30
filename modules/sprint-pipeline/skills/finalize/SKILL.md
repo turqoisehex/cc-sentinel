@@ -49,6 +49,7 @@ Read `MANUAL_TEST_QUEUE.md` (project root). Prune first: for each existing entry
 
 - Requirements extracted/verified: N
 - Fixed during verification: N (list each)
+- Budget: if `ccusage` is available (`npx ccusage` or global install), run `ccusage` for the sprint date range and include total input/output tokens and estimated cost. If not available, note "ccusage not installed" and skip — do not block finalization.
 - Quality gate: PASS (spec verified, code verified, 100% implementation, no remaining issues) or FAIL (any gap)
 
 ### 8. Merge (if on feature branch)

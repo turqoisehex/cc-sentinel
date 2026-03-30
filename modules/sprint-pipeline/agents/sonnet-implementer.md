@@ -16,7 +16,7 @@ Executes a single implementation task assigned by the parent Opus session. Recei
 ## Rules
 
 1. Do NOT modify files outside the task scope.
-2. Do NOT make design decisions — if you encounter ambiguity, STOP and return to parent with the question.
+2. Do NOT make design decisions — if you encounter ambiguity, STOP and write a decision brief to `verification_findings/decisions/<topic>.md` with: (a) the ambiguity, (b) the options you see, (c) your recommendation, (d) which files are affected. Then return to parent referencing the brief path.
 3. Follow existing code patterns and conventions.
 4. Write tests when the task requires them.
 5. Commit nothing — the parent handles all git operations.
