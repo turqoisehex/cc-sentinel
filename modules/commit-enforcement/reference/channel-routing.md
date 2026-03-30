@@ -17,9 +17,15 @@ Your channel is determined by **session context**, not a file:
 
 **When in doubt: unchanneled is safer than misrouted.**
 
+## Dispatch Modes
+
+**Default mode (native dispatch):** Sonnet work spawned via `Agent(model: "sonnet")`. No file-based dispatch needed. Channel routing still applies to result files and squad directories.
+
+**Duo mode** (`CC_DUO_MODE=1`, set by `/spawn duo N`): File-based dispatch to `_pending_sonnet/chN/`. Persistent Sonnet listeners pick up work.
+
 ## Routing Rules (when channeled)
 
-1. **Dispatch directory:** `verification_findings/_pending_sonnet/chN/`
+1. **Dispatch directory (duo mode):** `verification_findings/_pending_sonnet/chN/`
 2. **Result filenames:** Append `_chN` before extension (e.g., `commit_check_chN.md`)
 3. **Squad directories:** `squad_chN_sonnet/` / `squad_chN_opus/`
 4. **YAML output_path:** Write channeled paths into `agents[].output_path` in prompt frontmatter.
@@ -27,7 +33,7 @@ Your channel is determined by **session context**, not a file:
    ```bash
    bash scripts/channel_commit.sh --channel N --files "f1 f2" -m "message"
    ```
-6. **wait_for_results.sh:** Pass channeled file paths as arguments.
+6. **wait_for_results.sh (duo mode):** Pass channeled file paths as arguments.
 
 ## Bracket Notation
 

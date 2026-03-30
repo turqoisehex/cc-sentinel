@@ -44,7 +44,9 @@ Show consolidated findings. Do NOT auto-fix. **User gate.**
 
 ### Step 2: Staleness scan + dependency verification
 
-**MANDATORY SONNET DELEGATION.** Write single Sonnet prompt to `verification_findings/_pending_sonnet/[chN/]sprint_start_scan_<timestamp>.md`. Three agents:
+**Default mode:** Spawn Sonnet subagent via `Agent(model: "sonnet")` with the delegation prompt.
+
+**Duo mode:** MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]sprint_start_scan_<timestamp>.md`. Three agents:
 
 - **Agent A — Infrastructure:** Read sprint-dependent files. Report: exists/stubbed/missing, line counts, TODO markers.
 - **Agent B — Specs:** Read referenced specs. Verify content counts, cross-references, terminology.
@@ -58,7 +60,9 @@ Include: infrastructure table, spec status, known tasks, key files table.
 
 ### Step 4: Phase-gate verification
 
-**MANDATORY SONNET DELEGATION.** Agent checks every CT claim against disk. Fix discrepancies immediately.
+**Default mode:** Spawn Sonnet subagent via `Agent(model: "sonnet")` with the delegation prompt.
+
+**Duo mode:** MANDATORY SONNET DELEGATION. Agent checks every CT claim against disk. Fix discrepancies immediately.
 
 ### Step 5: Present for user approval
 

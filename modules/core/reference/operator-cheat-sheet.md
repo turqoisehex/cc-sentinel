@@ -32,15 +32,15 @@ Quick reference for running CC sessions with cc-sentinel governance.
 
 ---
 
-## Two-Terminal Workflow
+## Default Workflow (Native Dispatch)
 
 1. Opus terminal: `/audit` → `/design` → `/build` → `/perfect` → `/finalize`
-2. Sonnet terminal: `/sonnet` (stays active, processes `verification_findings/_pending_sonnet/`)
-3. Coordination: file signals, shared `CURRENT_TASK.md`, bash wait loops
+2. Sonnet work spawned natively via `Agent(model: "sonnet")` — no separate terminal needed
+3. For parallel Opus sessions: `/spawn opus N` — each Opus dispatches to others via `_pending_opus/`
 
-## Multi-Channel Workflow
+## Duo Workflow (Persistent Sonnet Listeners)
 
-For parallel Opus sessions working on different tasks simultaneously:
+For high-volume Sonnet work benefiting from session persistence. Set via `/spawn duo N` which sets `CC_DUO_MODE=1`.
 
 1. **Terminal 1 (Opus Ch1):** `/opus 1` → work through pipeline
 2. **Terminal 2 (Sonnet Ch1):** `/sonnet 1` (watches `_pending_sonnet/ch1/` only)

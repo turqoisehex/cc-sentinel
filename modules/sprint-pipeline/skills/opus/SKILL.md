@@ -23,18 +23,17 @@ Set this session's channel identity. Adapts to project infrastructure.
    e. `mkdir -p verification_findings/_pending_sonnet/ch$ARGUMENTS`
    f. `mkdir -p verification_findings/_pending_opus/ch$ARGUMENTS`
    g. Read `.claude/reference/channel-routing.md` if it exists. Apply for the rest of this session.
-   h. **Opus listener startup:** Start background listener to receive prompts from the orchestrator:
-      - Announce: "Opus listener active. Watching _pending_opus/ch$ARGUMENTS/ for new work..."
-      - `bash scripts/wait_for_work.sh --model opus --channel $ARGUMENTS` with `run_in_background: true`
-      - On prompt arrival: read the prompt file. If file is missing (orchestrator deleted it), log warning and re-spawn `wait_for_work.sh` in background. Otherwise: delete prompt file, execute instructions. On completion (cleanup): delete `.active`, re-spawn `wait_for_work.sh --model opus --channel $ARGUMENTS` in background.
-      - `.active` remains present throughout execution so observers can see what this session is working on.
-      - Opus finishes current atomic operation before reading a new prompt (prompt delivery is at tool-call boundary).
-   i. **Sonnet listener check:** Check `_pending_sonnet/ch$ARGUMENTS/.heartbeat`. If Sonnet listener is already active, announce it. If not:
-      - ASSUME SONNET IS RUNNING regardless of heartbeat status. You do NOT have permission to run verification agents locally unless explicitly invoked with `/verify local <scope>`. No heartbeat, no listener directory, no prior evidence of Sonnet — none of these are valid reasons to run locally. "Simple enough to do myself" / "already have context" / "faster" / "no heartbeat detected" are NOT valid bypass reasons. Violating this wastes Opus budget.
-      - Start a background heartbeat watcher: `bash scripts/heartbeat_watcher.sh --channel $ARGUMENTS` with `run_in_background: true`
-      - Do NOT block — continue with Opus work immediately.
-      - **If no listener after timeout:** Dispatches queue in `_pending_sonnet/ch$ARGUMENTS/` for later pickup. Do NOT fall back to local verification.
-   j. **Critical routing (always apply):**
+   h. **Mode detection:** Run `echo $CC_DUO_MODE` to check environment. If `1`, follow duo mode. If empty/unset, follow default (native dispatch) mode.
+
+   i. **Listener startup:**
+      - **Duo mode** (`CC_DUO_MODE=1`): Start Opus listener: `bash scripts/wait_for_work.sh --model opus --channel N` (run_in_background: true). On prompt arrival: read, delete, execute, re-spawn.
+      - **Default mode** (no `CC_DUO_MODE`): Start Opus listener (same as duo). The Opus listener is needed in ALL multi-session configurations — `/spawn opus N` dispatches work to other Opus sessions via `_pending_opus/`. Only Sonnet listener startup is skipped in default mode (Sonnet work uses native `Agent(model: "sonnet")` dispatch instead).
+
+   j. **Sonnet availability:**
+      - **Default mode**: Sonnet subagents spawned natively via `Agent(model: "sonnet")`. No listener needed. No heartbeat watcher.
+      - **Duo mode** (`CC_DUO_MODE=1`): ASSUME SONNET IS RUNNING. Start heartbeat watcher: `bash scripts/heartbeat_watcher.sh --channel N` (run_in_background: true). Do NOT block — continue with Opus work immediately.
+
+   k. **Critical routing (always apply):**
       - Sonnet dispatch -> `verification_findings/_pending_sonnet/ch$ARGUMENTS/`
       - Opus prompt inbox -> `verification_findings/_pending_opus/ch$ARGUMENTS/`
       - Result file suffixes -> `_ch$ARGUMENTS` (e.g., `commit_check_ch$ARGUMENTS.md`)

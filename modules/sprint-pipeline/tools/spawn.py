@@ -1045,7 +1045,13 @@ class Spawner:
             idx = session["index"]
             model_cap = model.capitalize()
             print("  Tab %s %s:" % (session["window"].capitalize(), idx), file=file)
-            print("    claude --model %s" % model, file=file)
+            env = ""
+            if mode == "duo":
+                env = "CC_DUO_MODE=1 "
+            if model == "sonnet":
+                env += "SENTINEL_LISTENER=true "
+            env += "SENTINEL_CHANNEL=%d " % idx
+            print("    %sclaude --model %s" % (env, model), file=file)
             print("    /rename %s %s" % (model_cap, idx), file=file)
             print("    /%s %s" % (model, idx), file=file)
             print(file=file)
@@ -1247,6 +1253,8 @@ class Spawner:
                 env_prefix = "SENTINEL_CHANNEL=%d" % idx
                 if model == "sonnet":
                     env_prefix = "SENTINEL_LISTENER=true " + env_prefix
+                if mode == "duo":
+                    env_prefix = "CC_DUO_MODE=1 " + env_prefix
                 key_sender.type_line("%s claude --model %s" % (env_prefix, model))
 
                 # Step 6: Sleep startup_delay
@@ -1582,6 +1590,12 @@ def main():
     if key_sender is None and detect_display_server() != "wayland":
         print("No keystroke sender available. Run: python spawn.py --check")
         return 1
+
+    if args.mode == "duo":
+        print("Note: Duo mode creates persistent Sonnet listeners. For most workflows,")
+        print("'opus N' with native subagent dispatch is more budget-efficient.")
+        print("Use duo when you have high-volume Sonnet work benefiting from session persistence.")
+        print()
 
     Spawner.spawn(args.mode, args.count, cfg.data, driver, key_sender)
     return 0

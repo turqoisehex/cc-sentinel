@@ -29,13 +29,24 @@ SESSION_JSONL=~/.claude/projects/<PROJECT_SLUG>/${SESSION_ID}.jsonl  # Replace <
 echo "$SESSION_JSONL"
 ```
 
-Write prompt to `verification_findings/_pending_sonnet/[chN/]cold_prep_<timestamp>.md`. Wait for results:
+**Dispatch decision — four-way case table:**
+
+| `CC_DUO_MODE` | `wait_for_results.sh` exists | Behavior |
+|---|---|---|
+| unset (default) | yes | Native dispatch via `Agent(model: "sonnet")`. Ignore listener infrastructure. |
+| unset (default) | no (core-only) | Native dispatch via `Agent(model: "sonnet")`. Same as above — core-only install still uses native dispatch. |
+| `1` (duo) | yes + listener active | File-based dispatch to `_pending_sonnet/`. Write prompt to `verification_findings/_pending_sonnet/[chN/]cold_prep_<timestamp>.md`. Existing behavior. |
+| `1` (duo) | yes + no listener | Warn: "No Sonnet listener — Step 1 will use subagents instead." Execute the two agent tasks directly as subagents. |
+
+In default mode, `CC_DUO_MODE` is unset and native dispatch takes priority regardless of whether listener infrastructure exists on disk.
+
+**Default mode:** Spawn the two agent tasks as Sonnet subagents via `Agent(model: "sonnet")` using the prompt content below.
+
+**Duo mode:** Write prompt to `verification_findings/_pending_sonnet/[chN/]cold_prep_<timestamp>.md`. Wait for results:
 ```bash
 rm -f verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md
+bash scripts/wait_for_results.sh verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md
 ```
-If `scripts/wait_for_results.sh` exists: `bash scripts/wait_for_results.sh verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md`
-
-If not (Core-only install without Commit Enforcement): execute the two agent tasks directly as subagents instead of dispatching to Sonnet.
 
 **Prompt file content** (YAML frontmatter required). Resolve bracket notation before writing:
 

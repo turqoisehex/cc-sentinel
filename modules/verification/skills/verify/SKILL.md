@@ -44,9 +44,23 @@ SCOPE_SUMMARY: [one sentence]
 SQUAD_DIR: squad_[chN_]sonnet/
 ```
 
-### Step 4: Delegate to Sonnet
+### Step 4: Launch verification
 
-DISPATCH TO SONNET AND ASSUME THE LISTENER IS RUNNING. You do NOT have permission to run squad agents locally unless invoked with `/verify local <scope>`.
+**Default mode (native dispatch):**
+Spawn `sonnet-verifier` subagent via `Agent(model: "sonnet")`. Pass: WORK_PRODUCT, SOURCE_SPEC, SCOPE_SUMMARY, SQUAD_DIR, list of agents to launch (from Step 4a filtering).
+
+The subagent:
+1. Writes manifest.json to squad directory
+2. Spawns verification agents in parallel
+3. Collects all results to standard paths
+4. Returns: overall verdict + finding counts + path to summary file
+
+**Duo mode** (`CC_DUO_MODE=1` or Sonnet listener active):
+Write squad prompt to `_pending_sonnet/[chN/]squad_<timestamp>.md` with YAML frontmatter. Wait via `bash scripts/wait_for_results.sh` (run_in_background: true).
+
+**Sonnet sessions** (detected by `SENTINEL_LISTENER=true` env var): Spawn the verification agents directly with `run_in_background: true` and write to the squad directory. Do NOT follow the delegation block. Detection: persistent Sonnet listeners set `SENTINEL_LISTENER=true` (injected by spawn.py at line 1249). Native Sonnet subagents do NOT have this var — they follow the default mode path and return results to their parent.
+
+**`/verify local <scope>`:** Preserved as an explicit override. Forces local agent execution regardless of mode — equivalent to default-mode behavior even in a duo session. Useful for quick single-agent re-runs where file-based dispatch is unnecessary overhead.
 
 #### Step 4a: Smart agent filtering
 
@@ -67,7 +81,7 @@ Write `manifest.json` to the squad directory. Agent names MUST include the `.md`
 
 If all files are source code (or mixed), launch all 6 and **delete any existing manifest.json** in the squad directory (to prevent stale partial-run manifests from affecting the commit gate).
 
-Follow this exact sequence:
+**Duo mode dispatch sequence** (when using file-based dispatch):
 1. Update CT — cold-start ready.
 2. Write squad prompt to `verification_findings/_pending_sonnet/[chN/]squad_<timestamp>.md`.
 3. Run wait loop for result files.
@@ -110,6 +124,8 @@ When all expected result files present:
 4. ANY FAIL -> list issues, ask user whether to fix and re-run.
 
 ### Step 6: Fix loop (if needed)
+
+**Fix ALL findings before launching the next round.** This includes FAIL, WARN, MEDIUM, LOW, and pre-existing issues surfaced by agents. Only INFO items may be deferred. The standard is: a fresh squad should return nothing but INFOs. Selectively fixing only FAILs or HIGHs while leaving LOWs creates a moving baseline that never converges.
 
 Fix issues -> re-run ONLY failed agent(s). Max 3 rounds total. After round 3: write `VERIFICATION_BLOCKED` + remaining issues to CT, present to user.
 

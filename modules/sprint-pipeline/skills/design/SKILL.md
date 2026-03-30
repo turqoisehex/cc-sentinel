@@ -56,11 +56,17 @@ Required sections: numbered steps with checkboxes + acceptance criteria, key fil
 
 ### Step 5: Phase-gate verification
 
-MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]plan_adversarial_<timestamp>.md`. Checks: plan<->design doc match, classification correctness, missing dependencies.
+**Default mode:** Spawn Sonnet subagent via `Agent(model: "sonnet")` with adversarial plan review prompt. Checks: plan<->design doc match, classification correctness, missing dependencies.
 
-### Step 6: Generate Sonnet prompt (MANDATORY)
+**Duo mode:** MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]plan_adversarial_<timestamp>.md`.
 
-For [SONNET] tasks, write dispatch-ready prompt to `verification_findings/_pending_sonnet/[chN/]sonnet_<feature>_<timestamp>.md`.
+### Step 6: Generate Sonnet task specifications (MANDATORY)
+
+For [SONNET] tasks, write task specifications that will be passed to `sonnet-implementer` subagents during /3 build.
+
+**Default mode:** Task specs are embedded directly in the /3 plan (each [SONNET] task's description serves as the subagent prompt).
+
+**Duo mode:** Write dispatch-ready prompt to `verification_findings/_pending_sonnet/[chN/]sonnet_<feature>_<timestamp>.md` with YAML frontmatter.
 
 YAML frontmatter required:
 ```yaml
