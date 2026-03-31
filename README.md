@@ -167,7 +167,7 @@ Also supports **multi-channel coordination** for parallel Opus/Sonnet workflows 
 
 ### Sprint Pipeline
 
-Structured workflow phases for complex features. Each phase has a slash command:
+Structured workflow phases for complex features. Each phase has a skill:
 
 | Command | Phase | Purpose |
 |---|---|---|
@@ -297,7 +297,7 @@ cc-sentinel/
 
 Each module contains some combination of:
 - `hooks/` -- Shell scripts registered in settings.json
-- `skills/` -- Slash commands and programmatic skills (`.claude/skills/`)
+- `skills/` -- Skills serving as both slash commands and programmatic invocations (`.claude/skills/`)
 - `reference/` -- Documentation injected into context
 - `agents/` -- Agent definitions (`.claude/agents/`)
 - `scripts/` -- Utility scripts copied to project root

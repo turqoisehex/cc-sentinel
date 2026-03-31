@@ -150,6 +150,9 @@ if (Test-Path $SettingsFile) {
             if ($settings.permissions.allow.Count -eq 0) {
                 $settings.permissions.PSObject.Properties.Remove("allow")
             }
+            if (@($settings.permissions.PSObject.Properties).Count -eq 0) {
+                $settings.PSObject.Properties.Remove("permissions")
+            }
         }
 
         if ($settings.statusLine -and $settings.statusLine.command -like "*context-awareness*") {

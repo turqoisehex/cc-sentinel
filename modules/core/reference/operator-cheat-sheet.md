@@ -14,7 +14,7 @@ Quick reference for running CC sessions with cc-sentinel governance.
 | Quality | `/perfect` | `/4` | Evaluate → simplify or rewrite → grill → verify → prove correctness |
 | Finalize | `/finalize` | `/5` | Review, prove, close out, reset |
 
-## Utility Commands
+## Utility Skills
 
 | Command | What it does |
 |---------|-------------|

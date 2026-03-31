@@ -152,6 +152,9 @@ for d in "$HOOKS_DIR" "$SCRIPTS_DIR" "$SKILLS_DIR" \
   fi
 done
 
+# Export for Python heredoc subprocesses (Phases 2 and 3)
+export SETTINGS_FILE CLAUDE_MD
+
 # --- Phase 2: Clean settings.json ---
 if [[ -f "$SETTINGS_FILE" ]]; then
   log ""
@@ -160,7 +163,6 @@ if [[ -f "$SETTINGS_FILE" ]]; then
   if [[ "$DRY_RUN" == "true" ]]; then
     log "  WOULD CLEAN: hooks, permissions, statusLine from $SETTINGS_FILE"
   else
-    export SETTINGS_FILE CLAUDE_MD
     "$PYTHON" << 'PYEOF'
 import json, os, re
 

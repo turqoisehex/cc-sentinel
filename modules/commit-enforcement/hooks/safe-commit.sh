@@ -64,7 +64,7 @@ parse_manifest_agents() {
     echo "WARNING: manifest.json exists but is not valid JSON — using default agents" >&2
     return
   fi
-  if ! jq -e '.launched' "$squad_dir/manifest.json" >/dev/null 2>&1; then
+  if ! jq -e 'has("launched")' "$squad_dir/manifest.json" >/dev/null 2>&1; then
     echo "WARNING: manifest.json exists but .launched key is missing — using default agents" >&2
     return
   fi
