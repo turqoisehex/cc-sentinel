@@ -31,7 +31,7 @@ if [[ ! -f "$WAIT_SCRIPT" ]]; then
   fi
 fi
 
-# Usage (internal): bash safe-commit.sh --internal [-m "message"] [--skip-squad] [--local-verify] [--skip-tests]
+# Usage (internal): bash safe-commit.sh --internal [-m "message"] [--skip-squad] [--local-verify] [--sonnet-verify] [--skip-tests]
 
 # --- Parse flags ---
 SKIP_SQUAD="false"
@@ -61,7 +61,7 @@ parse_manifest_agents() {
   SQUAD_EXPECTED=("${DEFAULT_AGENTS[@]}")
   [[ ! -f "$squad_dir/manifest.json" ]] && return
   if ! jq -e '.launched' "$squad_dir/manifest.json" >/dev/null 2>&1; then
-    echo "WARNING: manifest.json exists but contains invalid JSON — using default agents" >&2
+    echo "WARNING: manifest.json exists but .launched is missing or invalid — using default agents" >&2
     return
   fi
   local agents

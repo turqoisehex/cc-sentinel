@@ -639,7 +639,6 @@ run_hook --internal --skip-tests --local-verify -m "solo mode"
 # Then no result files -> HAVE_RESULTS=false -> skip per-commit
 # Squad check should still pass
 assert_exit 0 "exits 0 (per-commit skipped, squad passes)"
-assert_stderr_contains "No Sonnet listener" "warns about missing listener"
 assert_stderr_contains "Per-commit agent checks skipped" "skips per-commit checks"
 teardown_repo
 

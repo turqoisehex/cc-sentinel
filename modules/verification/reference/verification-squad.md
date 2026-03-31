@@ -269,7 +269,7 @@ SCOPE: [paste one-sentence scope]
 
 6. Reverse check: work product items NOT in spec → `[U]` UNSPECIFIED (flag, don't FAIL).
 
-6. Write via atomic protocol: `.tmp` then `mv -f` to final path.
+7. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
 VERDICT: PASS | WARN (N issues) | FAIL (N issues)
@@ -466,4 +466,4 @@ VERDICT is PASS only if Total issues = 0.
 2. For each file: confirm it contains a `VERDICT:` line. Missing VERDICT → treat as FAIL, re-read full content, action all findings.
 3. If ALL PASS or WARN: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
 4. If ANY FAIL: fix the issues, **then re-read ALL agent outputs** (not just the failed agent's), then re-run ONLY the failed agent(s). A fix for one agent's finding does not resolve findings from other agents.
-5. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`) are cleaned up automatically by the commit hook after a successful commit
+5. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`, `squad_chN_opus/`) are cleaned up automatically by the commit hook after a successful commit

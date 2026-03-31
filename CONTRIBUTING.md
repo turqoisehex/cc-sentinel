@@ -9,7 +9,7 @@ This is a side project maintained in spare time. Contributions are welcome — b
 - **Bash** 4.0+ (macOS ships 3.2 — use `brew install bash`)
 - **jq** for JSON processing (`brew install jq` / `apt install jq` / `choco install jq`)
 - **Git** 2.x+
-- **Python 3** (only needed for the sprint-pipeline module)
+- **Python 3** (required for settings.json merge during installation)
 
 ### Clone and Explore
 

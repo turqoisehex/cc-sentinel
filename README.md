@@ -79,7 +79,7 @@ Claude Code clones the repo and runs an interactive installer. The expected flow
 # Clone
 git clone https://github.com/turqoisehex/cc-sentinel.git ~/.claude/cc-sentinel
 
-# Install to current project (recommended)
+# Install to current project
 bash ~/.claude/cc-sentinel/install.sh --modules "core,context-awareness,verification" --target project
 
 # Or install globally
@@ -245,7 +245,7 @@ If anything fails, `/self-test` reports exactly what's wrong and how to fix it.
 | **Recommended for** | Teams, project-specific config | Solo developers, personal defaults |
 | **Hook paths** | Relative (`.claude/hooks/...`) | Absolute (`~/.claude/hooks/...`) |
 
-Most users should start with **project install**. Global install is useful for personal defaults you want everywhere.
+Most users should start with **global install**. Global install is useful for personal defaults you want everywhere.
 
 ## Configuration
 

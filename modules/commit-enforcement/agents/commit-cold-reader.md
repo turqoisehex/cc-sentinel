@@ -33,7 +33,7 @@ Diff hash: [hash from caller]
 
 ---
 
-## Detail (parent reads ONLY for judgment on specific finding)
+## Detail (parent reads ONLY for judgment on a specific finding)
 ### Finding 1: [title]
 What's wrong, why it reads as broken, evidence from diff
 ```

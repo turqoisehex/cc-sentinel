@@ -41,7 +41,7 @@ if [[ -n "$CONFIG_FILE" ]]; then
     (.statusline.bar_empty // "░"),
     (.statusline.format // "context {bar} {percentage}%"),
     (.statusline.color_normal // "37"),
-    (.statusline.color_warning // "31"),
+    (.statusline.color_warning // "33"),
     (.statusline.warning_indicator // ""),
     (.statusline.bar_style // "auto"),
     (.repeat_mode // "once_per_tier_reset_on_compaction"),
@@ -68,7 +68,7 @@ else
   BAR_EMPTY="░"
   FORMAT="context {bar} {percentage}%"
   COLOR_NORMAL="37"
-  COLOR_WARNING="31"
+  COLOR_WARNING="33"
   WARNING_INDICATOR=""
   BAR_STYLE="auto"
   REPEAT_MODE="once_per_tier_reset_on_compaction"

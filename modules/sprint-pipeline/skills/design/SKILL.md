@@ -9,13 +9,13 @@ description: "Design and planning phase: brainstorming, task classification (Opu
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-**Step 0:** Before any other work, TaskCreate every step. Mark in_progress->completed.
+**Step 0:** Before any other work, TaskCreate every step. Mark in_progress→completed.
 
 ## Procedure
 
 ### Step 1: Brainstorm
 
-Invoke `superpowers:brainstorming` skill. Flow: brainstorm -> design doc -> spec review -> `superpowers:writing-plans`.
+Invoke `superpowers:brainstorming` skill. Flow: brainstorm → design doc → spec review → `superpowers:writing-plans`.
 
 ### Step 2: writing-plans produces detailed implementation plan
 
@@ -45,7 +45,7 @@ BEFORE writing CT:
 1. Replay the entire brainstorming conversation.
 2. List every user decision, approval, rejection, refinement, constraint.
 3. For each: grep the design doc for evidence it's in a file.
-4. Missing -> write to design doc NOW.
+4. Missing → write to design doc NOW.
 
 Risk: brainstorming generates the most decisions per turn. They feel captured because they're in conversation. They are NOT captured until in a file.
 

@@ -104,6 +104,8 @@ Output: `verification_findings/SQUAD_DIR/performance.md` (where `SQUAD_DIR` is t
 ### F5. Smart Agent Filtering + 6-Agent Update
 **Module:** Verification + Commit Enforcement | **Type:** Edit prompts + hooks | **Risk:** Low (gate logic change needs care)
 
+> **Note:** The "6-agent" content in F5 was partially superseded by the performance→mechanical merge (2026-03-30). Smart filtering was implemented; performance.md was not added as a separate agent.
+
 Enhancement to `modules/verification/commands/verify.md` Step 4. Before launching agents, classify changed files and only launch relevant agents:
 
 | File Category | Agents Launched |

@@ -84,3 +84,8 @@ The spec is well-structured and covers the design comprehensively. The migration
 4. The breaking rename has no migration/deployment strategy (M5)
 
 Once these are addressed, the spec is implementable.
+
+## Resolution Status (2026-03-30)
+
+All MUST-FIX items were addressed during implementation:
+- M1-M5: Resolved — implementation incorporated all review feedback. See deployed code and tests for verification.

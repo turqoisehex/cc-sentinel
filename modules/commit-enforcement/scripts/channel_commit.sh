@@ -94,13 +94,13 @@ phase1_stage_and_dispatch() {
   currently_staged=$(git diff --cached --name-only 2>/dev/null || true)
   if [[ -n "$currently_staged" ]]; then
     local unrelated=""
-    for staged_file in $currently_staged; do
+    while IFS= read -r staged_file; do
       local is_ours="false"
       for f in "${FILE_ARRAY[@]}"; do
         [[ "$staged_file" == "$f" ]] && is_ours="true" && break
       done
       [[ "$is_ours" == "false" ]] && unrelated="$unrelated $staged_file"
-    done
+    done <<< "$currently_staged"
     [[ -n "$unrelated" ]] && echo "WARNING: Clearing unrelated staged files:$unrelated" >&2
   fi
 

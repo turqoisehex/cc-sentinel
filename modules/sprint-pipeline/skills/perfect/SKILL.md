@@ -9,30 +9,30 @@ description: "Post-implementation quality pass: evaluate, grill loop, verificati
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-**Step 0:** Before any other work, TaskCreate every step. Mark in_progress->completed.
+**Step 0:** Before any other work, TaskCreate every step. Mark in_progress→completed.
 
 ## Delegation
 
 **Default mode:** Steps marked DELEGATE: spawn Sonnet subagent via `Agent(model: "sonnet")` with the delegation prompt. Output to `verification_findings/` paths specified per step.
 
-**Duo mode:** Steps marked DELEGATE: update CT first, write self-contained prompt to `verification_findings/_pending_sonnet/[chN/]`, wait via `bash scripts/wait_for_results.sh <paths>`.
+**Duo mode:** Steps marked DELEGATE: update `CURRENT_TASK_chN.md` (or `CURRENT_TASK.md` if unchanneled) first, write self-contained prompt to `verification_findings/_pending_sonnet/[chN/]`, wait via `bash scripts/wait_for_results.sh <paths>`.
 
 ## Phase 1: Scope and Evaluate
 
 ### 1. Scope
 
 - Bare: session files, fall back to `git diff main...HEAD`.
-- Named subsystem: read every file -> `verification_findings/perfect_inventory[_chN].md`.
+- Named subsystem: read every file → `verification_findings/perfect_inventory[_chN].md`.
 
 ### 2. Evaluate
 
-Read in-scope files + authoritative spec + project rules. Catalog: accidental complexity, incomplete migrations, over/under-engineering, naming lies. Write to `verification_findings/perfect_evaluation[_chN].md`.
+Read in-scope files + authoritative spec + project-specific rules files. Catalog: accidental complexity, incomplete migrations, over/under-engineering, naming lies. Write to `verification_findings/perfect_evaluation[_chN].md`.
 
 ### 3. Branch — user gate
 
-- **Already elegant** -> Phase 2.
-- **Sound approach, messy execution** -> Step 4, then Phase 2.
-- **Mediocre approach** -> Step 5, then Phase 2.
+- **Already elegant** → Phase 2 (grill the original from Step 2).
+- **Sound approach, messy execution** → Step 4, then Phase 2.
+- **Mediocre approach** → Step 5, then Phase 2.
 
 Present assessment. Wait for approval.
 
@@ -60,6 +60,7 @@ Opus reviews all four → `verification_findings/perfect_simplify_report[_chN].m
 ### 5. Scrap and rewrite
 
 **5a** Design → `verification_findings/perfect_rewrite_design[_chN].md`: file structure, data flow, eliminations, preservations, migration strategy. **User gate.**
+
 **5b** DELEGATE build.
 **Default mode:** Spawn `sonnet-implementer` via `Agent(model: "sonnet")`. `_v2` suffix. TDD. One commit per unit via `channel_commit.sh`.
 **Duo mode:** Write to `_pending_sonnet/[chN/]perfect_rewrite_<timestamp>.md`.
@@ -72,7 +73,7 @@ Opus reviews all four → `verification_findings/perfect_simplify_report[_chN].m
 
 ## Phase 2: Grill Loop (max 5 rounds)
 
-`/grill` all `/perfect` work product. Fix -> test -> repeat until clean or 5 rounds. Batch all grill fixes into one commit before Phase 3. If approach is wrong (not cleanup), go back to Step 2. After round 5, present to user.
+`/grill` all `/perfect` work product. Fix → test → repeat until clean or 5 rounds. Batch all grill fixes into one commit before Phase 3. If approach is wrong (not cleanup), go back to Step 2. After round 5, present to user.
 
 ## Phase 3: Squad Loop (max 3 rounds)
 

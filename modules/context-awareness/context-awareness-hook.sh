@@ -35,7 +35,6 @@ TRIGGER_FILE="${FLAG_DIR}/.cc-ctx-trigger-${SESSION_ID}"
 
 # Trigger file exists — read message and level
 MESSAGE="$(jq -r '.message // empty' "$TRIGGER_FILE" | tr -d '\r')"
-LEVEL="$(jq -r '.level // ""' "$TRIGGER_FILE" | tr -d '\r')"
 
 if [[ -z "$MESSAGE" ]]; then
   rm -f "$TRIGGER_FILE"

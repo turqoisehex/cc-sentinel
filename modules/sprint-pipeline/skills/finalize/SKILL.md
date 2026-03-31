@@ -11,7 +11,7 @@ After `/perfect`, when sprint work is complete. Handles transcript mining, Sonne
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-**Step 0:** Before any other work, TaskCreate every step. Mark in_progress->completed.
+**Step 0:** Before any other work, TaskCreate every step. Mark in_progress→completed.
 
 ## Steps
 
@@ -29,7 +29,7 @@ If Sonnet contributed this sprint: `git log` to identify Sonnet commits. Read ch
 
 **Duo mode:** DELEGATE via `verification_findings/_pending_sonnet/[chN/]transcript_mining_<timestamp>.md`. Wait: `bash scripts/wait_for_results.sh` (run_in_background: true).
 
-Opus collects, deduplicates. For each decision: grep work product for evidence. Missing -> write it now.
+Opus collects, deduplicates. For each decision: grep work product for evidence. Missing → write it now.
 
 ### 4. Spec-to-code verification
 
@@ -39,7 +39,7 @@ Opus collects, deduplicates. For each decision: grep work product for evidence. 
 
 ### 5. Accumulated Corrections
 
-Review all issues found this sprint. For each: search CLAUDE.md for existing rule -> strengthen/update. Not found -> add as "Never X. Always Y." with rationale. Never duplicate.
+Review all issues found this sprint. For each: search CLAUDE.md for existing rule → strengthen/update. Not found → add as "Never X. Always Y." with rationale. Never duplicate.
 
 ### 6. Update manual test queue
 

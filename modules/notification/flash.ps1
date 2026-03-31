@@ -3,9 +3,9 @@ try { [Console]::In.ReadToEnd() | Out-Null } catch {}
 
 # R2D2-style sounds (simplified)
 
-function Boop { [console]::beep((Get-Random -Min 400 -Max 800), (Get-Random -Min 80 -Max 150)) }
-function Beep { [console]::beep((Get-Random -Min 1800 -Max 2400), (Get-Random -Min 40 -Max 100)) }
-function Chirp { [console]::beep((Get-Random -Min 1200 -Max 1800), (Get-Random -Min 50 -Max 120)) }
+function Boop { [console]::beep((Get-Random -Minimum 400 -Maximum 800), (Get-Random -Minimum 80 -Maximum 150)) }
+function Beep { [console]::beep((Get-Random -Minimum 1800 -Maximum 2400), (Get-Random -Minimum 40 -Maximum 100)) }
+function Chirp { [console]::beep((Get-Random -Minimum 1200 -Maximum 1800), (Get-Random -Minimum 50 -Maximum 120)) }
 
 $sounds = @(
     { Boop },
@@ -17,7 +17,7 @@ $count = Get-Random -Minimum 1 -Maximum 5
 for ($i = 0; $i -lt $count; $i++) {
     $sound = $sounds | Get-Random
     & $sound
-    if ($i -lt $count - 1) { Start-Sleep -Milliseconds (Get-Random -Min 30 -Max 100) }
+    if ($i -lt $count - 1) { Start-Sleep -Milliseconds (Get-Random -Minimum 30 -Maximum 100) }
 }
 
 # Flash taskbar

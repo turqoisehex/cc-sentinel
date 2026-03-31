@@ -29,6 +29,7 @@ Quick reference for running CC sessions with cc-sentinel governance.
 | `/status` | Phase, progress, blockers, context usage |
 | `/cleanup` | End-of-session housekeeping |
 | `/self-test` | Verify installation integrity |
+| `/spawn` | Launch parallel sessions (opus/sonnet/duo) |
 
 ---
 

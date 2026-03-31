@@ -10,7 +10,7 @@ Runs during `/5` Step 4. Verifies code implements everything the spec describes 
 
 Find spec section(s) defining "done": relevant spec files, `docs/plans/*.md`, or project planning documents. No spec → flag before proceeding.
 
-#### Phase 2: Extract the Flat Checklist
+### Phase 2: Extract the Flat Checklist
 
 Read the spec section **in full, start to finish**. Extract every discrete feature, UI element, behavior, data flow, and integration point into a numbered flat list.
 

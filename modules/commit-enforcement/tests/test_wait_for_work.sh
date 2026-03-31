@@ -115,8 +115,8 @@ echo ""
 
 # --- Test 1: --model opus selects _pending_opus dir ---
 echo "Test 1: --model opus selects _pending_opus dir"
-TMPDIR=$(mktemp -d)
-cd "$TMPDIR"
+TMPDIR_ROOT=$(mktemp -d)
+cd "$TMPDIR_ROOT"
 mkdir -p verification_findings/_pending_opus/ch1
 echo "work" > verification_findings/_pending_opus/ch1/task.md
 run_script --model opus --channel 1
@@ -125,13 +125,13 @@ assert_exit 0 "exit 0 (opus, channel 1)"
 assert_stdout_contains "_pending_opus/ch1/task.md" "stdout contains _pending_opus/ch1/task.md"
 assert_file_exists "verification_findings/_pending_opus/ch1/.active" ".active written"
 cd "$ORIG_DIR"
-rm -rf "$TMPDIR"
+rm -rf "$TMPDIR_ROOT"
 
 # --- Test 2: --model sonnet selects _pending_sonnet dir ---
 echo ""
 echo "Test 2: --model sonnet selects _pending_sonnet dir"
-TMPDIR=$(mktemp -d)
-cd "$TMPDIR"
+TMPDIR_ROOT=$(mktemp -d)
+cd "$TMPDIR_ROOT"
 mkdir -p verification_findings/_pending_sonnet/ch1
 echo "work" > verification_findings/_pending_sonnet/ch1/task.md
 run_script --model sonnet --channel 1
@@ -140,42 +140,42 @@ assert_exit 0 "exit 0 (sonnet, channel 1)"
 assert_stdout_contains "_pending_sonnet/ch1/task.md" "stdout contains _pending_sonnet/ch1/task.md"
 assert_file_exists "verification_findings/_pending_sonnet/ch1/.active" ".active written"
 cd "$ORIG_DIR"
-rm -rf "$TMPDIR"
+rm -rf "$TMPDIR_ROOT"
 
 # --- Test 3: Invalid model -> exit 1 with error ---
 echo ""
 echo "Test 3: Invalid model -> exit 1 with error"
-TMPDIR=$(mktemp -d)
-cd "$TMPDIR"
+TMPDIR_ROOT=$(mktemp -d)
+cd "$TMPDIR_ROOT"
 run_script --model invalid
 assert_exit 1 "exit 1 (invalid model)"
 assert_stderr_contains "opus.*sonnet|sonnet.*opus|must be" "stderr mentions valid model names"
 cd "$ORIG_DIR"
-rm -rf "$TMPDIR"
+rm -rf "$TMPDIR_ROOT"
 
 # --- Test 4: Oldest-first ordering ---
 echo ""
 echo "Test 4: Oldest-first ordering"
-TMPDIR=$(mktemp -d)
-cd "$TMPDIR"
+TMPDIR_ROOT=$(mktemp -d)
+cd "$TMPDIR_ROOT"
 mkdir -p verification_findings/_pending_sonnet/ch1
 echo "c" > verification_findings/_pending_sonnet/ch1/task_c.md
 echo "b" > verification_findings/_pending_sonnet/ch1/task_b.md
 echo "a" > verification_findings/_pending_sonnet/ch1/task_a.md
 # Age task_b to be oldest (100s in the past)
-python -c "import os,time; os.utime('verification_findings/_pending_sonnet/ch1/task_b.md', (time.time()-100, time.time()-100))"
+python -c "import os,time; os.utime('verification_findings/_pending_sonnet/ch1/task_b.md', (time.time()-100, time.time()-100))" || python3 -c "import os,time; os.utime('verification_findings/_pending_sonnet/ch1/task_b.md', (time.time()-100, time.time()-100))"
 run_script --model sonnet --channel 1
 kill_heartbeat "verification_findings/_pending_sonnet/ch1/.heartbeat_pid"
 assert_exit 0 "exit 0 (oldest-first)"
 assert_stdout_contains "task_b.md" "stdout returns oldest file (task_b.md)"
 cd "$ORIG_DIR"
-rm -rf "$TMPDIR"
+rm -rf "$TMPDIR_ROOT"
 
 # --- Test 5: .active file written with correct format ---
 echo ""
 echo "Test 5: .active file written with correct format"
-TMPDIR=$(mktemp -d)
-cd "$TMPDIR"
+TMPDIR_ROOT=$(mktemp -d)
+cd "$TMPDIR_ROOT"
 mkdir -p verification_findings/_pending_sonnet/ch2
 echo "work" > verification_findings/_pending_sonnet/ch2/task.md
 run_script --model sonnet --channel 2
@@ -192,13 +192,13 @@ else
   FAIL=$((FAIL + 1))
 fi
 cd "$ORIG_DIR"
-rm -rf "$TMPDIR"
+rm -rf "$TMPDIR_ROOT"
 
 # --- Test 6: Unchanneled (no --channel) uses top-level pending dir ---
 echo ""
 echo "Test 6: Unchanneled uses top-level _pending_sonnet dir"
-TMPDIR=$(mktemp -d)
-cd "$TMPDIR"
+TMPDIR_ROOT=$(mktemp -d)
+cd "$TMPDIR_ROOT"
 mkdir -p verification_findings/_pending_sonnet
 echo "work" > verification_findings/_pending_sonnet/task.md
 run_script --model sonnet
@@ -207,7 +207,7 @@ assert_exit 0 "exit 0 (unchanneled)"
 assert_stdout_contains "_pending_sonnet/task.md" "stdout contains _pending_sonnet/task.md (no ch subdir)"
 assert_file_exists "verification_findings/_pending_sonnet/.active" ".active written at top-level"
 cd "$ORIG_DIR"
-rm -rf "$TMPDIR"
+rm -rf "$TMPDIR_ROOT"
 
 # ==================== SUMMARY ====================
 

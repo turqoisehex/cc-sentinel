@@ -9,7 +9,7 @@ description: "Sprint start: spec integrity checking, staleness scan, dependency 
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-**Step 0:** Before any other work, TaskCreate every step. Mark in_progress->completed.
+**Step 0:** Before any other work, TaskCreate every step. Mark in_progress→completed.
 
 ## Procedure
 
@@ -31,8 +31,8 @@ c. **Tier 2 (detail):** ~1500–2500 line chunks at `## ` boundaries (never mid-
 #### 1b. Parent direct verification (while agents run)
 
 - **Tables:** Verify all arithmetic (row/column sums, totals).
-- **Cross-references:** Grep spec references to other files -> verify each exists on disk.
-- **Enums/constants:** Grep spec enum values -> compare against code definitions.
+- **Cross-references:** Grep spec references to other files → verify each exists on disk.
+- **Enums/constants:** Grep spec enum values → compare against code definitions. Flag mismatches.
 
 #### 1c. Consolidate
 
@@ -40,7 +40,7 @@ Read all agent outputs. Two-tier: cross-check "PARTIAL CONTEXT" items against ot
 
 #### 1d. Present findings
 
-Show consolidated findings. Do NOT auto-fix. **User gate.**
+Show consolidated findings. Do NOT auto-fix or suggest fixes unless asked. User decides what to fix. **User gate.**
 
 ### Step 2: Staleness scan + dependency verification
 
@@ -56,7 +56,7 @@ Read results. Fix stale items. Note already-accomplished. Fix terminology violat
 
 ### Step 3: Write INITIAL CT
 
-Include: infrastructure table, spec status, known tasks, key files table.
+Include: infrastructure table (what's built, paths, DO NOT REBUILD), spec status (specified vs. gaps), known tasks, key files table (paths + why).
 
 ### Step 4: Phase-gate verification
 

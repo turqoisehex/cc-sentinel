@@ -55,7 +55,7 @@ COMMANDS_DIR="$BASE/commands"
 SKILLS_DIR="$BASE/skills"
 REFERENCE_DIR="$BASE/reference"
 TEMPLATES_DIR="$BASE/templates"
-TOOLS_DIR="$BASE/tools"
+TOOLS_DIR="$([[ "$TARGET" == "global" ]] && echo "$BASE/tools" || echo "$HOME/.claude/tools")"
 CC_AWARENESS="$([[ "$TARGET" == "global" ]] && echo "$BASE/cc-context-awareness" || echo ".claude/cc-context-awareness")"
 
 # --- Known sentinel files ---
@@ -63,7 +63,7 @@ HOOKS=(
   agent-file-reminder.sh anti-deferral.sh auto-checkpoint.sh
   auto-format.sh comment-replacement.sh file-protection.sh
   post-compact-reorient.sh pre-compact-state-save.sh safe-commit.sh
-  session-orient.sh stop-task-check.sh flash-notification.sh
+  session-orient.sh stop-task-check.sh flash-notification.sh flash.ps1
 )
 
 SCRIPTS=(
@@ -95,7 +95,7 @@ TEMPLATES=(
 
 TOOLS=(spawn.py spawn.json)
 
-AGENTS=("sonnet-implementer.md" "sonnet-verifier.md" "commit-verifier.md")
+AGENTS=("sonnet-implementer.md" "sonnet-verifier.md" "commit-verifier.md" "commit-adversarial.md" "commit-cold-reader.md")
 
 # --- Remove function ---
 removed=0

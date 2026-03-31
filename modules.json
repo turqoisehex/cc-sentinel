@@ -359,6 +359,9 @@
         ],
         "reference": [
           "spec-verification.md"
+        ],
+        "templates": [
+          "plugin-auto-invoke.md"
         ]
       },
       "settings_merge": {},

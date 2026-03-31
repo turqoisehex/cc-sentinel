@@ -149,6 +149,8 @@ Two-tier listener bypass:
 - **Tier 1 (message pattern):** Replace `"Watching _pending/"` with `"Watching _pending_(sonnet|opus)/"`. Matches the announce line emitted by `/sonnet` and `/opus` command/skill docs. Fast and exact.
 - **Tier 2 (heartbeat probe):** If tier 1 misses (listener has moved past announce), probe for a fresh `.heartbeat` file (<15s) in any `_pending_sonnet/` or `_pending_opus/` directory. Combined with absence of completion language in the last message, this identifies an active listener. Guards against the stop hook forcing CT writes on listener sessions (which corrupts commits).
 
+> **Implementation note:** Tier 2 (heartbeat probe) was removed during implementation. Tests 8c/8d confirm this is deliberate — heartbeat files do not bypass the stale CT check.
+
 Opus listener sessions still get full stop-hook enforcement for their actual work output — the bypass only applies to the idle-wait and post-announce phases.
 
 ### 7. `safe-commit.sh`

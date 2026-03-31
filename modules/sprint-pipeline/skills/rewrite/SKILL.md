@@ -19,7 +19,7 @@ Read the subsystem completely — what the code does, not what comments say. Wri
 
 ### Step 2: Understand what it should do
 
-Read spec, design docs, CT, project rules. Write **Requirements Extraction** to the same file.
+Read spec, design docs, CT, project-specific rules files. Write **Requirements Extraction** to the same file: behavioral requirements, design constraints, integration points.
 
 ### Step 3: Catalog the debt
 
@@ -27,7 +27,7 @@ Compare Steps 1 and 2. Write **Debt Catalog** to the same file: accidental compl
 
 ### Step 4: Design the elegant version
 
-Write **Rewrite Design** to `verification_findings/rewrite_design[_chN].md`: new file structure, data flow, eliminations, preservations, migration strategy.
+Write **Rewrite Design** to `verification_findings/rewrite_design[_chN].md`: new file structure, data flow, what's eliminated (from debt catalog), what's preserved, migration strategy for external interfaces.
 
 Principles: one responsibility per file, minimal interfaces, names match behavior, YAGNI, consistent patterns.
 
@@ -45,7 +45,7 @@ Before swapping: (1) existing behavioral tests pass on new, (2) new tests pass, 
 
 ### Step 7: Swap and clean
 
-Rename new files to final names, update imports, delete old files (no tombstones), run full tests, atomic commit.
+Rename new files to final names, update imports, delete old files (no tombstones — git history is the record), run full tests, atomic commit.
 
 ### Step 8: Verify
 
@@ -55,6 +55,6 @@ Rename new files to final names, update imports, delete old files (no tombstones
 
 - The user invoked `/rewrite`. The answer is yes.
 - Preserve all behavior unless user explicitly says to change it.
-- Finish the migration. No partial rewrites.
+- Finish the migration. No partial rewrites — coexisting old+new is worse than either alone.
 - Old code is your spec when spec is ambiguous (unless it's a known bug).
 - Max ~10 files. If scope is larger, ask user to narrow.

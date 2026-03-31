@@ -22,7 +22,7 @@ Always read the current config before making changes. Use the Edit tool — neve
 
 ## What To Do
 
-1. Read `~/.claude/cc-context-awareness/config.json`
+1. Read the effective config file (local `./.claude/cc-context-awareness/config.json` if it exists, otherwise `~/.claude/cc-context-awareness/config.json`)
 2. Refer to the config schema and examples below
 3. Make targeted edits based on what the user wants
 

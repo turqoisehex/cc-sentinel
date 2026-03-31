@@ -70,6 +70,7 @@ elif [[ "$TOOL" == "MultiEdit" ]]; then
       MSG="You appear to have replaced code with a comment placeholder in edit $((i+1)) of a MultiEdit. This is almost never correct. Restore the original code and integrate your changes properly."
       MSG_ESCAPED=$(printf '%s' "$MSG" | jq -Rs '.' | tr -d '\r')
       echo "{\"additionalContext\": ${MSG_ESCAPED}}"
+      # Only one warning per MultiEdit invocation (intentional — avoids flooding)
       exit 0
     fi
   done

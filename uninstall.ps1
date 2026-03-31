@@ -28,7 +28,7 @@ $CommandsDir = Join-Path $Base "commands"
 $SkillsDir = Join-Path $Base "skills"
 $ReferenceDir = Join-Path $Base "reference"
 $TemplatesDir = Join-Path $Base "templates"
-$ToolsDir = Join-Path $Base "tools"
+$ToolsDir = if ($Target -eq "global") { Join-Path $Base "tools" } else { Join-Path $env:USERPROFILE ".claude" "tools" }
 
 # --- Known sentinel files ---
 $Hooks = @(
@@ -53,7 +53,7 @@ $Skills = @(
 $Reference = @("channel-routing.md","operator-cheat-sheet.md","spec-verification.md","verification-squad.md")
 $Templates = @("channel-template.md","current-task-template.md","design-invariants.md","plugin-auto-invoke.md","terminology.md")
 $Tools = @("spawn.py", "spawn.json")
-$Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-verifier.md")
+$Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-verifier.md","commit-adversarial.md","commit-cold-reader.md")
 
 # --- Remove function ---
 $script:removed = 0

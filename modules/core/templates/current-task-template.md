@@ -76,7 +76,7 @@ authoritative files need to be read before planning?)
 - **After compaction:** Read CLAUDE.md, then this file. Before resuming, verify your understanding of the current step by reading the actual target file(s). Do not trust the compacted summary's description of file state — verify against source. Then continue.
 - **When in doubt, ASK.** Do not guess at design intent.
 - **Think before answering.** The first assessment is probably overconfident.
-- **Context thresholds fire automatically** at 50/65/75/85/92%. Follow their instructions.
+- **Context thresholds fire automatically** at 50/65/75/85/95%. Follow their instructions.
 
 ---
 

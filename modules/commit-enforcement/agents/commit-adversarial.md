@@ -36,7 +36,7 @@ Diff hash: [hash from caller]
 
 ---
 
-## Detail (parent reads ONLY for judgment on specific finding)
+## Detail (parent reads ONLY for judgment on a specific finding)
 ### Finding 1: [title]
 Layer 1 raw, Layer 2 verification, evidence
 ```

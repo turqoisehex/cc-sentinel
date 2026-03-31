@@ -15,7 +15,7 @@ Only pause when: (1) waiting for agents, (2) a design decision genuinely blocks 
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-**Step 0:** Before any other work, TaskCreate every step in CT. Mark in_progress->completed.
+**Step 0:** Before any other work, TaskCreate every step in CT. Mark in_progress→completed.
 
 ## Procedure
 
@@ -64,6 +64,8 @@ Commit once per logical unit, not per step. Each commit spawns 2 verification ag
 **Batch when ALL true:** same code pattern, same spec section, content/data additions only (zero logic), <300 lines inserted.
 
 **Never batch when ANY true:** control flow/state/engine logic, multiple subsystems, design judgment required, different spec sections or categories.
+
+Never cross category boundaries. Split at natural boundary if >300 lines.
 
 ## Design decisions during build
 
