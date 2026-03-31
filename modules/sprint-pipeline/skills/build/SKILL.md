@@ -51,21 +51,23 @@ In default mode, /verify spawns `sonnet-verifier` natively. In duo mode, /verify
 
 ### Commit boundaries
 
-Commit once per logical unit, not per step. Each commit spawns 2 verification agents + test suite.
+Commit once per logical unit, not per step. Each commit spawns 2 verification agents + test suite — keep the ratio of work to verification high.
 
-**Commit after:** completing a task group or phase boundary, finishing all steps that touch the same file set, completing a batch of related tasks, or before switching to a different subsystem.
+**Commit after:** completing a task group or phase boundary, finishing all steps that touch the same file set, completing a batch of related `[SONNET]` tasks, or before switching to a different subsystem.
 
-**Do not commit after:** each individual step, CT-only status updates mid-phase, or trivially small changes.
+**Do not commit after:** each individual step, CT-only status updates mid-phase, or trivially small changes that will be followed by more in the same area.
 
-**Always commit before:** pausing for a design decision, dispatching dependent work, or ending a session.
+**Always commit before:** pausing for a design decision, dispatching work that depends on committed state, or ending a session.
 
 ## Batching rules
 
 **Batch when ALL true:** same code pattern, same spec section, content/data additions only (zero logic), <300 lines inserted.
 
-**Never batch when ANY true:** control flow/state/engine logic, multiple subsystems, design judgment required, different spec sections.
+**Never batch when ANY true:** control flow/state/engine logic, multiple subsystems, design judgment required, different spec sections or categories.
 
 ## Design decisions during build
+
+Design decision = wrong answer requires architectural rework. Implementation choices with clear precedent (project reference docs) are not design decisions.
 
 When deferring: (1) note in CT under "Deferred Decisions" immediately, (2) if blocks later step: implement most conservative default, mark provisional, (3) present all deferred at end of `/3`.
 

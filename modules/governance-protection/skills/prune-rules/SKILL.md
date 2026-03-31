@@ -28,7 +28,7 @@ Do NOT auto-remove or auto-update. User decides each item.
 ### Step 4: Apply and commit
 
 ```bash
-bash scripts/channel_commit.sh --files "CLAUDE.md CURRENT_TASK.md" -m "chore: prune accumulated corrections" --skip-squad
+bash scripts/channel_commit.sh --files "CLAUDE.md" -m "chore: prune accumulated corrections" --skip-squad
 ```
 
 ### Step 5: Remove governance marker

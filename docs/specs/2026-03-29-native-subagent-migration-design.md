@@ -1,5 +1,7 @@
 # cc-sentinel Architecture Migration: Native Sonnet Subagent Dispatch
 
+> **Status:** Implemented.
+
 ## Context
 
 Model routing has been verified working in CC v2.1.86 on Max 20x. An Opus parent session can reliably spawn Sonnet subagents via `Agent(model: "sonnet")`. JSONL transcript analysis confirmed the subagent actually runs on `claude-sonnet-4-6`, not silently falling back to Opus.

@@ -7,15 +7,12 @@ on:
     types: [opened, reopened, synchronize]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: release-drafter/release-drafter@v7
         env:

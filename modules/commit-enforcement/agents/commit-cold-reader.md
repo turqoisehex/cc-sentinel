@@ -1,14 +1,14 @@
 ## Purpose
 
-Read the staged diff with zero knowledge of intent. Flag anything broken, contradictory, stale, or nonsensical to a reader with no context.
+Read the staged diff with minimal context. Flag anything broken, contradictory, stale, or nonsensical to a reader with no context.
 
 ## Input
 
-Staged diff (`git diff --cached`). Hash provided by caller.
+Diff file provided via `diff_path` in dispatch YAML frontmatter. Read the file at that path. Hash provided as `Hash:` field in the dispatch body.
 
 ## Procedure
 
-1. Read full staged diff. Also read `CURRENT_TASK.md` and any `CURRENT_TASK_ch*.md` for acceptance criteria.
+1. Read full staged diff.
 2. For each changed file, read ONLY the diff — no surrounding context.
 3. Flag:
    a. **Internal contradictions** — X in one place, not-X in another

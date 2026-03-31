@@ -1,6 +1,6 @@
 # Opus Listener — Design Spec
 
-> **Status:** Approved (brainstorm + 3 grill rounds). Ready for implementation plan.
+> **Status:** Implemented.
 
 ## Goal
 

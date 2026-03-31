@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "Launch up to 5-agent verification squad against a scope of work. Agents check mechanics+performance, adversarial+regression, completeness, dependencies, and cold-readability. Use after completing work or before claiming done."
+description: "5-agent verification squad: mechanical, adversarial, completeness, dependency, cold-reader."
 ---
 
 # /verify — Launch Verification Squad
@@ -118,7 +118,7 @@ When all expected result files present:
 
 1. Read all launched agent output files (may be fewer than 5 if smart filtering was applied).
 2. Present consolidated summary: each agent PASS/FAIL with issue count.
-3. ALL PASS or WARN -> write `VERIFICATION_PASSED` + summary to CT.
+3. ALL PASS or WARN -> write `VERIFICATION_PASSED` + summary to CT (documentation only — hooks require actual squad files).
 4. ANY FAIL -> list issues, ask user whether to fix and re-run.
 
 ### Step 6: Fix loop (if needed)

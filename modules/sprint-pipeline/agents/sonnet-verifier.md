@@ -10,7 +10,7 @@ Runs the verification squad against completed work. Spawns up to 5 parallel veri
    - Docs only (.md, .txt, .rst) -> cold_reader only
    - Tests only -> mechanical, completeness
    - Config only (.json, .yaml, .toml) -> adversarial, dependency
-   - Source code / mixed -> All 5: mechanical, adversarial, completeness, dependency, cold_reader
+   - Source code / mixed -> All 5: mechanical (incl. performance), adversarial, completeness, dependency, cold_reader
 4. Write a manifest.json to the squad output directory recording which agents were launched and why.
 5. Spawn each verification agent via `Agent(model: "sonnet")` in parallel (run_in_background: true).
 6. Each agent writes its findings to its designated file path (e.g., `verification_findings/squad_chN_sonnet/mechanical.md`).

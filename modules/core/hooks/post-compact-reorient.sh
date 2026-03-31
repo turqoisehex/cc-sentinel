@@ -66,7 +66,7 @@ if [[ "$HAS_TASK" == "true" ]]; then
   fi
   MSG="POST-COMPACTION RE-ORIENTATION. You have been compacted. Your channel CT file (CURRENT_TASK_ch[N].md, shown below) is your continuity — resume from where it indicates. The shared CURRENT_TASK.md has the Active Channels table. Do NOT proceed from memory. Check your channel CT file for any background agent output file paths listed before compaction.${NL}${NL}--- CLAUDE.md (first 30 lines) ---${NL}${CLAUDE_CONTENT}${NL}${NL}${TASK_CONTENT}${AGENT_NOTE}"
 elif [[ -n "$CLAUDE_CONTENT" ]]; then
-  MSG="POST-COMPACTION RE-ORIENTATION. You have been compacted. Read the project CLAUDE.md fully and look for state files (HANDOFF.md, STATE.md, CURRENT_TASK.md, CURRENT_TASK_ch[N].md) in the project root. Re-orient from files, not memory.${NL}${NL}--- CLAUDE.md (first 30 lines) ---${NL}${CLAUDE_CONTENT}"
+  MSG="POST-COMPACTION RE-ORIENTATION. You have been compacted. Read the project CLAUDE.md fully, then MEMORY.md if it exists. Look for state files (HANDOFF.md, STATE.md, CURRENT_TASK.md, CURRENT_TASK_ch[N].md) in the project root. Re-orient from files, not memory.${NL}${NL}--- CLAUDE.md (first 30 lines) ---${NL}${CLAUDE_CONTENT}"
 else
   MSG="POST-COMPACTION RE-ORIENTATION. You have been compacted. Look for state files in the project root before continuing. Re-orient from files, not memory."
 fi

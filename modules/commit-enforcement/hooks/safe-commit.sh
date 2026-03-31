@@ -188,7 +188,7 @@ else
   elif [[ -f "pytest.ini" ]] || [[ -f "setup.py" ]] || [[ -f "pyproject.toml" ]]; then
     echo "Running pytest..." >&2
     TEST_RAN="true"
-    pytest > "$TEST_LOG" 2>&1 || python -m pytest > "$TEST_LOG" 2>&1 || { echo "TESTS FAILED:" >&2; tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
+    (command -v pytest >/dev/null 2>&1 && pytest || python -m pytest) > "$TEST_LOG" 2>&1 || { echo "TESTS FAILED:" >&2; tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
   elif [[ -f "Makefile" ]] && grep -q "^test:" "Makefile" 2>/dev/null; then
     echo "Running make test..." >&2
     TEST_RAN="true"

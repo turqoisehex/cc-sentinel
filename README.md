@@ -122,7 +122,7 @@ Thresholds trigger automatic reminders:
 - **50%** -- "Documenting as you go?"
 - **65%** -- "Could a fresh session resume from your state files?"
 - **75%** -- "Document comprehensively and get cold-start ready. Continue working methodically until compaction at ~84%."
-- **85%** -- "Commit all changes. State files must be current."
+- **85%** -- "Commit all changes. State files must be current. Keep working."
 - **92%** -- "Auto-compaction imminent. State files must be complete."
 
 This benefits **Claude Code itself** as much as the user. Without context awareness, Claude has no way to know how full its context window is — it cannot sense compaction approaching. The graduated warnings give Claude actionable signals to save state, wrap up work units, and prepare for compaction before it happens. The user gets visibility too, but the primary consumer is Claude's own decision-making.
@@ -143,7 +143,7 @@ Up to 5-agent verification squad that independently audits work before any compl
 | **Dependency Tracer** | Missing migrations, untraced call sites, silent default changes |
 | **Cold Reader** | Semantic errors invisible to the author -- reads with zero context |
 
-The `stop-task-check.sh` hook fires when Claude tries to stop, requiring verification evidence before allowing completion claims through. Self-attestation ("I verified this") is explicitly rejected -- the hook checks for actual squad output files on disk.
+The `stop-task-check.sh` hook fires when Claude tries to stop, requiring verification evidence before allowing completion claims through. Self-attestation ("I verified this") is explicitly rejected -- the hook checks for actual squad output files on disk. The `comment-replacement.sh` hook silently strips stale inline comments (TODO, FIXME, HACK) from edited files.
 
 Commands: `/verify`, `/grill` (iterative self-challenge)
 
@@ -401,7 +401,7 @@ Fresh Mac -- install Homebrew first, then everything else:
 brew install node jq && npm install -g @anthropic-ai/claude-code
 ```
 
-macOS Catalina+ includes Python 3, Git, and bash, so only Node.js and jq need to be installed via Homebrew.
+macOS includes Git and bash; Python 3 is available via Xcode Command Line Tools or Homebrew. Only Node.js and jq need to be installed via Homebrew.
 
 If you already have Homebrew, skip the first line. Check what you have: `brew --version && node -v && jq --version`.
 
@@ -488,7 +488,7 @@ Restart Claude Code after uninstalling for changes to take effect.
 No. cc-sentinel adds rules to your existing CLAUDE.md (with clear delimiters) and registers hooks in settings.json. Your existing configuration is preserved.
 
 **Can I uninstall cc-sentinel?**
-Yes. See [Uninstalling](#uninstalling) below. The uninstaller removes all sentinel files, cleans hooks and allow rules from settings.json, and strips the rules block from CLAUDE.md.
+Yes. See [Uninstalling](#uninstalling). The uninstaller removes all sentinel files, cleans hooks and allow rules from settings.json, and strips the rules block from CLAUDE.md.
 
 **Does this work with Claude Code plugins?**
 Yes. cc-sentinel hooks and plugins coexist. The sprint-pipeline module recommends complementary plugins but does not require them.

@@ -46,7 +46,7 @@ Present ALL of these problems as a table. Do NOT filter or select a subset. Show
 
 ### Step 4: Recommend Modules
 
-Present ALL 8 problems as a numbered table with the module that solves each. Then present the module selection table below. Always include Core.
+Referencing the problem table above, present the module selection table below. Always include Core.
 
 | Module | What it solves | Recommended? |
 |--------|---------------|-------------|

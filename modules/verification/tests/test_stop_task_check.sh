@@ -224,7 +224,7 @@ assert_stdout_contains '"decision".*"block"' "outputs block decision"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "mentions verification"
 teardown_temp
 
-# --- Test 3: Active task + completion language + valid squad (6 PASS) -> ALLOW ---
+# --- Test 3: Active task + completion language + valid squad (5 PASS) -> ALLOW ---
 echo ""
 echo "Test 3: Active task + completion language + valid squad -> ALLOW"
 setup_temp
@@ -725,7 +725,7 @@ mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
 # First squad dir (alphabetically): incomplete
-create_failing_squad "$PROJECT" "squad_a_old" 3  # 3 pass, 3 fail
+create_failing_squad "$PROJECT" "squad_a_old" 3  # 2 pass, 3 fail
 # Second squad dir (alphabetically): all pass
 create_passing_squad "$PROJECT" "squad_b_new"
 INPUT=$(build_input "$PROJECT" "All work is done. Sprint is complete.")

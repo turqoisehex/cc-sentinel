@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-03-30
+
 ### Added
 - Initial public release with 7 modules: core, context-awareness, verification, commit-enforcement, sprint-pipeline, governance-protection, notification
 - Cross-platform installers (Unix + Windows PowerShell)
@@ -13,3 +15,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Up to 5-agent verification squad with smart filtering
 - Windows-compatible context awareness (status bar + graduated warnings)
 - File-signal coordination for parallel Claude Code sessions
+
+[Unreleased]: https://github.com/turqoisehex/cc-sentinel/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/turqoisehex/cc-sentinel/releases/tag/v0.1.0

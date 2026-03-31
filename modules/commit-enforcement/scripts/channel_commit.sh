@@ -247,6 +247,7 @@ printf '%s\n' "${FILE_ARRAY[@]}" > "$COMMIT_ACTIVE_FILE"
 ATTEMPT=0
 while (( ATTEMPT < MAX_RETRIES )); do
   ATTEMPT=$((ATTEMPT + 1))
+  OPTIMISTIC_DISPATCH="false"
   phase1_stage_and_dispatch "$ATTEMPT" || exit 1
 
   if [[ "$LOCAL_VERIFY" != "true" ]]; then

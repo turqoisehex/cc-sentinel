@@ -84,5 +84,5 @@ When channel work conflicts with main or another channel:
 
 - **Self-dispatch deadlock:** Sonnet cannot consume prompts it writes.
 - **CT race condition:** `.commit_active` prevents concurrent file modifications.
-- **Heartbeat:** `wait_for_work.sh` spawns a background heartbeat process (writes `.heartbeat` every 3s, PID in `.heartbeat_pid`). Background process survives after work is found and self-terminates when the listener session exits (PPID polling). Stale >30s = warning.
+- **Heartbeat:** `wait_for_work.sh` spawns a background heartbeat process (writes `.heartbeat` every 3s, PID in `.heartbeat_pid`). Background process survives after work is found and self-terminates when the listener session exits (PPID polling). Stale >300s (5 min) = warning; >900s (15 min) = switch to local verification.
 - **Cross-channel squad leak:** Squad directories from one channel could theoretically satisfy another channel's completion gate if both are active simultaneously. The stop hook scopes checks to active CT files to mitigate this.

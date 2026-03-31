@@ -66,7 +66,7 @@ if [[ -n "$ACTIVE_CHANNELS" ]] || [[ "$SHARED_ACTIVE" == "true" ]]; then
   if [[ "$SHARED_ACTIVE" == "true" ]]; then
     MSG="${MSG} Shared CURRENT_TASK.md also has active unchanneled work."
   fi
-  MSG="${MSG}Resume from where the previous session left off."
+  MSG="${MSG} Resume from where the previous session left off."
   # Escape for JSON
   MSG_ESCAPED=$(printf '%b' "$MSG" | jq -Rs '.' | tr -d '\r')
   echo "{\"additionalContext\": ${MSG_ESCAPED}}"

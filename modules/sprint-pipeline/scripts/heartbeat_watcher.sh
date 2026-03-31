@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Duo mode only. Not used in default (native subagent) mode.
 # heartbeat_watcher.sh — Watch for Sonnet listener heartbeat on a channel.
 # Usage: bash heartbeat_watcher.sh --channel N [--timeout SECONDS]
 # Checks every 5 seconds for _pending_sonnet/chN/.heartbeat.

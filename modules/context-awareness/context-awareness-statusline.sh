@@ -35,6 +35,7 @@ if [[ -n "$CONFIG_FILE" ]]; then
     CONFIG_VALUES+=("$line")
   done < <(jq -r '
     (.flag_dir // "/tmp"),
+    (if .statusline.enabled == false then "false" else "true" end),
     (.statusline.bar_width // 20 | tostring),
     (.statusline.bar_filled // "█"),
     (.statusline.bar_empty // "░"),
@@ -47,19 +48,21 @@ if [[ -n "$CONFIG_FILE" ]]; then
     ((.thresholds // []) | @json)
   ' "$CONFIG_FILE" | tr -d '\r')
   FLAG_DIR="${CONFIG_VALUES[0]}"
-  BAR_WIDTH="${CONFIG_VALUES[1]}"
-  BAR_FILLED="${CONFIG_VALUES[2]}"
-  BAR_EMPTY="${CONFIG_VALUES[3]}"
-  FORMAT="${CONFIG_VALUES[4]}"
-  COLOR_NORMAL="${CONFIG_VALUES[5]}"
-  COLOR_WARNING="${CONFIG_VALUES[6]}"
-  WARNING_INDICATOR="${CONFIG_VALUES[7]}"
-  BAR_STYLE="${CONFIG_VALUES[8]}"
-  REPEAT_MODE="${CONFIG_VALUES[9]}"
-  THRESHOLDS_JSON="${CONFIG_VALUES[10]}"
+  STATUSLINE_ENABLED="${CONFIG_VALUES[1]}"
+  BAR_WIDTH="${CONFIG_VALUES[2]}"
+  BAR_FILLED="${CONFIG_VALUES[3]}"
+  BAR_EMPTY="${CONFIG_VALUES[4]}"
+  FORMAT="${CONFIG_VALUES[5]}"
+  COLOR_NORMAL="${CONFIG_VALUES[6]}"
+  COLOR_WARNING="${CONFIG_VALUES[7]}"
+  WARNING_INDICATOR="${CONFIG_VALUES[8]}"
+  BAR_STYLE="${CONFIG_VALUES[9]}"
+  REPEAT_MODE="${CONFIG_VALUES[10]}"
+  THRESHOLDS_JSON="${CONFIG_VALUES[11]}"
 else
   # Defaults if no config file
   FLAG_DIR="/tmp"
+  STATUSLINE_ENABLED="true"
   BAR_WIDTH=20
   BAR_FILLED="█"
   BAR_EMPTY="░"
@@ -152,6 +155,9 @@ fi
 
 # Persist fired-tiers tracking
 echo "$NEW_FIRED" > "$FIRED_FILE"
+
+# Exit before rendering if statusline is disabled (thresholds still fire above)
+[[ "$STATUSLINE_ENABLED" != "true" ]] && exit 0
 
 # Render status bar efficiently (no loops)
 FILLED_COUNT=$(( USED_PCT * BAR_WIDTH / 100 ))

@@ -84,6 +84,8 @@ YAML FRONTMATTER: Update the YAML block at the top of your state file with:
 
 ---
 
+> **Status:** Superseded — performance agent merged into mechanical (2026-03-30).
+
 ### F4. Performance Agent (6th Squad Member)
 **Module:** Verification | **Type:** New markdown prompt | **Risk:** None
 

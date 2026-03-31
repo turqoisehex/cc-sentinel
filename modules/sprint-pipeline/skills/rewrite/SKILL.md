@@ -37,11 +37,11 @@ Present design to user. Do NOT proceed without approval.
 
 Never rewrite in-place. New files get `_v2` suffix during construction. Old code stays untouched.
 
-TDD: write failing tests first, then implement. One commit per logical unit via `channel_commit.sh`.
+TDD: write failing tests first, then implement. Existing behavioral tests should pass against both versions. One commit per logical unit via `channel_commit.sh`.
 
 ### Step 6: Prove equivalence
 
-Before swapping: (1) existing behavioral tests pass on new, (2) new tests pass, (3) no broken callers, (4) full test suite passes. Write to `verification_findings/rewrite_equivalence[_chN].md`.
+Before swapping: (1) existing behavioral tests pass on new, (2) new tests pass, (3) no broken callers (grep imports/refs to old files), (4) `auto-detected test command`. Write to `verification_findings/rewrite_equivalence[_chN].md`.
 
 ### Step 7: Swap and clean
 

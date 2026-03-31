@@ -95,6 +95,8 @@ TEMPLATES=(
 
 TOOLS=(spawn.py spawn.json)
 
+AGENTS=("sonnet-implementer.md" "sonnet-verifier.md" "commit-verifier.md")
+
 # --- Remove function ---
 removed=0
 remove_file() {
@@ -123,6 +125,7 @@ for f in "${SKILLS[@]}"; do remove_file "$SKILLS_DIR/$f"; done
 for f in "${REFERENCE[@]}"; do remove_file "$REFERENCE_DIR/$f"; done
 for f in "${TEMPLATES[@]}"; do remove_file "$TEMPLATES_DIR/$f"; done
 for f in "${TOOLS[@]}"; do remove_file "$TOOLS_DIR/$f"; done
+for f in "${AGENTS[@]}"; do remove_file "$BASE/agents/$f"; done
 
 # Context awareness
 remove_file "$CC_AWARENESS"

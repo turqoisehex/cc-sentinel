@@ -2,7 +2,7 @@
 
 **Channel:** N
 **Status:** [PENDING | IN PROGRESS | COMPLETE]
-**Phase:** [/1-/5]
+**Phase:** [/0-/5]
 
 ---
 

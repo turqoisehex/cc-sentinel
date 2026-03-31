@@ -103,7 +103,8 @@ Controls the status bar appearance.
 | `bar_empty` | string | `"░"` | Character for empty portion |
 | `format` | string | `"context {bar} {percentage}%"` | Format string. Supports `{bar}` and `{percentage}` |
 | `color_normal` | string | `"37"` | ANSI color code for normal state (37=white) |
-| `color_warning` | string | `"31"` | ANSI color code for warning state (31=red) |
+| `color_warning` | string | `"33"` | ANSI color code for warning state (33=yellow) |
+| `bar_style` | string | `"unicode"` | Bar rendering style: `"auto"` (detect terminal), `"ascii"`, `"unicode"` |
 | `warning_indicator` | string | `""` | Appended to bar when above a threshold. Empty by default (color change is the indicator). |
 
 ### `hook_event` (string)
@@ -137,7 +138,7 @@ Add to the `thresholds` array:
 
 ### Lower the warning threshold to 70%
 
-Modify the existing threshold's `percent` field from `80` to `70`.
+Modify the existing threshold's `percent` field from `85` to `70`.
 
 ### Add multiple tiers
 

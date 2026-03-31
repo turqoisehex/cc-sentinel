@@ -1,6 +1,6 @@
 ## Input
 
-Staged diff (`git diff --cached`). Hash provided by caller.
+Diff file provided via `diff_path` in dispatch YAML frontmatter. Read the file at that path. Hash provided as `Hash:` field in the dispatch body.
 
 ## Procedure
 
@@ -41,7 +41,7 @@ Diff hash: [hash from caller]
 Layer 1 raw, Layer 2 verification, evidence
 ```
 
-Categories: `[LOGIC]`, `[SPEC]`, `[PROPAGATION]`, `[STALE]`, `[CONTRADICTION]`
+Categories: `[LOGIC]`, `[SPEC]`, `[PROPAGATION]`, `[REGRESSION]`, `[STALE]`, `[CONTRADICTION]`
 
 ## Rules
 

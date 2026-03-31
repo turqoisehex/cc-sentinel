@@ -118,7 +118,7 @@ When all expected result files present:
 
 1. Read all launched agent output files (may be fewer than 5 if smart filtering was applied).
 2. Present consolidated summary: each agent PASS/FAIL with issue count.
-3. ALL PASS → write `VERIFICATION_PASSED` + summary to CT (documentation only — hooks require actual squad files).
+3. ALL PASS or WARN → write `VERIFICATION_PASSED` + summary to CT (documentation only — hooks require actual squad files).
 4. ANY FAIL → list issues, ask user whether to fix and re-run failed agent(s).
 
 ### Step 6: Fix loop (if needed)

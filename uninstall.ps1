@@ -53,6 +53,7 @@ $Skills = @(
 $Reference = @("channel-routing.md","operator-cheat-sheet.md","spec-verification.md","verification-squad.md")
 $Templates = @("channel-template.md","current-task-template.md","design-invariants.md","plugin-auto-invoke.md","terminology.md")
 $Tools = @("spawn.py", "spawn.json")
+$Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-verifier.md")
 
 # --- Remove function ---
 $script:removed = 0
@@ -82,6 +83,7 @@ foreach ($f in $Skills) { Remove-SentinelItem (Join-Path $SkillsDir $f) }
 foreach ($f in $Reference) { Remove-SentinelItem (Join-Path $ReferenceDir $f) }
 foreach ($f in $Templates) { Remove-SentinelItem (Join-Path $TemplatesDir $f) }
 foreach ($f in $Tools) { Remove-SentinelItem (Join-Path $ToolsDir $f) }
+foreach ($f in $Agents) { Remove-SentinelItem (Join-Path $Base "agents" $f) }
 Remove-SentinelItem $CcAwareness
 
 # Clean empty directories
