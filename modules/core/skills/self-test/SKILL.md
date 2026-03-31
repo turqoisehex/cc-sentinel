@@ -1,6 +1,6 @@
 ---
 name: self-test
-description: Verify cc-sentinel installation integrity. Checks hooks, commands, skills, references, templates, and CLAUDE.md rules. Run after installation or when things seem broken.
+description: Verify cc-sentinel installation integrity. Checks hooks, skills, references, templates, and CLAUDE.md rules. Run after installation or when things seem broken.
 ---
 
 # /self-test — Verify Installation Integrity
@@ -26,16 +26,7 @@ Read the project's `.claude/settings.json` (or `~/.claude/settings.json` for glo
 
 For each hook: check the command path exists as a file on disk. PASS if registered AND file exists. FAIL if either is missing.
 
-### 2. Command files
-
-Check that `.claude/commands/` contains all expected command files for installed modules:
-
-- **Core:** `self-test.md`, `cold.md`, `cleanup.md`, `status.md`
-- **Verification:** `verify.md`, `grill.md`
-- **Sprint Pipeline:** `1.md` through `5.md`, `audit.md`, `design.md`, `build.md`, `perfect.md`, `finalize.md`, `opus.md`, `sonnet.md`, `rewrite.md`, `spawn.md`
-- **Governance Protection:** `mistake.md`, `prune-rules.md`
-
-### 3. Reference files
+### 2. Reference files
 
 Check `.claude/reference/` for expected files:
 
@@ -44,22 +35,22 @@ Check `.claude/reference/` for expected files:
 - **Commit Enforcement:** `channel-routing.md`
 - **Sprint Pipeline:** `spec-verification.md`
 
-### 4. Templates
+### 3. Templates
 
 Check project root for:
 - `CURRENT_TASK.md` or `current-task-template.md` — at least one must exist
 
-### 5. CLAUDE.md rules
+### 4. CLAUDE.md rules
 
 Read the project's `CLAUDE.md`. Check for the presence of cc-sentinel behavioral rules (search for "Fix it now" or "cc-sentinel rules" marker). PASS if rules block is present.
 
-### 6. Working directory
+### 5. Working directory
 
 If the Verification module is installed, check that `verification_findings/` directory exists. If not, create it.
 
 Check that `verification_findings/` is listed in `.gitignore` (if this is a git repo).
 
-### 7. Skills
+### 6. Skills
 
 Check that installed skills exist in `.claude/skills/<name>/SKILL.md`:
 
@@ -69,11 +60,11 @@ Check that installed skills exist in `.claude/skills/<name>/SKILL.md`:
 - **Sprint Pipeline:** `1`, `2`, `3`, `4`, `5`, `audit`, `design`, `build`, `perfect`, `finalize`, `opus`, `sonnet`, `rewrite`, `spawn`
 - **Governance Protection:** `mistake`, `prune-rules`
 
-### 8. Auto-invoke rules
+### 7. Auto-invoke rules
 
 Check `.claude/rules/plugin-auto-invoke.md` exists. PASS if present, FAIL if missing.
 
-### 9. Summary
+### 8. Summary
 
 Print a summary table:
 
@@ -81,7 +72,6 @@ Print a summary table:
 cc-sentinel self-test results:
   Hooks registered:     [N/M PASS]
   Hook files on disk:   [N/M PASS]
-  Command files:        [N/M PASS]
   Reference files:      [N/M PASS]
   Templates:            [PASS/FAIL]
   CLAUDE.md rules:      [PASS/FAIL]

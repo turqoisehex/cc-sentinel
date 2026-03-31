@@ -110,7 +110,7 @@ Do this silently — no user prompt needed. The installer will also add these ru
 
 ### Step 5: Run Installer
 
-Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, commands, or settings. It also auto-configures permissions so cc-sentinel scripts run without manual approval."
+Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, skills, or settings. It also auto-configures permissions so cc-sentinel scripts run without manual approval."
 
 Determine the correct installer command based on OS. Use the full path to the installer scripts in this repository (the directory containing this CLAUDE.md file):
 
@@ -230,17 +230,15 @@ Skills installed during this session are not loadable until the next session —
 
 1. Read settings.json — count hook event types and total hook entries.
 2. Glob for hook files on disk (`~/.claude/hooks/*.sh` or `.claude/hooks/*.sh`) — count them.
-3. Glob for command files (`~/.claude/commands/*.md` or `.claude/commands/*.md`) — count them.
-4. Glob for skill directories (`~/.claude/skills/*/SKILL.md` or `.claude/skills/*/SKILL.md`) — count them.
-5. Read the target CLAUDE.md — search for `cc-sentinel rules start`.
-6. Read settings.json — confirm `permissions.allow` contains cc-sentinel allow rules.
+3. Glob for skill directories (`~/.claude/skills/*/SKILL.md` or `.claude/skills/*/SKILL.md`) — count them.
+4. Read the target CLAUDE.md — search for `cc-sentinel rules start`.
+5. Read settings.json — confirm `permissions.allow` contains cc-sentinel allow rules.
 
 Present results as a table: each check PASS or FAIL with count. Example:
 
 ```
 Hooks registered:  16/16 PASS
 Hook files on disk: 15/15 PASS
-Commands:          22/22 PASS
 Skills:            23/23 PASS
 CLAUDE.md rules:   PASS
 Permissions:       PASS

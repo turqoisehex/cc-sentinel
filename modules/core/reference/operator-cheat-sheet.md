@@ -80,8 +80,7 @@ Each channel pair is isolated: Opus N dispatches to `_pending_sonnet/chN/`, Sonn
 |------|---------|
 | `CURRENT_TASK.md` | Session state — read first after every compaction |
 | `CLAUDE.md` + `.claude/rules/` | Always-loaded rules |
-| `.claude/skills/*/SKILL.md` | Model-callable skills (require YAML frontmatter: `name`, `description`) |
-| `.claude/commands/` | User-invocable slash commands (no YAML frontmatter needed) |
+| `.claude/skills/*/SKILL.md` | Slash commands and model-callable skills (YAML frontmatter: `name`, `description`) |
 | `.claude/agents/` | Agent definitions (no YAML frontmatter) |
 | `.claude/reference/` | On-demand docs |
 | `verification_findings/` | Ephemeral squad/agent output (gitignored) |

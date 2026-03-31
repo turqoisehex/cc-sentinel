@@ -24,7 +24,7 @@ cc-sentinel solves these with **hooks that enforce automatically** -- not rules 
 
 ## How It Works
 
-cc-sentinel is a modular set of Claude Code hooks, slash commands, reference docs, agents, and templates. You install the modules you need. The installer is a conversation -- Claude Code reads your project and recommends what to install.
+cc-sentinel is a modular set of Claude Code hooks, skills, reference docs, agents, and templates. You install the modules you need. The installer is a conversation -- Claude Code reads your project and recommends what to install.
 
 ```
 Claude Code: I see this is a Python/Django project with pytest. Here's what I recommend:
@@ -70,7 +70,7 @@ Claude Code clones the repo and runs an interactive installer. The expected flow
 6. **Run the installer** with the selected modules. Do not ask for confirmation after module selection -- just run it.
 7. **Offer deny rules** for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
 8. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
-9. **Print a summary** of what was installed: modules, hooks, commands, status line, spawn config.
+9. **Print a summary** of what was installed: modules, hooks, skills, status line, spawn config.
 10. **Tell the user to run `/self-test`** in their next session to validate.
 
 **Manual installation:**
@@ -107,7 +107,7 @@ Prevents the three most common failure modes: context loss, work deferral, and a
 Also includes:
 - **CURRENT_TASK.md template** -- structured state file that survives compaction
 - **Channel template** -- for multi-agent parallel work
-- **Operator cheat sheet** -- quick reference for all commands
+- **Operator cheat sheet** -- quick reference for all skills
 - **`/self-test`** -- diagnostic command that validates your installation
 
 ### Context Awareness
@@ -226,12 +226,11 @@ Desktop alerts when Claude Code completes a task or needs your input. Platform-n
 After installation, run `/self-test` to validate your setup. It checks:
 
 - Hooks are registered in settings.json AND their files exist on disk
-- Command files are present for each installed module
 - Reference files are present for each installed module
 - Templates exist (CURRENT_TASK.md or current-task-template.md)
 - CLAUDE.md contains cc-sentinel behavioral rules
 - Working directory (`verification_findings/`) exists and is gitignored
-- Skills are installed for applicable modules
+- Skills are installed for each installed module
 - Auto-invoke rules are present (`.claude/rules/plugin-auto-invoke.md`)
 
 If anything fails, `/self-test` reports exactly what's wrong and how to fix it.
@@ -298,11 +297,10 @@ cc-sentinel/
 
 Each module contains some combination of:
 - `hooks/` -- Shell scripts registered in settings.json
-- `commands/` -- Slash commands (`.claude/commands/`)
+- `skills/` -- Slash commands and programmatic skills (`.claude/skills/`)
 - `reference/` -- Documentation injected into context
 - `agents/` -- Agent definitions (`.claude/agents/`)
 - `scripts/` -- Utility scripts copied to project root
-- `skills/` -- Claude Code skills
 - `templates/` -- Project root templates
 
 ## Methodology
@@ -509,7 +507,7 @@ Look for issues labeled [`good first issue`](https://github.com/turqoisehex/cc-s
 
 - **Boris Cherny** -- Creator of Claude Code at Anthropic. His publicly documented workflow principles form the philosophical foundation. cc-sentinel implements his methodology as enforceable infrastructure. Community index: [howborisusesclaudecode.com](https://howborisusesclaudecode.com). Config reconstruction: [github.com/0xquinto/bcherny-claude](https://github.com/0xquinto/bcherny-claude).
 - **cc-context-awareness** by [sdi2200262](https://github.com/sdi2200262/cc-context-awareness) -- Canonical context window monitoring tool for macOS/Linux. cc-sentinel includes a Windows-compatible rewrite (the only known working Windows version) and recommends the canonical version for non-Windows users.
-- **Production-refined** through hundreds of hours of iterative development on a production Flutter project, translating Cherny's principles into hooks, agents, and commands that enforce behavior rather than suggest it.
+- **Production-refined** through hundreds of hours of iterative development on a production Flutter project, translating Cherny's principles into hooks, agents, and skills that enforce behavior rather than suggest it.
 
 ## License
 

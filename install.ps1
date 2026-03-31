@@ -93,14 +93,6 @@ function Install-Module($moduleName) {
         }
     }
 
-    # Commands
-    $cmdsDir = Join-Path $moduleDir "commands"
-    if (Test-Path $cmdsDir) {
-        Get-ChildItem $cmdsDir -Filter "*.md" | ForEach-Object {
-            Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "commands" $_.Name)
-        }
-    }
-
     # Reference
     $refDir = Join-Path $moduleDir "reference"
     if (Test-Path $refDir) {
@@ -141,33 +133,6 @@ function Install-Module($moduleName) {
             $skillName = $_.Name
             Get-ChildItem $_.FullName -File | ForEach-Object {
                 Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "skills" $skillName $_.Name)
-            }
-        }
-    }
-
-    # Auto-generate skills from commands (for any command without a hand-crafted skill)
-    if (Test-Path $cmdsDir) {
-        Get-ChildItem $cmdsDir -Filter "*.md" | ForEach-Object {
-            $cmdName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
-            $skillFile = Join-Path $ClaudeDir "skills" $cmdName "SKILL.md"
-            if (-not (Test-Path $skillFile)) {
-                # Extract description from first heading: # /name — Description
-                $cmdContent = Get-Content $_.FullName -Raw
-                $description = ""
-                if ($cmdContent -match "^#\s+[^\n]*?—\s*(.+)") {
-                    $description = $Matches[1].Trim()
-                } elseif ($cmdContent -match "^#\s+(.+)") {
-                    $description = $Matches[1].Trim()
-                }
-                $skillContent = "---`nname: $cmdName`ndescription: $description`n---`n`n$cmdContent"
-                if (-not $DryRun) {
-                    $skillDir = Join-Path $ClaudeDir "skills" $cmdName
-                    if (-not (Test-Path $skillDir)) { New-Item -ItemType Directory -Path $skillDir -Force | Out-Null }
-                    $skillContent | Set-Content $skillFile -NoNewline
-                    Log "  Auto-generated skill: $cmdName/SKILL.md"
-                } else {
-                    Log "  WOULD AUTO-GENERATE skill: $cmdName/SKILL.md"
-                }
             }
         }
     }
@@ -530,24 +495,21 @@ foreach ($mod in $modArray) {
     }
 }
 
-# For global installs, rewrite script paths in command and reference .md files
+# For global installs, rewrite script paths in reference and skill .md files
 if ($Target -eq "global" -and -not $DryRun) {
     Log "Rewriting script paths for global install..."
-    foreach ($subdir in @("commands", "reference")) {
-        $mdPath = Join-Path $ClaudeDir $subdir
-        if (Test-Path $mdPath) {
-            Get-ChildItem $mdPath -Filter "*.md" | ForEach-Object {
-                $content = Get-Content $_.FullName -Raw
-                if ($content -match "bash scripts/") {
-                    $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
-                    $content | Set-Content $_.FullName -NoNewline
-                    Log "  Updated paths in: $($_.Name)"
-                }
+    $refPath = Join-Path $ClaudeDir "reference"
+    if (Test-Path $refPath) {
+        Get-ChildItem $refPath -Filter "*.md" | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            if ($content -match "bash scripts/") {
+                $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
+                $content | Set-Content $_.FullName -NoNewline
+                Log "  Updated paths in: $($_.Name)"
             }
         }
     }
 
-    # Also rewrite paths in skill files
     $skillsPath = Join-Path $ClaudeDir "skills"
     if (Test-Path $skillsPath) {
         Get-ChildItem $skillsPath -Directory | ForEach-Object {
@@ -594,24 +556,16 @@ if ($Modules -match "sprint-pipeline") {
     }
 }
 
-# Verify all commands have matching skills
-$missingSkills = 0
-$commandsPath = Join-Path $ClaudeDir "commands"
-if (Test-Path $commandsPath) {
-    Get-ChildItem $commandsPath -Filter "*.md" | ForEach-Object {
-        $cmdName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
-        $skillFile = Join-Path $ClaudeDir "skills" $cmdName "SKILL.md"
-        if (-not (Test-Path $skillFile)) {
-            Log "  WARNING: command '$cmdName' has no matching skill at skills/$cmdName/SKILL.md"
-            $missingSkills++
-        }
+# Verify skills are installed
+$skillCount = 0
+$skillsPath = Join-Path $ClaudeDir "skills"
+if (Test-Path $skillsPath) {
+    Get-ChildItem $skillsPath -Directory | ForEach-Object {
+        $skillFile = Join-Path $_.FullName "SKILL.md"
+        if (Test-Path $skillFile) { $skillCount++ }
     }
 }
-if ($missingSkills -eq 0) {
-    Log "All commands have matching skills"
-} else {
-    Log "$missingSkills command(s) missing skills"
-}
+Log "$skillCount skills installed"
 
 Write-Host ""
 Log "Installation complete!"

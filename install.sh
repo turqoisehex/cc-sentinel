@@ -116,14 +116,6 @@ install_module() {
     done
   fi
 
-  # Commands
-  if [[ -d "$module_dir/commands" ]]; then
-    for f in "$module_dir"/commands/*.md; do
-      [[ ! -f "$f" ]] && continue
-      copy_file "$f" "${CLAUDE_DIR}/commands/$(basename "$f")"
-    done
-  fi
-
   # Reference
   if [[ -d "$module_dir/reference" ]]; then
     for f in "$module_dir"/reference/*.md; do
@@ -169,36 +161,6 @@ install_module() {
         [[ ! -f "$f" ]] && continue
         copy_file "$f" "${CLAUDE_DIR}/skills/${skill_name}/$(basename "$f")"
       done
-    done
-  fi
-
-  # Auto-generate skills from commands (fallback for commands without hand-crafted skills)
-  if [[ -d "$module_dir/commands" ]]; then
-    for f in "$module_dir"/commands/*.md; do
-      [[ ! -f "$f" ]] && continue
-      local cmd_name
-      cmd_name=$(basename "$f" .md)
-      local skill_target="${CLAUDE_DIR}/skills/${cmd_name}/SKILL.md"
-      # Skip if hand-crafted skill already installed
-      [[ -f "$skill_target" ]] && continue
-      # Extract description from first heading (# /name — Description)
-      local desc
-      desc=$(head -5 "$f" | grep -m1 '^# /' | sed 's/^# \///' | sed 's/ — /: /' || true)
-      [[ -z "$desc" ]] && desc="$cmd_name command"
-      if [[ "$DRY_RUN" == "true" ]]; then
-        log "  WOULD GENERATE skill: $cmd_name"
-      else
-        mkdir -p "$(dirname "$skill_target")"
-        {
-          echo "---"
-          echo "name: $cmd_name"
-          echo "description: \"$desc\""
-          echo "---"
-          echo ""
-          cat "$f"
-        } > "$skill_target"
-        log "  Generated skill: $cmd_name"
-      fi
     done
   fi
 
@@ -685,21 +647,17 @@ done
 
 echo ""
 
-# For global installs, rewrite script paths in command and reference .md files
+# For global installs, rewrite script paths in reference and skill .md files
 if [[ "$TARGET" == "global" && "$DRY_RUN" != "true" ]]; then
   log "Rewriting script paths for global install..."
-  for md_dir in "${CLAUDE_DIR}/commands" "${CLAUDE_DIR}/reference"; do
-    for md_file in "${md_dir}"/*.md; do
-      [[ ! -f "$md_file" ]] && continue
-      if grep -q 'bash scripts/' "$md_file" 2>/dev/null; then
-        # Portable sed -i (BSD vs GNU)
-        tmp_file="${md_file}.tmp"
-        sed "s|bash scripts/|bash ~/.claude/scripts/|g" "$md_file" > "$tmp_file" && mv "$tmp_file" "$md_file"
-        log "  Updated paths in: $(basename "$md_file")"
-      fi
-    done
+  for md_file in "${CLAUDE_DIR}"/reference/*.md; do
+    [[ ! -f "$md_file" ]] && continue
+    if grep -q 'bash scripts/' "$md_file" 2>/dev/null; then
+      tmp_file="${md_file}.tmp"
+      sed "s|bash scripts/|bash ~/.claude/scripts/|g" "$md_file" > "$tmp_file" && mv "$tmp_file" "$md_file"
+      log "  Updated paths in: $(basename "$md_file")"
+    fi
   done
-  # Also rewrite paths in skill files
   if [[ -d "${CLAUDE_DIR}/skills" ]]; then
     for skill_file in "${CLAUDE_DIR}"/skills/*/SKILL.md; do
       [[ ! -f "$skill_file" ]] && continue
@@ -749,24 +707,16 @@ if echo "$MODULES" | grep -q "sprint-pipeline"; then
   fi
 fi
 
-# Dependency check: verify every command has a matching skill
-log "Verifying command-to-skill coverage..."
-MISSING_SKILLS=0
-if [[ -d "${CLAUDE_DIR}/commands" ]]; then
-  for cmd_file in "${CLAUDE_DIR}/commands"/*.md; do
-    [[ ! -f "$cmd_file" ]] && continue
-    cmd_name=$(basename "$cmd_file" .md)
-    if [[ ! -f "${CLAUDE_DIR}/skills/${cmd_name}/SKILL.md" ]]; then
-      log "  WARNING: Command '$cmd_name' has no matching skill"
-      MISSING_SKILLS=$((MISSING_SKILLS + 1))
-    fi
+# Verify skills are installed
+log "Verifying skill installation..."
+SKILL_COUNT=0
+if [[ -d "${CLAUDE_DIR}/skills" ]]; then
+  for skill_file in "${CLAUDE_DIR}"/skills/*/SKILL.md; do
+    [[ ! -f "$skill_file" ]] && continue
+    SKILL_COUNT=$((SKILL_COUNT + 1))
   done
 fi
-if [[ "$MISSING_SKILLS" -eq 0 ]]; then
-  log "  All commands have matching skills"
-else
-  log "  $MISSING_SKILLS command(s) missing skills — auto-generate may have failed. Re-run install or create skills manually."
-fi
+log "  $SKILL_COUNT skills installed"
 
 echo ""
 log "Installation complete!"

@@ -24,7 +24,6 @@ if ($Target -eq "global") {
 }
 
 $HooksDir = Join-Path $Base "hooks"
-$CommandsDir = Join-Path $Base "commands"
 $SkillsDir = Join-Path $Base "skills"
 $ReferenceDir = Join-Path $Base "reference"
 $TemplatesDir = Join-Path $Base "templates"
@@ -38,12 +37,6 @@ $Hooks = @(
     "session-orient.sh", "stop-task-check.sh", "flash-notification.sh", "flash.ps1"
 )
 $Scripts = @("channel_commit.sh", "heartbeat_watcher.sh", "wait_for_results.sh", "wait_for_work.sh")
-$Commands = @(
-    "1.md","2.md","3.md","4.md","5.md","audit.md","build.md","cleanup.md",
-    "cold.md","design.md","finalize.md","grill.md","mistake.md","opus.md",
-    "perfect.md","prune-rules.md","rewrite.md","self-test.md","sonnet.md",
-    "spawn.md","status.md","verify.md"
-)
 $Skills = @(
     "1","2","3","4","5","audit","build","cleanup","cold",
     "configure-context-awareness","design","finalize","grill","mistake",
@@ -78,7 +71,6 @@ Log "Removing sentinel files..."
 
 foreach ($f in $Hooks) { Remove-SentinelItem (Join-Path $HooksDir $f) }
 foreach ($f in $Scripts) { Remove-SentinelItem (Join-Path $ScriptsDir $f) }
-foreach ($f in $Commands) { Remove-SentinelItem (Join-Path $CommandsDir $f) }
 foreach ($f in $Skills) { Remove-SentinelItem (Join-Path $SkillsDir $f) }
 foreach ($f in $Reference) { Remove-SentinelItem (Join-Path $ReferenceDir $f) }
 foreach ($f in $Templates) { Remove-SentinelItem (Join-Path $TemplatesDir $f) }
@@ -87,7 +79,7 @@ foreach ($f in $Agents) { Remove-SentinelItem (Join-Path $Base "agents" $f) }
 Remove-SentinelItem $CcAwareness
 
 # Clean empty directories
-foreach ($d in @($HooksDir,$ScriptsDir,$CommandsDir,$SkillsDir,$ReferenceDir,$TemplatesDir,$ToolsDir)) {
+foreach ($d in @($HooksDir,$ScriptsDir,$SkillsDir,$ReferenceDir,$TemplatesDir,$ToolsDir)) {
     if ((Test-Path $d) -and @(Get-ChildItem $d -Force).Count -eq 0) {
         if ($DryRun) { Log "  WOULD REMOVE empty dir: $d" }
         else { Remove-Item $d; Log "  Removed empty dir: $d" }

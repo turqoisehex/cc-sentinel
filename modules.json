@@ -15,12 +15,6 @@
           "agent-file-reminder.sh",
           "auto-checkpoint.sh"
         ],
-        "commands": [
-          "self-test.md",
-          "cold.md",
-          "cleanup.md",
-          "status.md"
-        ],
         "skills": [
           "cleanup",
           "cold",
@@ -207,10 +201,6 @@
           "stop-task-check.sh",
           "comment-replacement.sh"
         ],
-        "commands": [
-          "verify.md",
-          "grill.md"
-        ],
         "reference": [
           "verification-squad.md"
         ],
@@ -311,22 +301,6 @@
         "commit-enforcement"
       ],
       "files": {
-        "commands": [
-          "1.md",
-          "2.md",
-          "3.md",
-          "4.md",
-          "5.md",
-          "audit.md",
-          "design.md",
-          "build.md",
-          "perfect.md",
-          "finalize.md",
-          "opus.md",
-          "sonnet.md",
-          "rewrite.md",
-          "spawn.md"
-        ],
         "skills": [
           "1",
           "2",
@@ -385,10 +359,6 @@
       "files": {
         "hooks": [
           "file-protection.sh"
-        ],
-        "commands": [
-          "mistake.md",
-          "prune-rules.md"
         ],
         "skills": [
           "mistake",

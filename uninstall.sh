@@ -51,7 +51,6 @@ fi
 
 HOOKS_DIR="$BASE/hooks"
 SCRIPTS_DIR="$([[ "$TARGET" == "global" ]] && echo "$BASE/scripts" || echo "scripts")"
-COMMANDS_DIR="$BASE/commands"
 SKILLS_DIR="$BASE/skills"
 REFERENCE_DIR="$BASE/reference"
 TEMPLATES_DIR="$BASE/templates"
@@ -68,13 +67,6 @@ HOOKS=(
 
 SCRIPTS=(
   channel_commit.sh heartbeat_watcher.sh wait_for_results.sh wait_for_work.sh
-)
-
-COMMANDS=(
-  1.md 2.md 3.md 4.md 5.md audit.md build.md cleanup.md cold.md
-  design.md finalize.md grill.md mistake.md opus.md perfect.md
-  prune-rules.md rewrite.md self-test.md sonnet.md spawn.md
-  status.md verify.md
 )
 
 SKILLS=(
@@ -120,7 +112,6 @@ log "Removing sentinel files..."
 
 for f in "${HOOKS[@]}"; do remove_file "$HOOKS_DIR/$f"; done
 for f in "${SCRIPTS[@]}"; do remove_file "$SCRIPTS_DIR/$f"; done
-for f in "${COMMANDS[@]}"; do remove_file "$COMMANDS_DIR/$f"; done
 for f in "${SKILLS[@]}"; do remove_file "$SKILLS_DIR/$f"; done
 for f in "${REFERENCE[@]}"; do remove_file "$REFERENCE_DIR/$f"; done
 for f in "${TEMPLATES[@]}"; do remove_file "$TEMPLATES_DIR/$f"; done
@@ -131,7 +122,7 @@ for f in "${AGENTS[@]}"; do remove_file "$BASE/agents/$f"; done
 remove_file "$CC_AWARENESS"
 
 # Clean up empty directories
-for d in "$HOOKS_DIR" "$SCRIPTS_DIR" "$COMMANDS_DIR" "$SKILLS_DIR" \
+for d in "$HOOKS_DIR" "$SCRIPTS_DIR" "$SKILLS_DIR" \
          "$REFERENCE_DIR" "$TEMPLATES_DIR" "$TOOLS_DIR"; do
   if [[ -d "$d" ]] && [[ -z "$(ls -A "$d" 2>/dev/null)" ]]; then
     if [[ "$DRY_RUN" == "true" ]]; then
