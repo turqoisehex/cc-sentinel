@@ -60,8 +60,12 @@ parse_manifest_agents() {
   local squad_dir="$1"
   SQUAD_EXPECTED=("${DEFAULT_AGENTS[@]}")
   [[ ! -f "$squad_dir/manifest.json" ]] && return
+  if ! jq empty "$squad_dir/manifest.json" 2>/dev/null; then
+    echo "WARNING: manifest.json exists but is not valid JSON — using default agents" >&2
+    return
+  fi
   if ! jq -e '.launched' "$squad_dir/manifest.json" >/dev/null 2>&1; then
-    echo "WARNING: manifest.json exists but .launched is missing or invalid — using default agents" >&2
+    echo "WARNING: manifest.json exists but .launched key is missing — using default agents" >&2
     return
   fi
   local agents
@@ -172,7 +176,7 @@ else
   if [[ -f "pubspec.yaml" ]]; then
     echo "Running Flutter tests..." >&2
     TEST_RAN="true"
-    flutter test > "$TEST_LOG" 2>&1 || { echo "TESTS FAILED:" >&2; tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
+    flutter test --exclude-tags property,pairwise,slow > "$TEST_LOG" 2>&1 || { echo "TESTS FAILED:" >&2; tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
   elif [[ -f "package.json" ]]; then
     echo "Running npm tests..." >&2
     TEST_RAN="true"

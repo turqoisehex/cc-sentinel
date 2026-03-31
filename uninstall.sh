@@ -89,6 +89,18 @@ TOOLS=(spawn.py spawn.json)
 
 AGENTS=("sonnet-implementer.md" "sonnet-verifier.md" "commit-verifier.md" "commit-adversarial.md" "commit-cold-reader.md")
 
+RULES=(design-invariants.md plugin-auto-invoke.md terminology.md)
+
+CONFIG=(protected-files.txt sensitive-patterns.txt)
+
+# Legacy commands (removed in v1.1, but older installs may still have them)
+LEGACY_COMMANDS=(
+  1.md 2.md 3.md 4.md 5.md audit.md build.md cleanup.md cold.md
+  design.md finalize.md grill.md mistake.md opus.md perfect.md
+  prune-rules.md rewrite.md self-test.md sonnet.md spawn.md
+  status.md verify.md
+)
+
 # --- Remove function ---
 removed=0
 remove_file() {
@@ -117,13 +129,20 @@ for f in "${REFERENCE[@]}"; do remove_file "$REFERENCE_DIR/$f"; done
 for f in "${TEMPLATES[@]}"; do remove_file "$TEMPLATES_DIR/$f"; done
 for f in "${TOOLS[@]}"; do remove_file "$TOOLS_DIR/$f"; done
 for f in "${AGENTS[@]}"; do remove_file "$BASE/agents/$f"; done
+for f in "${RULES[@]}"; do remove_file "$BASE/rules/$f"; done
+for f in "${CONFIG[@]}"; do remove_file "$BASE/$f"; done
+
+# Legacy commands cleanup (from pre-v1.1 installs)
+LEGACY_COMMANDS_DIR="$BASE/commands"
+for f in "${LEGACY_COMMANDS[@]}"; do remove_file "$LEGACY_COMMANDS_DIR/$f"; done
 
 # Context awareness
 remove_file "$CC_AWARENESS"
 
 # Clean up empty directories
 for d in "$HOOKS_DIR" "$SCRIPTS_DIR" "$SKILLS_DIR" \
-         "$REFERENCE_DIR" "$TEMPLATES_DIR" "$TOOLS_DIR"; do
+         "$REFERENCE_DIR" "$TEMPLATES_DIR" "$TOOLS_DIR" \
+         "$BASE/rules" "$BASE/agents" "$LEGACY_COMMANDS_DIR"; do
   if [[ -d "$d" ]] && [[ -z "$(ls -A "$d" 2>/dev/null)" ]]; then
     if [[ "$DRY_RUN" == "true" ]]; then
       log "  WOULD REMOVE empty dir: $d"
@@ -141,6 +160,7 @@ if [[ -f "$SETTINGS_FILE" ]]; then
   if [[ "$DRY_RUN" == "true" ]]; then
     log "  WOULD CLEAN: hooks, permissions, statusLine from $SETTINGS_FILE"
   else
+    export SETTINGS_FILE CLAUDE_MD
     "$PYTHON" << 'PYEOF'
 import json, os, re
 

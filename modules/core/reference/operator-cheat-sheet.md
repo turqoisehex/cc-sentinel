@@ -91,7 +91,7 @@ Each channel pair is isolated: Opus N dispatches to `_pending_sonnet/chN/`, Sonn
 
 | Term | Meaning |
 |------|---------|
-| **TaskCreate** | Claude Code's built-in task tracking tool. Commands use "TaskCreate every step" to mean: create a checklist of tasks and mark them in_progress → completed as you go. |
+| **TaskCreate** | Claude Code's built-in task tracking tool. Skills use "TaskCreate every step" to mean: create a checklist of tasks and mark them in_progress → completed as you go. |
 | **CT** | CURRENT_TASK.md — the session state file. |
 | **Squad** | The verification squad — up to 5 agents (mechanical, adversarial, completeness, dependency, cold reader). Performance checks integrated into mechanical. Invoked via `/verify`. |
 
@@ -99,7 +99,7 @@ Each channel pair is isolated: Opus N dispatches to `_pending_sonnet/chN/`, Sonn
 
 ## Governance Edits
 
-Protected files: CLAUDE.md, slash commands, agents, rules.
+Protected files: CLAUDE.md, skills, agents, rules.
 
 1. Add `GOVERNANCE-EDIT-AUTHORIZED` as standalone line in `CURRENT_TASK.md`
 2. Edit the protected file

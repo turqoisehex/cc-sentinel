@@ -47,6 +47,16 @@ $Reference = @("channel-routing.md","operator-cheat-sheet.md","spec-verification
 $Templates = @("channel-template.md","current-task-template.md","design-invariants.md","plugin-auto-invoke.md","terminology.md")
 $Tools = @("spawn.py", "spawn.json")
 $Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-verifier.md","commit-adversarial.md","commit-cold-reader.md")
+$Rules = @("design-invariants.md","plugin-auto-invoke.md","terminology.md")
+$Config = @("protected-files.txt","sensitive-patterns.txt")
+
+# Legacy commands (removed in v1.1, but older installs may still have them)
+$LegacyCommands = @(
+    "1.md","2.md","3.md","4.md","5.md","audit.md","build.md","cleanup.md","cold.md",
+    "design.md","finalize.md","grill.md","mistake.md","opus.md","perfect.md",
+    "prune-rules.md","rewrite.md","self-test.md","sonnet.md","spawn.md",
+    "status.md","verify.md"
+)
 
 # --- Remove function ---
 $script:removed = 0
@@ -76,10 +86,19 @@ foreach ($f in $Reference) { Remove-SentinelItem (Join-Path $ReferenceDir $f) }
 foreach ($f in $Templates) { Remove-SentinelItem (Join-Path $TemplatesDir $f) }
 foreach ($f in $Tools) { Remove-SentinelItem (Join-Path $ToolsDir $f) }
 foreach ($f in $Agents) { Remove-SentinelItem (Join-Path $Base "agents" $f) }
+foreach ($f in $Rules) { Remove-SentinelItem (Join-Path $Base "rules" $f) }
+foreach ($f in $Config) { Remove-SentinelItem (Join-Path $Base $f) }
+
+# Legacy commands cleanup (from pre-v1.1 installs)
+$LegacyCommandsDir = Join-Path $Base "commands"
+foreach ($f in $LegacyCommands) { Remove-SentinelItem (Join-Path $LegacyCommandsDir $f) }
+
 Remove-SentinelItem $CcAwareness
 
 # Clean empty directories
-foreach ($d in @($HooksDir,$ScriptsDir,$SkillsDir,$ReferenceDir,$TemplatesDir,$ToolsDir)) {
+$AgentsDir = Join-Path $Base "agents"
+$RulesDir = Join-Path $Base "rules"
+foreach ($d in @($HooksDir,$ScriptsDir,$SkillsDir,$ReferenceDir,$TemplatesDir,$ToolsDir,$AgentsDir,$RulesDir,$LegacyCommandsDir)) {
     if ((Test-Path $d) -and @(Get-ChildItem $d -Force).Count -eq 0) {
         if ($DryRun) { Log "  WOULD REMOVE empty dir: $d" }
         else { Remove-Item $d; Log "  Removed empty dir: $d" }
