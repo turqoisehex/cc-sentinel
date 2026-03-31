@@ -125,7 +125,7 @@ When all expected result files present:
 
 **Fix ALL findings before launching the next round.** This includes findings from agents that returned FAIL or WARN, and any pre-existing issues surfaced by agents. The standard is: a fresh squad should return all PASS. Selectively fixing only FAILs while leaving WARN findings creates a moving baseline that never converges.
 
-Fix issues -> re-run ONLY failed agent(s). Max 3 rounds total. After round 3: write `VERIFICATION_BLOCKED` + remaining issues to CT, present to user.
+Fix issues → re-run ONLY failed agent(s). Max 3 rounds total. After round 3: write `VERIFICATION_BLOCKED` + remaining issues to CT, present to user.
 
 **NEVER self-certify verification results.** After fixing FAILs, always launch a fresh squad on the same scope. The new squad's independent result count determines completion, not your tally of fixes applied. Fixing issues and declaring "0 remaining" is performative progress, not verification.
 

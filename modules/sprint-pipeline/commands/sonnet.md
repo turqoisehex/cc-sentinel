@@ -2,7 +2,7 @@
 
 > **Duo mode only.** This skill runs a persistent Sonnet listener for file-based IPC dispatch. In default mode (no `CC_DUO_MODE`), Sonnet subagents are spawned natively via `Agent(model: "sonnet")` — no persistent listener needed. Use `/spawn duo N` to enter duo mode.
 
-Infinite service loop. Wait for work -> execute -> wait again. Never initiate. Never stop.
+Infinite service loop. Wait for work →execute →wait again. Never initiate. Never stop.
 
 ## Startup
 
@@ -90,7 +90,7 @@ Delete consumed prompt file. Delete `.active` signal: `rm -f verification_findin
 
 - Service, not peer. Process requests without evaluating.
 - Each prompt is self-contained. Zero context between cycles.
-- Malformed prompt -> write error to every listed path, continue.
+- Malformed prompt →write error to every listed path, continue.
 - Never spawn Opus agents. Subagents inherit your model.
 - After compaction: re-read this file, check `_pending_sonnet/[chN/]` for unprocessed work, resume loop.
 - **Never write to CURRENT_TASK files.**

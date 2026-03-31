@@ -29,9 +29,9 @@ Set this session's channel identity. Adapts to project infrastructure.
       - **Duo mode** (`CC_DUO_MODE=1`): ASSUME SONNET IS RUNNING. Start heartbeat watcher: `bash scripts/heartbeat_watcher.sh --channel N` (run_in_background: true). Do NOT block — continue with Opus work immediately.
 
    k. **Critical routing (always apply):**
-      - Sonnet dispatch -> `verification_findings/_pending_sonnet/ch$ARGUMENTS/`
-      - Opus prompt inbox -> `verification_findings/_pending_opus/ch$ARGUMENTS/`
-      - Result file suffixes -> `_ch$ARGUMENTS` (e.g., `commit_check_ch$ARGUMENTS.md`)
+      - Sonnet dispatch →`verification_findings/_pending_sonnet/ch$ARGUMENTS/`
+      - Opus prompt inbox →`verification_findings/_pending_opus/ch$ARGUMENTS/`
+      - Result file suffixes →`_ch$ARGUMENTS` (e.g., `commit_check_ch$ARGUMENTS.md`)
 
 3. **If no channel infrastructure** (standalone project):
    - Announce: "Opus $ARGUMENTS active." and proceed normally. This session is identified as Opus $ARGUMENTS for coordination purposes.
