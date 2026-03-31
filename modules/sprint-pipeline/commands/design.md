@@ -54,10 +54,9 @@ Anti-lost-in-the-middle: write in segments of ~7 items, count structural element
 
 ### Step 5: Phase-gate verification
 
-**Default mode:** Spawn Sonnet subagent via `Agent(model: "sonnet")` with adversarial plan review prompt.
-**Duo mode:** MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]plan_adversarial_<timestamp>.md`.
+**Default mode:** Spawn Sonnet subagent via `Agent(model: "sonnet")` with adversarial plan review prompt. Agent writes to `verification_findings/plan_adversarial[_chN].md`. Checks: plan↔design doc match, classification correctness, missing dependencies, cross-model dependencies. Fix issues before proceeding.
 
-Agent writes to `verification_findings/plan_adversarial[_chN].md`. Wait: `bash scripts/wait_for_results.sh verification_findings/plan_adversarial[_chN].md` (`run_in_background: true`). Checks: plan↔design doc match, classification correctness, missing dependencies, cross-model dependencies. Fix issues before proceeding.
+**Duo mode:** MANDATORY SONNET DELEGATION. Write prompt to `verification_findings/_pending_sonnet/[chN/]plan_adversarial_<timestamp>.md`. Wait: `bash scripts/wait_for_results.sh verification_findings/plan_adversarial[_chN].md` (`run_in_background: true`). Fix issues before proceeding.
 
 ### Step 6: Generate Sonnet task specifications (MANDATORY)
 
