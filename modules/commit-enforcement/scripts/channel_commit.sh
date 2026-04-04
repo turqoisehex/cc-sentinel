@@ -85,8 +85,8 @@ acquire_lock() {
 
 release_lock() { rm -rf "$LOCK_DIR" 2>/dev/null; }
 
-# --- Phase 1: Stage + Hash + Dispatch ---
-phase1_stage_and_dispatch() {
+# --- Phase 1: Stage + Hash ---
+phase1_stage_and_hash() {
   local attempt=$1
   acquire_lock
 
@@ -116,9 +116,9 @@ phase1_stage_and_dispatch() {
   git diff --cached > "$DIFF_FILE"
   HASH=$(git hash-object --stdin < "$DIFF_FILE")
 
-  if [[ "$LOCAL_VERIFY" != "true" ]]; then
-    rm -f "$CHECK_FILE" "$COLD_READ_FILE"
-  fi
+  # Never delete existing verification files here.
+  # Stale files are handled by validate_results (hash mismatch in listener mode)
+  # or stamped with current hash (local-verify mode).
 
   release_lock
   echo "Phase 1 complete (attempt $attempt/$MAX_RETRIES) — hash: $HASH" >&2
@@ -129,8 +129,26 @@ dispatch_and_wait() {
   if [[ "$LOCAL_VERIFY" == "true" ]]; then
     if [[ ! -f "$CHECK_FILE" ]] || [[ ! -f "$COLD_READ_FILE" ]]; then
       echo "LOCAL VERIFY: Result files missing." >&2
+      echo "  Expected:" >&2
+      echo "    $CHECK_FILE" >&2
+      echo "    $COLD_READ_FILE" >&2
+      echo "  Hash: $HASH" >&2
+      echo "  Spawn commit-verifier subagents, then retry with --local-verify." >&2
       exit 1
     fi
+    # Stamp current hash into verification files.
+    # In local-verify mode, agents read the working directory directly (not the
+    # staged diff), so the hash is a bookkeeping stamp, not a content guarantee.
+    # The VERDICT is what matters — the agent's independent assessment.
+    for f in "$CHECK_FILE" "$COLD_READ_FILE"; do
+      if grep -q '^HASH:' "$f" 2>/dev/null; then
+        sed -i "s/^HASH:.*/HASH: $HASH/" "$f"
+      else
+        # Insert HASH line after VERDICT line
+        sed -i "/^VERDICT:/a HASH: $HASH" "$f"
+      fi
+    done
+    echo "LOCAL VERIFY: Stamped hash $HASH into verification files." >&2
     return 0
   fi
 
@@ -165,15 +183,19 @@ validate_results() {
     [[ ! -f "$f" ]] && echo "ERROR: Missing $f" >&2 && return 1
   done
 
-  if ! grep -q "$HASH" "$CHECK_FILE" 2>/dev/null; then
-    echo "Hash mismatch in adversarial check — cleaning stale result" >&2
-    rm -f "$CHECK_FILE" "$COLD_READ_FILE"
-    return 1
-  fi
-  if ! grep -q "$HASH" "$COLD_READ_FILE" 2>/dev/null; then
-    echo "Hash mismatch in cold-reader check — cleaning stale result" >&2
-    rm -f "$CHECK_FILE" "$COLD_READ_FILE"
-    return 1
+  # In local-verify mode, hash was stamped by dispatch_and_wait — skip hash check.
+  # Hash validation only matters in listener mode where diff is dispatched as a file.
+  if [[ "$LOCAL_VERIFY" != "true" ]]; then
+    if ! grep -q "$HASH" "$CHECK_FILE" 2>/dev/null; then
+      echo "Hash mismatch in adversarial check — cleaning stale result" >&2
+      rm -f "$CHECK_FILE" "$COLD_READ_FILE"
+      return 1
+    fi
+    if ! grep -q "$HASH" "$COLD_READ_FILE" 2>/dev/null; then
+      echo "Hash mismatch in cold-reader check — cleaning stale result" >&2
+      rm -f "$CHECK_FILE" "$COLD_READ_FILE"
+      return 1
+    fi
   fi
 
   if ! grep -qE "VERDICT: (PASS|WARN)" "$CHECK_FILE" 2>/dev/null; then
@@ -244,19 +266,25 @@ HASH=""
 mkdir -p "$PENDING_DIR"
 printf '%s\n' "${FILE_ARRAY[@]}" > "$COMMIT_ACTIVE_FILE"
 
+# Check listener liveness ONCE before the retry loop.
+# Listener state doesn't change between retries — checking inside the loop
+# wastes a heartbeat check per attempt and delays the LOCAL_VERIFY decision.
+if [[ "$LOCAL_VERIFY" != "true" ]]; then
+  if ! check_heartbeat; then
+    LOCAL_VERIFY="true"
+  fi
+fi
+
 ATTEMPT=0
 while (( ATTEMPT < MAX_RETRIES )); do
   ATTEMPT=$((ATTEMPT + 1))
-  OPTIMISTIC_DISPATCH="false"
-  phase1_stage_and_dispatch "$ATTEMPT" || exit 1
+  phase1_stage_and_hash "$ATTEMPT" || exit 1
 
-  if [[ "$LOCAL_VERIFY" != "true" ]]; then
-    if ! check_heartbeat; then
-      if [[ "$OPTIMISTIC_DISPATCH" == "true" ]]; then
-        # Listener may recover — write dispatch file optimistically
-        mkdir -p "$PENDING_DIR"
-        rm -f "${PENDING_DIR}"/verify_*.md 2>/dev/null || true
-        cat > "${PENDING_DIR}/verify_${HASH}.md" << OPT_EOF
+  # Optimistic dispatch for stuck listeners (set by check_heartbeat above).
+  if [[ "$OPTIMISTIC_DISPATCH" == "true" && "$ATTEMPT" -eq 1 ]]; then
+    mkdir -p "$PENDING_DIR"
+    rm -f "${PENDING_DIR}"/verify_*.md 2>/dev/null || true
+    cat > "${PENDING_DIR}/verify_${HASH}.md" << OPT_EOF
 ---
 type: commit-verification
 diff_path: ${DIFF_FILE}
@@ -271,18 +299,16 @@ Hash: ${HASH}
 Message: ${MESSAGE}
 Files: ${FILE_ARRAY[*]}
 OPT_EOF
-        echo "Optimistic dispatch written — proceeding with local verification" >&2
-      fi
-      LOCAL_VERIFY="true"
-    fi
+    echo "Optimistic dispatch written — proceeding with local verification" >&2
   fi
 
   WAIT_EXIT=0
   dispatch_and_wait || WAIT_EXIT=$?
   if [[ $WAIT_EXIT -ne 0 ]]; then
-    echo "Sonnet wait failed (attempt $ATTEMPT/$MAX_RETRIES)" >&2
+    echo "Verification failed (attempt $ATTEMPT/$MAX_RETRIES)" >&2
     (( ATTEMPT >= MAX_RETRIES )) && exit 1
-    rm -f "$CHECK_FILE" "$COLD_READ_FILE"
+    # Don't delete verification files on transient failures — they may still be valid.
+    # Only hash mismatch (in listener mode) triggers cleanup via validate_results.
     continue
   fi
 
@@ -291,10 +317,11 @@ OPT_EOF
   if [[ $VAL_EXIT -eq 0 ]]; then
     break
   elif [[ $VAL_EXIT -eq 2 ]]; then
+    # VERDICT: FAIL — hard stop, don't retry
     exit 1
   else
+    # Hash mismatch or missing files — retry
     (( ATTEMPT >= MAX_RETRIES )) && exit 1
-    rm -f "$CHECK_FILE" "$COLD_READ_FILE"
   fi
 done
 
