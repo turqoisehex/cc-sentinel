@@ -80,8 +80,11 @@ if [[ "$BAR_STYLE" == "ascii" ]]; then
   BAR_FILLED="#"
   BAR_EMPTY="-"
 elif [[ "$BAR_STYLE" == "auto" ]]; then
-  # Test if terminal can render Unicode by checking locale
-  if [[ "${LANG:-}" == *UTF* || "${LANG:-}" == *utf* || "${LC_ALL:-}" == *UTF* || "${LC_ALL:-}" == *utf* ]]; then
+  # Test if terminal can render Unicode by checking locale vars + Windows Terminal
+  if [[ "${LANG:-}"    == *[Uu][Tt][Ff]* || \
+        "${LC_ALL:-}"  == *[Uu][Tt][Ff]* || \
+        "${LC_CTYPE:-}" == *[Uu][Tt][Ff]* || \
+        -n "${WT_SESSION:-}" ]]; then
     : # Keep Unicode defaults
   else
     BAR_FILLED="#"
