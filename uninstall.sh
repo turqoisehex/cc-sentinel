@@ -189,17 +189,33 @@ sentinel_hook_patterns = [
 
 if "hooks" in settings:
     for event_type in list(settings["hooks"].keys()):
-        original = settings["hooks"][event_type]
-        if isinstance(original, list):
-            filtered = []
-            for hook in original:
-                cmd = hook.get("command", "") if isinstance(hook, dict) else ""
-                if not any(p in cmd for p in sentinel_hook_patterns):
-                    filtered.append(hook)
+        entries = settings["hooks"][event_type]
+        if isinstance(entries, list):
+            filtered_entries = []
+            for entry in entries:
+                if isinstance(entry, dict) and "hooks" in entry:
+                    # Matcher object — filter its hooks array
+                    filtered_hooks = []
+                    for h in entry["hooks"]:
+                        cmd = h.get("command", "") if isinstance(h, dict) else ""
+                        if not any(p in cmd for p in sentinel_hook_patterns):
+                            filtered_hooks.append(h)
+                        else:
+                            changes.append(f"  Removed hook: {cmd[:80]}")
+                    if filtered_hooks:
+                        entry["hooks"] = filtered_hooks
+                        filtered_entries.append(entry)
+                elif isinstance(entry, dict):
+                    # Simple hook with direct command field
+                    cmd = entry.get("command", "")
+                    if not any(p in cmd for p in sentinel_hook_patterns):
+                        filtered_entries.append(entry)
+                    else:
+                        changes.append(f"  Removed hook: {cmd[:80]}")
                 else:
-                    changes.append(f"  Removed hook: {cmd[:80]}")
-            settings["hooks"][event_type] = filtered
-            if not filtered:
+                    filtered_entries.append(entry)
+            settings["hooks"][event_type] = filtered_entries
+            if not filtered_entries:
                 del settings["hooks"][event_type]
     if not settings["hooks"]:
         del settings["hooks"]

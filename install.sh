@@ -317,6 +317,17 @@ target = os.environ.get("TARGET", "project")
 
 modules = [m.strip() for m in modules_str.split(",") if m.strip()]
 
+# Resolve notification placeholder before merge so dedup check sees final commands
+import platform
+os_name = platform.system()
+cmd_prefix = "~/.claude" if target == "global" else hook_prefix
+if os_name == "Linux" or os_name == "Darwin":
+    notif_cmd = f"bash {cmd_prefix}/hooks/flash-notification.sh"
+elif os_name == "Windows":
+    notif_cmd = f"powershell -ExecutionPolicy Bypass -File {cmd_prefix}/hooks/flash.ps1"
+else:
+    notif_cmd = None
+
 # Read modules.json
 with open(os.path.join(sentinel_root, "modules.json")) as f:
     manifest = json.load(f)
@@ -348,8 +359,11 @@ for mod_key in modules:
             new_entry = {"matcher": entry.get("matcher", ""), "hooks": []}
             for hook in entry.get("hooks", []):
                 cmd = hook.get("command", "")
+                # Resolve notification placeholder to platform-specific command
+                if cmd == "__NOTIFICATION_SCRIPT__" and notif_cmd:
+                    cmd = notif_cmd
                 # Replace .claude/ prefix with global path (keep ~ unexpanded so allow rules match)
-                if target == "global":
+                elif target == "global":
                     cmd = cmd.replace(".claude/", "~/.claude/")
                 new_hook = dict(hook)
                 new_hook["command"] = cmd
@@ -372,27 +386,6 @@ for mod_key in modules:
         if target == "global":
             sl["command"] = sl["command"].replace(".claude/", "~/.claude/")
         settings["statusLine"] = sl
-
-# Handle notification module — replace __NOTIFICATION_SCRIPT__ placeholder
-import platform
-os_name = platform.system()
-# Use ~/ prefix for global installs so allow rules match (bash expands ~ at runtime)
-cmd_prefix = "~/.claude" if target == "global" else hook_prefix
-if os_name == "Linux":
-    notif_cmd = f"bash {cmd_prefix}/hooks/flash-notification.sh"
-elif os_name == "Darwin":
-    notif_cmd = f"bash {cmd_prefix}/hooks/flash-notification.sh"
-elif os_name == "Windows":
-    notif_cmd = f"powershell -ExecutionPolicy Bypass -File {cmd_prefix}/hooks/flash.ps1"
-else:
-    notif_cmd = None
-
-if notif_cmd:
-    for event_type in settings.get("hooks", {}):
-        for entry in settings["hooks"][event_type]:
-            for hook in entry.get("hooks", []):
-                if hook.get("command") == "__NOTIFICATION_SCRIPT__":
-                    hook["command"] = notif_cmd
 
 # Write back
 with open(settings_file, "w") as f:
