@@ -36,7 +36,7 @@ If `$ARGUMENTS` is empty, run `--check` to show environment status. If spawn.jso
 
 Config file: `~/.claude/tools/spawn.json` (auto-created by `--setup`).
 
-Key settings: `startup_delay` (tune per machine speed), `terminal`, `key_sender`.
+Key settings: `startup_delay` (tune per machine speed), `terminal`, `key_sender`, `project_dir`.
 
 ## Trust Prompt
 

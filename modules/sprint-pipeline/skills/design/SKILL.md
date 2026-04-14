@@ -57,6 +57,16 @@ Required sections: numbered steps with checkboxes + acceptance criteria, key fil
 
 Anti-lost-in-the-middle: write in segments of ~7 items, count structural elements, cross-check against plan headings, reverse-scan last third.
 
+**Cross-channel dispatch:** If the user specifies that this work should be picked up by another channel (e.g., "put it in channel 7", "Opus 7 should run this"), write TWO files:
+
+1. **CT:** `CURRENT_TASK_chN.md` (target channel). Fully self-contained — another Opus session reads it via `/opus N` and executes `/3` with zero additional context. Requirements:
+   - Plan file path (the plan must also be written and committed)
+   - All design decisions, key file paths, source paths, execution order
+   - No references to "this conversation" or context only available here
+2. **Prompt:** `verification_findings/_pending_opus/chN/<descriptive-name>.md`. This is the trigger file the Opus listener picks up. Keep it short — just the command to execute (e.g., "Read `CURRENT_TASK_ch7.md` and execute `/3`."). The CT carries the detail.
+
+Both files required. CT without prompt = work prepared but never triggered. Announce readiness: "Channel N CT + prompt ready for pickup" and register in shared `CURRENT_TASK.md`'s Active Channels table.
+
 ### Step 5: Phase-gate verification
 
 **Default mode:** Spawn Sonnet subagent via `Agent(model: "sonnet")` with adversarial plan review prompt. Agent writes to `verification_findings/plan_adversarial[_chN].md`. Checks: plan↔design doc match, classification correctness, missing dependencies, cross-model dependencies. Fix issues before proceeding.
@@ -89,4 +99,8 @@ Prompt body MUST include: task list with acceptance criteria, file paths, code p
 
 ### Step 7: Present for user approval
 
-Show plan (with classification table) and Sonnet prompt. Announce `/2` complete. Do NOT proceed to `/3` until user approves.
+Show plan (with classification table) and Sonnet prompt. Announce `/2` complete.
+
+**If same-session execution:** Do NOT proceed to `/3` until user approves.
+
+**If cross-channel dispatch:** Confirm target CT (`CURRENT_TASK_chN.md`) is written and registered in shared CT. The target session picks up with `/opus N` → reads CT → executes `/3`.
