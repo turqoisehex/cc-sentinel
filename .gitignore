@@ -29,8 +29,7 @@ __pycache__/
 .claude/
 
 # Development artifacts (not part of installable package)
-docs/plans/archive/
-docs/superpowers/plans/
+docs/
 
 # Images (GitHub UI only, not needed for install)
 *.png
