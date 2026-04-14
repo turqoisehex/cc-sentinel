@@ -33,7 +33,7 @@ Count Accumulated Corrections entries. If >= 15: warn user, invoke `/prune-rules
 ### Step 5: Commit
 
 ```bash
-bash scripts/channel_commit.sh --files "CLAUDE.md" -m "fix: encode correction" --skip-squad
+bash scripts/channel_commit.sh --files "CLAUDE.md" -m "fix: encode correction" --governance
 ```
 
 ### Step 6: Remove governance marker

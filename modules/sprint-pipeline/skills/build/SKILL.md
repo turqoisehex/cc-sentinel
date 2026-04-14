@@ -15,7 +15,7 @@ Only pause when: (1) waiting for agents, (2) a design decision genuinely blocks 
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-**Step 0:** Before any other work, TaskCreate every step in CT. Mark in_progress→completed.
+**Step 0:** Before any other work, TaskCreate every step in CT. Mark in_progress->completed.
 
 ## Procedure
 
@@ -34,14 +34,17 @@ For each step in CT:
 
 4. Repeat until a **commit boundary** (see below).
 
-5. Verify before commit:
-   Stage all files you intend to commit first. Do not stage additional files after this point.
-   Pre-compute the diff hash: `git diff --cached > verification_findings/diff_chN.tmp && git hash-object --stdin < verification_findings/diff_chN.tmp`. Pass this value to `commit-verifier` as the `commit hash` field.
-   Spawn `commit-verifier` subagent via `Agent(model: "sonnet")`. Pass: channel, staged diff path, commit hash.
-   IMPORTANT: Do not stage additional files between running the verifier and calling channel_commit.sh — the hash in the verifier output must match the live diff at commit time.
-   The subagent must write `HASH: <hash>` into its output files so `validate_results()` can confirm integrity.
-   - PASS/WARN: proceed with `bash scripts/channel_commit.sh --channel N --files "<files>" -m "<message>" --local-verify`
+5. Verify before commit — full rules in `.claude/reference/commit-protocol.md`. READ IT the first time you commit in any session.
+   Do NOT pre-stage. The git index is shared across channel sessions.
+   Compute the verifier diff (index-independent): `git diff HEAD -- <files> > verification_findings/staged_diff_chN.diff`. NEVER `git diff --cached`. For unchanneled sessions, omit the `_chN` suffix — use `verification_findings/staged_diff.diff`, `commit_check.md`, `commit_cold_read.md`.
+   Spawn `commit-adversarial` and `commit-cold-reader` subagents in parallel via `Agent(model: "sonnet")`. In each agent's prompt, pass BOTH:
+     - `diff_path`: the staged_diff file from the previous step
+     - `output_path`: `verification_findings/commit_check_chN.md` (adversarial) or `verification_findings/commit_cold_read_chN.md` (cold-reader). For unchanneled sessions, use the unsuffixed filenames. The script greps for the chN-suffixed name if `--channel N` is set — wrong `output_path` = script exits 1.
+   Agents write `VERDICT: PASS|WARN|FAIL` into those files. No HASH line needed — `channel_commit.sh` stamps the real hash in `--local-verify` mode via sed ("stamps" = overwrites any existing `HASH:` line, or inserts one after `VERDICT:`). Never pre-stage, never pre-hash, never touch the index.
+   - PASS/WARN: proceed with `bash scripts/channel_commit.sh --channel N --files "<files>" -m "<message>" --local-verify` (project-local path; the global `~/.claude/scripts/channel_commit.sh` is kept in sync and is equivalent).
    - FAIL: review findings, fix, re-verify.
+
+   **Note:** This verify-before-commit workflow applies ONLY when verifier agents are spawned. The `--skip-squad` flag (used by /finalize pre-verification WIP commits) bypasses agent spawning entirely — no verdict file is written, so there is no PASS/WARN/FAIL outcome to react to. /finalize callers should NOT follow the FAIL branch; if the underlying file state is wrong, fix it before the /finalize run, not after.
 
    **Duo mode fallback:** Omit `--local-verify` — channel_commit.sh dispatches to the Sonnet listener automatically.
 
@@ -51,25 +54,21 @@ In default mode, /verify spawns `sonnet-verifier` natively. In duo mode, /verify
 
 ### Commit boundaries
 
-Commit once per logical unit, not per step. Each commit spawns 2 verification agents + test suite — keep the ratio of work to verification high.
+Commit once per logical unit, not per step. Each commit spawns 2 verification agents + test suite.
 
-**Commit after:** completing a task group or phase boundary, finishing all steps that touch the same file set, completing a batch of related `[SONNET]` tasks, or before switching to a different subsystem.
+**Commit after:** completing a task group or phase boundary, finishing all steps that touch the same file set, completing a batch of related tasks, or before switching to a different subsystem.
 
-**Do not commit after:** each individual step, CT-only status updates mid-phase, or trivially small changes that will be followed by more in the same area.
+**Do not commit after:** each individual step, CT-only status updates mid-phase, or trivially small changes.
 
-**Always commit before:** pausing for a design decision, dispatching work that depends on committed state, or ending a session.
+**Always commit before:** pausing for a design decision, dispatching dependent work, or ending a session.
 
 ## Batching rules
 
 **Batch when ALL true:** same code pattern, same spec section, content/data additions only (zero logic), <300 lines inserted.
 
-**Never batch when ANY true:** control flow/state/engine logic, multiple subsystems, design judgment required, different spec sections or categories.
-
-Never cross category boundaries. Split at natural boundary if >300 lines.
+**Never batch when ANY true:** control flow/state/engine logic, multiple subsystems, design judgment required, different spec sections.
 
 ## Design decisions during build
-
-Design decision = wrong answer requires architectural rework. Implementation choices with clear precedent (project reference docs) are not design decisions.
 
 When deferring: (1) note in CT under "Deferred Decisions" immediately, (2) if blocks later step: implement most conservative default, mark provisional, (3) present all deferred at end of `/3`.
 

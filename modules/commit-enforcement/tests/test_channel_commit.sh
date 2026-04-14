@@ -455,6 +455,19 @@ assert_stderr_contains "(CONFLICT|Hash mismatch)" "detects hash change"
 assert_no_lock "lock cleaned up on conflict"
 teardown_repo
 
+# --- Test 13: Governance flag bypasses verification pipeline ---
+echo ""
+echo "Test 13: Governance flag bypasses verification"
+setup_repo
+create_test_file "CLAUDE.md" "governance content"
+# No verification files, no heartbeat, no squad — governance should bypass all
+run_commit --governance --files "CLAUDE.md" -m "fix: governance test"
+assert_exit 0 "exits successfully with --governance"
+assert_stderr_contains "GOVERNANCE: Skipping verification pipeline" "prints governance bypass message"
+assert_file_committed "CLAUDE.md" "CLAUDE.md is in the commit"
+assert_no_lock "lock cleaned up"
+teardown_repo
+
 # ==================== SUMMARY ====================
 
 echo ""

@@ -56,7 +56,7 @@ Resolve before running. Unchanneled: omit bracketed portion.
 Public commit API for all sessions.
 
 ```bash
-bash scripts/channel_commit.sh --channel N --files "f1 f2" -m "message" [--skip-squad] [--local-verify]
+bash scripts/channel_commit.sh --channel N --files "f1 f2" -m "message" [--skip-squad] [--skip-tests] [--local-verify] [--governance]
 ```
 
 Handles: staging lock, diff capture, Sonnet dispatch, validation, retry, tests, safe-commit.

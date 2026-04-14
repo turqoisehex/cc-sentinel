@@ -7,7 +7,7 @@ description: "Verification listener service loop. Waits for work files in _pendi
 
 > **Duo mode only.** This skill runs a persistent Sonnet listener for file-based IPC dispatch. In default mode (no `CC_DUO_MODE`), Sonnet subagents are spawned natively via `Agent(model: "sonnet")` — no persistent listener needed. Use `/spawn duo N` to enter duo mode.
 
-Infinite service loop. Wait for work →execute →wait again. Never initiate. Never stop.
+Infinite service loop. Wait for work -> execute -> wait again. Never initiate. Never stop.
 
 ## Startup
 
@@ -25,7 +25,7 @@ Infinite service loop. Wait for work →execute →wait again. Never initiate. N
 If `$ARGUMENTS` provided (e.g., `/sonnet 1`):
 - `mkdir -p verification_findings/_pending_sonnet/ch$ARGUMENTS`
 - Announce: "Sonnet listener active. Watching _pending_sonnet/ch$ARGUMENTS/"
-- Use `bash scripts/wait_for_work.sh --model sonnet --channel $ARGUMENTS` in Wait.
+- Use `bash ~/.claude/scripts/wait_for_work.sh --model sonnet --channel $ARGUMENTS` in Wait.
 - Delete consumed prompts from `_pending_sonnet/ch$ARGUMENTS/` in Cleanup.
 
 If no argument:
@@ -36,7 +36,7 @@ If no argument:
 
 ### Wait
 
-Run `bash scripts/wait_for_work.sh --model sonnet [--channel N]` with `run_in_background: true`. Blocks until a prompt file appears.
+Run `bash ~/.claude/scripts/wait_for_work.sh --model sonnet [--channel N]` with `run_in_background: true`. Blocks until a prompt file appears.
 
 ### Execute
 
@@ -53,10 +53,10 @@ Read the prompt file.
 
 **Diff injection (commit-verification with diff_path):** If `diff_path` present and file exists:
 1. Read file content.
-2. Prepend to each agent: "The staged diff is below. Analyze THIS diff only. Do NOT run git commands -- working tree is being manipulated by another terminal. Your ONLY evidence: (1) diff below, (2) files via Read tool."
+2. Prepend to each agent: "The working-tree diff (produced by `git diff HEAD -- <files>`) is below. Analyze THIS diff only. Do NOT run git commands -- the git index is shared across channel sessions and must not be touched. Your ONLY evidence: (1) diff below, (2) files via Read tool. Do NOT write a HASH line in your output — channel_commit.sh stamps the real hash post-verdict."
 3. If `diff_path` set but file missing: write error to all `output_path`s, return to Wait.
 
-If `diff_path` absent: agents read `git diff --cached` directly (backwards compatible).
+If `diff_path` absent: write error ("commit-verification dispatch missing diff_path — running `git diff --cached` on the shared index is forbidden, see `.claude/reference/commit-protocol.md`") to all `output_path`s, delete the prompt, return to Wait. There is no fallback — callers must supply `diff_path`.
 
 **Spawn agents:**
 - **commit-verification/squad:** Agent count from YAML `agents` array. Spawn all in parallel.
@@ -70,7 +70,7 @@ One agent per task -- each has full tool access (Edit, Write, Bash).
 
 | Type | Work | Execution |
 |------|------|-----------|
-| `commit-verification` | Analyze staged diff | Parallel agents (read-only) |
+| `commit-verification` | Analyze working-tree diff from `diff_path` | Parallel agents (read-only) |
 | `squad` | Analyze work product vs spec | Parallel agents (read-only) |
 | `implementation` | Edit code, create files, test, commit | One agent per task (full tools) |
 
@@ -95,7 +95,7 @@ Delete consumed prompt file. Delete `.active` signal: `rm -f verification_findin
 
 - Service, not peer. Process requests without evaluating.
 - Each prompt is self-contained. Zero context between cycles.
-- Malformed prompt →write error to every listed path, continue.
+- Malformed prompt -> write error to every listed path, continue.
 - Never spawn Opus agents. Subagents inherit your model.
 - After compaction: re-read this file, check `_pending_sonnet/[chN/]` for unprocessed work, resume loop.
 - **Never write to CURRENT_TASK files.**

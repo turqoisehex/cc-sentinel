@@ -89,6 +89,19 @@ if [[ -n "${SENTINEL_CHANNEL:-}" ]]; then
   SQUAD_GLOB="verification_findings/squad_ch${SENTINEL_CHANNEL}_*/"
 fi
 
+# Filter: skip dirs owned by other channels.
+# Channeled sessions already have a specific glob — filter is a safety net.
+# Unchanneled sessions use squad_*/ glob — filter excludes squad_ch<digit>* dirs.
+is_own_squad_dir() {
+  local base
+  base=$(basename "$1")
+  if [[ -n "${SENTINEL_CHANNEL:-}" ]]; then
+    [[ "$base" == squad_ch${SENTINEL_CHANNEL}_* || "$base" == "squad_ch${SENTINEL_CHANNEL}" ]]
+  else
+    [[ ! "$base" =~ ^squad_ch[0-9] ]]
+  fi
+}
+
 # 1. Per-commit agent checks (adversarial + cold reader)
 STAGED_FOR_CHECKS="$(git diff --cached --name-only 2>/dev/null)" || true
 if [[ -n "$STAGED_FOR_CHECKS" ]]; then
@@ -222,6 +235,7 @@ if [[ -n "$STAGED_FILES" ]]; then
       SQUAD_EVIDENCE="false"
       for sd in $SQUAD_GLOB; do
         [[ ! -d "$sd" ]] && continue
+        is_own_squad_dir "$sd" || continue
         parse_manifest_agents "$sd"
 
         ALL_PASS="true"
@@ -252,7 +266,31 @@ if [[ -n "$STAGED_FILES" ]]; then
         echo "" >&2
         echo "================================================================" >&2
         echo "  COMMIT BLOCKED: Squad verification required." >&2
-        echo "  Run /verify first, or use --skip-squad for WIP commits." >&2
+        echo "" >&2
+        echo "  Searched: $SQUAD_GLOB" >&2
+        # Show what was found (or not) for diagnosis
+        found_dirs=0
+        for _sd in $SQUAD_GLOB; do
+          [[ ! -d "$_sd" ]] && continue
+          is_own_squad_dir "$_sd" || continue
+          found_dirs=$((found_dirs + 1))
+          echo "  Found dir: $_sd" >&2
+          parse_manifest_agents "$_sd"
+          for _ef in "${SQUAD_EXPECTED[@]}"; do
+            if [[ ! -f "$_sd/$_ef" ]]; then
+              echo "    MISSING: $_ef" >&2
+            elif ! grep -qE "VERDICT: (PASS|WARN)" "$_sd/$_ef" 2>/dev/null; then
+              echo "    NO PASS/WARN: $_ef" >&2
+            else
+              echo "    OK: $_ef" >&2
+            fi
+          done
+        done
+        if [[ $found_dirs -eq 0 ]]; then
+          echo "  No squad directories found matching: $SQUAD_GLOB" >&2
+        fi
+        echo "" >&2
+        echo "  Fix: Run /verify, or use --skip-squad for WIP commits." >&2
         echo "================================================================" >&2
         exit 1
       fi
@@ -268,6 +306,7 @@ COMMIT_EXIT=$?
 if [[ "$COMMIT_EXIT" -eq 0 ]]; then
   for sd in $SQUAD_GLOB; do
     [[ ! -d "$sd" ]] && continue
+    is_own_squad_dir "$sd" || continue
     parse_manifest_agents "$sd"
 
     ALL_DONE="true"
