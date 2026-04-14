@@ -24,6 +24,7 @@ while [[ $# -gt 0 ]]; do
     --context-source) CONTEXT_SOURCE="$2"; shift 2 ;;
     --dry-run) DRY_RUN="true"; shift ;;
     --inject-rules) INJECT_RULES="true"; shift ;;
+    --force-overwrite) FORCE_OVERWRITE="true"; shift ;;
     --help|-h)
       echo "Usage: bash install.sh --modules \"core,verification,...\" --target project|global [options]"
       echo ""
@@ -33,6 +34,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --bar-style <style>     unicode, ascii, or auto (default: auto)"
       echo "  --context-source <src>  bundled or canonical (default: bundled)"
       echo "  --inject-rules          Inject behavioral rules into CLAUDE.md"
+      echo "  --force-overwrite       Overwrite locally-modified files on reinstall (default: preserve)"
       echo "  --dry-run               Show what would be installed without doing it"
       exit 0
       ;;
@@ -89,11 +91,19 @@ copy_file() {
   local src="$1" dst="$2"
   if [[ "$DRY_RUN" == "true" ]]; then
     log "  WOULD COPY: $src → $dst"
-  else
-    mkdir -p "$(dirname "$dst")"
-    cp "$src" "$dst"
-    log "  Copied: $(basename "$dst")"
+    return
   fi
+  mkdir -p "$(dirname "$dst")"
+  # Local-preservation: on reinstall, skip files that the user has modified locally.
+  # Gated by the .cc-sentinel-installed marker so fresh installs always proceed.
+  # Pass --force-overwrite to replace locally-modified files with the canonical source.
+  local marker="${CLAUDE_DIR}/.cc-sentinel-installed"
+  if [[ "$FORCE_OVERWRITE" != "true" && -f "$marker" && -f "$dst" ]] && ! cmp -s "$src" "$dst"; then
+    log "  SKIPPED (local modifications preserved): $(basename "$dst")"
+    return
+  fi
+  cp "$src" "$dst"
+  log "  Copied: $(basename "$dst")"
 }
 
 install_module() {
@@ -710,6 +720,14 @@ if [[ -d "${CLAUDE_DIR}/skills" ]]; then
   done
 fi
 log "  $SKILL_COUNT skills installed"
+
+# Write the install marker. On subsequent reinstalls, copy_file() uses this
+# marker to gate local-preservation: files present and modified are kept as-is
+# (pass --force-overwrite to replace). Fresh installs never see the marker so
+# they always install canonical content.
+if [[ "$DRY_RUN" != "true" ]]; then
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${CLAUDE_DIR}/.cc-sentinel-installed"
+fi
 
 echo ""
 log "Installation complete!"

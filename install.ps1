@@ -17,7 +17,9 @@ param(
     [ValidateSet("bundled", "canonical")]
     [string]$ContextSource = "bundled",
 
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    [switch]$ForceOverwrite
 )
 
 $ErrorActionPreference = "Stop"
@@ -67,12 +69,24 @@ function Log($msg) { Write-Host "[cc-sentinel] $msg" }
 function Copy-FileChecked($src, $dst) {
     if ($DryRun) {
         Log "  WOULD COPY: $src -> $dst"
-    } else {
-        $dir = Split-Path -Parent $dst
-        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-        Copy-Item -Path $src -Destination $dst -Force
-        Log "  Copied: $(Split-Path -Leaf $dst)"
+        return
     }
+    $dir = Split-Path -Parent $dst
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    # Local-preservation: on reinstall, skip files the user has modified locally.
+    # Gated by .cc-sentinel-installed marker so fresh installs always proceed.
+    # Pass -ForceOverwrite to replace locally-modified files with the canonical source.
+    $marker = Join-Path $ClaudeDir ".cc-sentinel-installed"
+    if (-not $ForceOverwrite -and (Test-Path $marker) -and (Test-Path $dst)) {
+        $srcHash = (Get-FileHash -Path $src -Algorithm SHA256).Hash
+        $dstHash = (Get-FileHash -Path $dst -Algorithm SHA256).Hash
+        if ($srcHash -ne $dstHash) {
+            Log "  SKIPPED (local modifications preserved): $(Split-Path -Leaf $dst)"
+            return
+        }
+    }
+    Copy-Item -Path $src -Destination $dst -Force
+    Log "  Copied: $(Split-Path -Leaf $dst)"
 }
 
 function Install-Module($moduleName) {
@@ -566,6 +580,12 @@ if (Test-Path $skillsPath) {
     }
 }
 Log "$skillCount skills installed"
+
+# Write the install marker. See install.sh for rationale.
+if (-not $DryRun) {
+    $markerPath = Join-Path $ClaudeDir ".cc-sentinel-installed"
+    (Get-Date -AsUTC -Format "yyyy-MM-ddTHH:mm:ssZ") | Out-File -FilePath $markerPath -Encoding utf8 -NoNewline
+}
 
 Write-Host ""
 Log "Installation complete!"

@@ -9,7 +9,7 @@ Lighter than `/5` (sprint close) and `/cold` (context dying). Run when session e
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-**Step 0:** Before any other work, TaskCreate every step. Mark in_progress→completed.
+**Step 0:** Before any other work, TaskCreate every step. Mark in_progress->completed.
 
 ## Step 1: Inventory Session State
 
@@ -22,7 +22,7 @@ Read CT. Run `git status` and `git diff --stat`. Catalog briefly:
 
 For each plan item: verify done by reading target file or grepping (don't trust CT markers alone). Mark done items in CT (Edit). Note remaining with specific files and changes needed.
 
-Context-aware: below 50% context used (plenty of budget remaining) → verify ALL items; 50-75% used (conserve budget) → verify only done-marked items.
+Context-aware: below 50% context used (plenty of budget remaining) -> verify ALL items; 50-75% used (conserve budget) -> verify only done-marked items.
 
 Report: "N of M plan items complete. Remaining: [list with one-line context each]."
 
@@ -30,17 +30,17 @@ Report: "N of M plan items complete. Remaining: [list with one-line context each
 
 If uncommitted changes exist, one commit for all session work.
 
-If `scripts/channel_commit.sh` exists (Commit Enforcement module installed):
+If `scripts/channel_commit.sh` exists (Commit Enforcement module installed), follow `.claude/reference/commit-protocol.md` — multi-channel index safety rules apply:
 ```bash
-bash scripts/channel_commit.sh [--channel N] --files "<all changed files>" -m "wip: end-of-session commit" --skip-squad
+bash ~/.claude/scripts/channel_commit.sh [--channel N] --files "<all changed files>" -m "wip: end-of-session commit" --skip-squad
 ```
 
-If channel_commit.sh is not available (Core-only install):
+If channel_commit.sh is not available (Core-only install — no multi-channel concern):
 ```bash
 git add <all changed files>
 git commit -m "wip: end-of-session commit"
 ```
-Use proper message if changes include completed work. Clean tree → skip.
+Use proper message if changes include completed work. Clean tree -> skip.
 
 ## Step 4: Clean Artifacts
 
@@ -54,7 +54,7 @@ Delete session artifacts. **Only YOUR channel's artifacts** — never touch othe
 
 Commit only if tracked files were deleted (squad dirs and `_pending_sonnet/` are gitignored). If `scripts/channel_commit.sh` exists:
 ```bash
-bash scripts/channel_commit.sh [--channel N] --files "<deleted tracked files>" -m "cleanup: remove session artifacts" --skip-squad
+bash ~/.claude/scripts/channel_commit.sh [--channel N] --files "<deleted tracked files>" -m "cleanup: remove session artifacts" --skip-squad
 ```
 If not: `git add <deleted tracked files> && git commit -m "cleanup: remove session artifacts"`
 
@@ -71,7 +71,7 @@ For each incomplete item: ensure CT has enough context for zero-context executio
 
 If files changed. With channel_commit.sh:
 ```bash
-bash scripts/channel_commit.sh [--channel N] --files "<changed files>" -m "cleanup: [session state updated | channel N cleared]" --skip-squad
+bash ~/.claude/scripts/channel_commit.sh [--channel N] --files "<changed files>" -m "cleanup: [session state updated | channel N cleared]" --skip-squad
 ```
 Without: `git add <changed files> && git commit -m "cleanup: session state updated"`
 
