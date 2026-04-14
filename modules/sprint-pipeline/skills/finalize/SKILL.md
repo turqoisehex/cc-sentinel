@@ -41,22 +41,26 @@ Opus collects, deduplicates. For each decision: grep work product for evidence. 
 
 Review all issues found this sprint. For each: search CLAUDE.md for existing rule → strengthen/update. Not found → add as "Never X. Always Y." with rationale. Never duplicate.
 
-### 6. Update manual test queue
+### 6. Reconcile SC and CIP
+
+Read `SPRINT_CHECKLIST.md` and `COMPREHENSIVE_IMPLEMENTATION_PLAN.md`. For each item completed this sprint: check it off with commit hash. For incomplete items discovered during verification (MISS/PARTIAL/blocked): add as unchecked items under the current or next sprint section. Never leave completed work untracked or incomplete work unmarked.
+
+### 7. Update manual test queue
 
 Read `MANUAL_TEST_QUEUE.md` (project root). Prune first: for each existing entry, search `test/` for automated coverage added since the entry was created — if now covered, remove it. Then review this sprint's deliverables for items meeting BOTH criteria: (1) cannot be verified by any automated test, script, or integration test, and (2) critically important — if broken, users will notice. Skip cosmetic, edge-case, or "nice to verify" items. For qualifying items not already in the queue, append a row: description, why not automatable, pass criteria, sprint added. If no items qualify, skip this step.
 
-### 7. Final report
+### 8. Final report
 
 - Requirements extracted/verified: N
 - Fixed during verification: N (list each)
 - Budget: run `ccusage` for the sprint date range and include total input/output tokens and estimated cost.
 - Quality gate: PASS (spec verified, code verified, 100% implementation, no remaining issues) or FAIL (any gap)
 
-### 8. Merge (if on feature branch)
+### 9. Merge (if on feature branch)
 
 If on feature branch: merge to main. If already on main: skip.
 
-### 9. Channel cleanup / Reset
+### 10. Channel cleanup / Reset
 
 **Channeled:** Delete `CURRENT_TASK_chN.md`, remove channel row from shared CT Active Channels table, delete `verification_findings/squad_chN_*/`. Commit: `bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md" -m "finalize: remove channel N" --skip-squad`
 
