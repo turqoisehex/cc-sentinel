@@ -426,34 +426,11 @@ fi
 assert_no_lock "lock cleaned up"
 teardown_repo
 
-# --- Test 12: Hash conflict detection (concurrent modification of same file) ---
-echo ""
-echo "Test 12: Hash conflict detection"
-setup_repo
-create_test_file "file_k.txt" "content K"
-# Stage and compute the expected hash (file_k has "content K modified")
-git add file_k.txt
-EXPECTED_HASH=$(git diff --cached | git hash-object --stdin)
-git reset --quiet
-# Pre-populate result files with Phase 1's hash for local-verify
-mkdir -p verification_findings
-printf 'Hash: %s\nVERDICT: PASS\n' "$EXPECTED_HASH" > verification_findings/commit_check.md
-printf 'Hash: %s\nVERDICT: PASS\n' "$EXPECTED_HASH" > verification_findings/commit_cold_read.md
-# Simulate concurrent commit that modifies the SAME file (changes its base in HEAD)
-# This changes what git diff --cached produces for file_k.txt in Phase 2
-echo "content K concurrent change" > file_k.txt
-git add file_k.txt
-git commit --quiet -m "concurrent: modify file_k.txt"
-# Restore our intended modification (different from what concurrent committed)
-echo "content K modified" > file_k.txt
-# Phase 2 will re-stage file_k.txt, but the diff is now against the new base
-# ("concurrent change" -> "modified") instead of ("content K" -> "modified")
-# This produces a different hash -> CONFLICT
-run_commit --files "file_k.txt" -m "test: conflict" --local-verify
-assert_exit 1 "exits with error (hash conflict)"
-assert_stderr_contains "(CONFLICT|Hash mismatch)" "detects hash change"
-assert_no_lock "lock cleaned up on conflict"
-teardown_repo
+# Test 12 removed 2026-04-15: exercised the old local-verify hash-grep contract
+# deleted in a7e7edc ("hash is bookkeeping, verdict is substance"). The scenario
+# it simulated (HEAD moved before Phase 1) is no longer guarded anywhere; Phase
+# 2's COMMIT_HASH!=HASH branch only catches HEAD advances BETWEEN phases of one
+# invocation, which has no natural seam to inject in a single-threaded test.
 
 # --- Test 13: Governance flag bypasses verification pipeline ---
 echo ""
