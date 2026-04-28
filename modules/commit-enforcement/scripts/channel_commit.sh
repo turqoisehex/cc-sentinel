@@ -2,7 +2,7 @@
 # channel_commit.sh — Atomic multi-channel commit with locking and verification dispatch
 #
 # Usage:
-#   bash scripts/channel_commit.sh [--channel N] --files "f1 f2" -m "msg" [--skip-squad] [--skip-tests] [--local-verify] [--governance]
+#   bash scripts/channel_commit.sh [--channel N] --files "f1 f2" -m "msg" [--skip-squad] [--skip-tests] [--local-verify] [--governance] [--integration]
 #
 # Output:
 #   stdout: commit SHA on success
@@ -37,6 +37,7 @@ SKIP_SQUAD="false"
 SKIP_TESTS="false"
 LOCAL_VERIFY="false"
 GOVERNANCE="false"
+INTEGRATION="false"
 MAX_RETRIES=3
 
 # Trailing `true` required: under set -e, [[ ]] returning false would exit.
@@ -50,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     --skip-squad)   SKIP_SQUAD="true"; shift ;;
     --skip-tests)   SKIP_TESTS="true"; shift ;;
     --local-verify) LOCAL_VERIFY="true"; shift ;;
+    --integration)  INTEGRATION="true"; shift ;;
     --governance)   GOVERNANCE="true"; SKIP_SQUAD="true"; SKIP_TESTS="true"; LOCAL_VERIFY="true"; shift ;;
     *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
   esac
@@ -402,6 +404,7 @@ fi
 COMMIT_ARGS=(-m "$MESSAGE" --local-verify)
 [[ "$SKIP_SQUAD" == "true" ]] && COMMIT_ARGS+=(--skip-squad)
 [[ "$SKIP_TESTS" == "true" ]] && COMMIT_ARGS+=(--skip-tests)
+[[ "$INTEGRATION" == "true" ]] && COMMIT_ARGS+=(--integration)
 
 [[ -n "$CHANNEL" ]] && export SENTINEL_CHANNEL="$CHANNEL"
 COMMIT_EXIT=0

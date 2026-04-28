@@ -424,6 +424,21 @@ SCOPE: [paste one-sentence scope]
 
 4. For CODE files: What does each function ACTUALLY do (not what comments say)? Flag comment-code mismatches. Check: default values sensible without caller context? Error messages accurate?
 
+   **TRACE DISCIPLINE (mandatory for any scope involving runtime behavior, timing, pacing, effects, or parameter-driven code):**
+
+   "Params match spec" is NOT coverage. Design intent in comments, names, or surrounding prose is NOT coverage. The only thing that counts is: **what does the consumer actually do with these inputs at runtime?**
+
+   For each parameter the work product declares, and for each parameter the consumer reads:
+   - List both sets as flat lists.
+   - Any parameter the consumer reads that the work product does NOT declare → identify the silent fallback value, then trace the runtime behavior that fallback produces, and compare against the source/spec requirement. A parameter set that is spec-faithful but routes into an unintended fallback branch is a FAIL, not a PASS.
+   - Any parameter the work product declares that the consumer does NOT read → orphan declaration, flag as DEAD.
+
+   For design intent expressed as "this is X-type, therefore Y doesn't apply" (e.g., "this is rate-based, no per-cycle timing applies") — verify the consumer actually implements that classification. If the consumer has one code path that reads Y and falls back when absent, the classification is aspirational, not implemented. FAIL.
+
+   Do NOT write "matches source" or "MATCH" as a verdict for a fidelity/timing/pacing scope without having read the consumer's code and traced the numeric runtime behavior. "Source says 1s/breath, code declares 1s/breath" is a text match, not a trace. The trace question is: "given these parameter values, what numbers does the state machine / engine / renderer produce at runtime?" Answer that question with code citations, or the finding is UNVERIFIED and the verdict is FAIL.
+
+   If a spec or source specifies a numeric value (seconds, breaths/min, pixels, bytes, etc.) and you cannot produce the corresponding runtime number by tracing the code, that is a gap — FAIL. "The engine handles it correctly" is an assumption, not a finding.
+
 5. **ONLY AFTER steps 1-4:** Read spec (if provided). Flag every gap between "what it says" and "what it should say."
 
 6. Write via atomic protocol: `.tmp` then `mv -f` to final path.

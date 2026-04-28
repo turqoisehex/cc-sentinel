@@ -71,7 +71,7 @@ Claude Code clones the repo and runs an interactive installer. The expected flow
 7. **Offer deny rules** for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
 8. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
 9. **Print a summary** of what was installed: modules, hooks, skills, status line, spawn config.
-10. **Tell the user to run `/self-test`** in their next session to validate.
+10. **Print an inline install summary** (hooks, skills, reference files — each with PASS/FAIL count). Skills installed this session are not loadable until the next session; **tell the user to run `/self-test`** then for ongoing validation.
 
 **Manual installation:**
 

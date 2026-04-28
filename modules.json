@@ -202,7 +202,8 @@
           "comment-replacement.sh"
         ],
         "reference": [
-          "verification-squad.md"
+          "verification-squad.md",
+          "verification-behavior.md"
         ],
         "skills": [
           "grill",
@@ -265,7 +266,8 @@
           "commit-cold-reader.md"
         ],
         "reference": [
-          "channel-routing.md"
+          "channel-routing.md",
+          "commit-protocol.md"
         ],
         "tests": [
           "test_channel_commit.sh",
@@ -328,8 +330,7 @@
         ],
         "agents": [
           "sonnet-implementer.md",
-          "sonnet-verifier.md",
-          "commit-verifier.md"
+          "sonnet-verifier.md"
         ],
         "reference": [
           "spec-verification.md"
@@ -363,6 +364,9 @@
         "skills": [
           "mistake",
           "prune-rules"
+        ],
+        "reference": [
+          "audit-pointer-rules.md"
         ],
         "config": [
           "protected-files.txt",

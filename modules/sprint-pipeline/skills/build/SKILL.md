@@ -54,13 +54,20 @@ In default mode, /verify spawns `sonnet-verifier` natively. In duo mode, /verify
 
 ### Commit boundaries
 
-Commit once per logical unit, not per step. Each commit spawns 2 verification agents + test suite.
+**Default cadence: once at end of /3, once at end of /5.** Each commit spawns 2 verification agents + test suite — that cost means fewer, larger commits, not more granular ones.
 
-**Commit after:** completing a task group or phase boundary, finishing all steps that touch the same file set, completing a batch of related tasks, or before switching to a different subsystem.
+- **/3 (build):** One commit covering ALL code changes built during /3, at the very end. Not per-phase, not per-subsystem, not per file set. One commit.
+- **/5 (finalize):** One commit covering /4 quality changes + sprint close artifacts (CLAUDE.md corrections, SC/CIP updates, etc.).
+- **/2 (design):** No commit. Plan and CT updates are included in the /3 commit.
+- **/4 (perfect):** No commit. /4 code changes are committed in /5.
 
-**Do not commit after:** each individual step, CT-only status updates mid-phase, or trivially small changes.
+**Exception — commit mid-/3 only when:** (1) a plan-defined commit task explicitly separates two phases for a stated reason (e.g., infrastructure must land before exercises that depend on it AND they cannot be batched), AND (2) you cannot complete /3 in one session. Even then, verify the plan's reason is real before splitting.
 
-**Always commit before:** pausing for a design decision, dispatching dependent work, or ending a session.
+**Plan-generated commit tasks:** Plans are sometimes generated with mid-/3 "Commit Phase N" tasks. Ignore them — they are non-compliant with the one-commit rule. Follow the commit boundaries here, not the plan's task structure. If the plan has a genuinely load-bearing mid-/3 split (infrastructure dependency), the exception above applies; state the reason in CT before committing early.
+
+**Never commit because:** a phase feels "done," the file set is different, "while agents run," or as a checkpoint. These are not reasons. Agent cost is real — wasted verifier spawns consume the developer's paid budget.
+
+**If you mis-spawn verifiers:** Use TaskStop immediately to cancel them. "They're almost done" does not justify letting them run. Budget waste IS harm.
 
 ## Batching rules
 

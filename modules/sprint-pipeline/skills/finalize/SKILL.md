@@ -1,11 +1,11 @@
 ---
 name: finalize
-description: "Sprint finalization: transcript mining, Sonnet review, spec-to-code verification, accumulated corrections, manual test queue, and channel reset. Phase /5 of the sprint pipeline. Also invoked as /5."
+description: "Sprint finalization: transcript mining, Sonnet review, accumulated corrections, manual test queue, and channel reset. Phase /5 of the sprint pipeline. Also invoked as /5."
 ---
 
 # /finalize — Finalize (alias: /5)
 
-After `/perfect`, when sprint work is complete. Handles transcript mining, Sonnet review, spec-to-code verification, accumulated corrections, and reset.
+After `/perfect`, when sprint work is complete. Handles transcript mining, Sonnet review, accumulated corrections, and reset.
 
 **Abbreviations:** CT = `CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`.
 
@@ -19,7 +19,7 @@ After `/perfect`, when sprint work is complete. Handles transcript mining, Sonne
 
 ### 1. Pre-verification checkpoint
 
-If uncommitted changes: `bash ~/.claude/scripts/channel_commit.sh --channel N --files "<files>" -m "wip: pre-verification" --skip-squad`. If clean: skip.
+If uncommitted changes: `bash scripts/channel_commit.sh --channel N --files "<files>" -m "wip: pre-verification" --skip-squad`. If clean: skip.
 
 ### 2. Review Sonnet's work
 
@@ -33,11 +33,17 @@ If Sonnet contributed this sprint: `git log` to identify Sonnet commits. Read ch
 
 Opus collects, deduplicates. For each decision: grep work product for evidence. Missing -> write it now.
 
-### 4. Spec-to-code verification
+### 4. Fidelity-audit gate
 
-**Default mode:** Spawn Sonnet subagent via `Agent(model: "sonnet")` with spec-to-code prompt. Procedure: `.claude/reference/spec-verification.md`. Output: `verification_findings/spec_to_code_report[_chN].md`.
+Verify that `/perfect` Phase 2.5 ran. Check for both outputs:
+- `verification_findings/fidelity_audit[_chN].md`
+- `verification_findings/field_consumption_audit[_chN].md`
 
-**Duo mode:** DELEGATE via `verification_findings/_pending_sonnet/[chN/]spec_to_code_<timestamp>.md`. Wait: `bash ~/.claude/scripts/wait_for_results.sh` (run_in_background: true).
+Missing either → FAIL. Return to `/perfect` and run Phase 2.5 before continuing.
+
+Read both files. Any unresolved [D]/[F]/[M]/[I]/[T] findings → FAIL. Return to `/perfect` — fix, re-run Phase 2.5, then resume `/5` from this step.
+
+Only proceed to Step 5 when both audits exist, both verdict PASS, and no unresolved findings above INFO.
 
 ### 5. Accumulated Corrections
 
@@ -64,7 +70,7 @@ If on feature branch: merge to main. If already on main: skip.
 
 ### 10. Channel cleanup / Reset
 
-**Channeled:** Delete `CURRENT_TASK_chN.md`, remove channel row from shared CT Active Channels table, delete `verification_findings/squad_chN_*/`. Commit: `bash ~/.claude/scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md" -m "finalize: remove channel N" --skip-squad`
+**Channeled:** Delete `CURRENT_TASK_chN.md`, remove channel row from shared CT Active Channels table, delete `verification_findings/squad_chN_*/`. Commit: `bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md" -m "finalize: remove channel N" --skip-squad`
 
 **Unchanneled:** Overwrite CT with `current-task-template.md` contents. Never blank the file.
 

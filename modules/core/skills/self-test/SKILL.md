@@ -31,9 +31,10 @@ For each hook: check the command path exists as a file on disk. PASS if register
 Check `.claude/reference/` for expected files:
 
 - **Core:** `operator-cheat-sheet.md`
-- **Verification:** `verification-squad.md`
-- **Commit Enforcement:** `channel-routing.md`
+- **Verification:** `verification-squad.md`, `verification-behavior.md`
+- **Commit Enforcement:** `channel-routing.md`, `commit-protocol.md`
 - **Sprint Pipeline:** `spec-verification.md`
+- **Governance Protection:** `audit-pointer-rules.md`
 
 ### 3. Templates
 

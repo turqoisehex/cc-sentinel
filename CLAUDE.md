@@ -31,7 +31,7 @@ Ask these questions one at a time. Wait for each answer before proceeding. Do NO
 
 ### Step 3: Present Problem→Solution Table
 
-Present ALL of these problems as a table. Do NOT filter or select a subset. Show all 8 rows:
+Present ALL of these problems as a table. Do NOT filter or select a subset. Show every row:
 
 | # | Problem | Solution |
 |---|---------|----------|
@@ -65,6 +65,7 @@ Present options in this exact order:
 Do NOT present individual selection first. "All modules" is the default. Auto-include dependencies (e.g., Sprint Pipeline requires Core + Verification + Commit Enforcement).
 
 ### Step 4b: Spawn Configuration (if Sprint Pipeline selected)
+
 
 If Sprint Pipeline was selected, ask:
 
@@ -133,21 +134,19 @@ Add `--context-source canonical` or `--context-source bundled` accordingly. On W
 
 ### Step 5b: Configure Spawn (if Sprint Pipeline selected)
 
-If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config:
+If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config. Substitute the actual integer for `N` before running:
 
 ```bash
-python3 -c "
-import json, pathlib
+SPAWN_DELAY=N python3 -c "
+import json, pathlib, os
 p = pathlib.Path.home() / '.claude' / 'tools' / 'spawn.json'
 p.parent.mkdir(parents=True, exist_ok=True)
 cfg = json.loads(p.read_text()) if p.exists() else {}
-cfg['startup_delay'] = DELAY
+cfg['startup_delay'] = int(os.environ['SPAWN_DELAY'])
 p.write_text(json.dumps(cfg, indent=2))
-print('Spawn config written: startup_delay = DELAY')
+print('Spawn config written: startup_delay =', cfg['startup_delay'])
 "
 ```
-
-Replace `DELAY` with the integer value from the user's answer.
 
 Then run `python3 ~/.claude/tools/spawn.py --setup` to auto-detect terminal and key sender.
 
@@ -233,15 +232,17 @@ Skills installed during this session are not loadable until the next session —
 3. Glob for skill directories (`~/.claude/skills/*/SKILL.md` or `.claude/skills/*/SKILL.md`) — count them.
 4. Read the target CLAUDE.md — search for `cc-sentinel rules start`.
 5. Read settings.json — confirm `permissions.allow` contains cc-sentinel allow rules.
+6. Glob for reference files on disk (`~/.claude/reference/*.md` or `.claude/reference/*.md`) — confirm key files are present. If verification module was installed: `verification-behavior.md`. If governance-protection was installed: `audit-pointer-rules.md`.
 
-Present results as a table: each check PASS or FAIL with count. Example:
+Present results as a table: each check PASS or FAIL with count. Exact counts depend on which modules were selected — do not compare to hardcoded expected values. Example format:
 
 ```
-Hooks registered:  16/16 PASS
-Hook files on disk: 15/15 PASS
-Skills:            23/23 PASS
-CLAUDE.md rules:   PASS
-Permissions:       PASS
+Hooks registered:   N/N PASS
+Hook files on disk: N/N PASS
+Skills:             N/N PASS
+CLAUDE.md rules:    PASS
+Permissions:        PASS
+Reference files:    N/N PASS
 ```
 
 ### Step 9: Getting Started

@@ -31,12 +31,13 @@ if [[ ! -f "$WAIT_SCRIPT" ]]; then
   fi
 fi
 
-# Usage (internal): bash safe-commit.sh --internal [-m "message"] [--skip-squad] [--local-verify] [--sonnet-verify] [--skip-tests]
+# Usage (internal): bash safe-commit.sh --internal [-m "message"] [--skip-squad] [--local-verify] [--sonnet-verify] [--skip-tests] [--integration]
 
 # --- Parse flags ---
 SKIP_SQUAD="false"
 SONNET_VERIFY="true"
 SKIP_TESTS="false"
+INTEGRATION="false"
 ARGS=()
 for arg in "$@"; do
   if [[ "$arg" == "--skip-squad" ]]; then
@@ -47,6 +48,8 @@ for arg in "$@"; do
     SONNET_VERIFY="true"
   elif [[ "$arg" == "--skip-tests" ]]; then
     SKIP_TESTS="true"
+  elif [[ "$arg" == "--integration" ]]; then
+    INTEGRATION="true"
   else
     ARGS+=("$arg")
   fi
@@ -216,6 +219,19 @@ else
     echo "Tests passed." >&2
   fi
   rm -f "$TEST_LOG"
+
+  # Integration tests (opt-in, requires device)
+  if [[ "$INTEGRATION" == "true" ]]; then
+    if flutter devices --machine 2>/dev/null | grep -q '"id"'; then
+      echo "Running integration tests..." >&2
+      INTEG_LOG=$(mktemp)
+      flutter test integration_test/ > "$INTEG_LOG" 2>&1 || { echo "INTEGRATION TESTS FAILED:" >&2; tail -20 "$INTEG_LOG" >&2; rm -f "$INTEG_LOG"; exit 1; }
+      echo "Integration tests passed." >&2
+      rm -f "$INTEG_LOG"
+    else
+      echo "No device available — integration tests skipped." >&2
+    fi
+  fi
 fi
 
 # 3. Squad verification — HARD BLOCK for non-exempt staged files

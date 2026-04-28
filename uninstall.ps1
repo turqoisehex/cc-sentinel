@@ -43,7 +43,7 @@ $Skills = @(
     "opus","perfect","prune-rules","rewrite","self-test","sonnet",
     "spawn","status","verify"
 )
-$Reference = @("channel-routing.md","operator-cheat-sheet.md","spec-verification.md","verification-squad.md")
+$Reference = @("audit-pointer-rules.md","channel-routing.md","commit-protocol.md","operator-cheat-sheet.md","spec-verification.md","verification-behavior.md","verification-squad.md")
 $Templates = @("channel-template.md","current-task-template.md","design-invariants.md","plugin-auto-invoke.md","terminology.md")
 $Tools = @("spawn.py", "spawn.json")
 $Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-verifier.md","commit-adversarial.md","commit-cold-reader.md")

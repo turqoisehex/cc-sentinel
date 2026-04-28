@@ -76,8 +76,9 @@ SKILLS=(
 )
 
 REFERENCE=(
-  channel-routing.md operator-cheat-sheet.md
-  spec-verification.md verification-squad.md
+  audit-pointer-rules.md channel-routing.md commit-protocol.md
+  operator-cheat-sheet.md spec-verification.md
+  verification-behavior.md verification-squad.md
 )
 
 TEMPLATES=(
