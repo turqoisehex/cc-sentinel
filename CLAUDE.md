@@ -127,11 +127,6 @@ bash "<this-repo-path>/install.sh" --modules "<selected>" --target "<target>"
 
 Replace `<this-repo-path>` with the absolute path to this cloned repository.
 
-If Context Awareness is selected AND the OS is macOS or Linux, ask:
-"For context-awareness, would you like to use the bundled version or install from the canonical repository (sdi2200262/cc-context-awareness)? The bundled version works on all platforms. The canonical version is maintained by the original author."
-
-Add `--context-source canonical` or `--context-source bundled` accordingly. On Windows, always use bundled (only known working Windows version).
-
 ### Step 5b: Configure Spawn (if Sprint Pipeline selected)
 
 If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config. Substitute the actual integer for `N` before running:
@@ -179,17 +174,10 @@ If user picks D: make the requested changes.
 
 **Conservative (Recommended):** Block media, video, archives, and binaries. Keep images and PDFs readable for OCR."
 
-If they accept, add ONLY these deny rules (no images, no PDFs):
-```json
-"permissions": {
-  "deny": [
-    "Read(*.mp3)", "Read(*.mp4)", "Read(*.avi)", "Read(*.mkv)", "Read(*.mov)",
-    "Read(*.wav)", "Read(*.flac)", "Read(*.aac)", "Read(*.ogg)",
-    "Read(*.zip)", "Read(*.tar.gz)", "Read(*.tar.bz2)", "Read(*.rar)", "Read(*.7z)",
-    "Read(*.exe)", "Read(*.dll)", "Read(*.so)", "Read(*.dylib)"
-  ]
-}
-```
+If they accept, re-run the installer with `--deny-rules` appended to the command. The installer handles the edit automatically (before file-protection hooks are active):
+
+**Windows:** append `-DenyRules` to the powershell command
+**macOS/Linux:** append `--deny-rules` to the bash command
 
 Do NOT include `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp`, `*.svg`, `*.pdf`, or `*.docx` — these are formats Claude can usefully read.
 

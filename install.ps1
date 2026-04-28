@@ -14,12 +14,11 @@ param(
 
     [string]$BarStyle = "auto",
 
-    [ValidateSet("bundled", "canonical")]
-    [string]$ContextSource = "bundled",
-
     [switch]$DryRun,
 
-    [switch]$ForceOverwrite
+    [switch]$ForceOverwrite,
+
+    [switch]$DenyRules
 )
 
 $ErrorActionPreference = "Stop"
@@ -230,6 +229,38 @@ function Install-ContextAwareness {
 function Install-Notification {
     $moduleDir = Join-Path $SentinelRoot "modules" "notification"
 
+    # Conflict detection: warn if settings.json already has notification/flash/alert hooks
+    if (Test-Path $SettingsFile) {
+        try {
+            $existingSettings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
+            $conflictFound = $false
+            $keywords = @("flash", "notify", "alert", "notification")
+            foreach ($event in @("Stop", "Notification")) {
+                $eventHooks = $existingSettings.hooks.$event
+                if ($eventHooks) {
+                    foreach ($entry in $eventHooks) {
+                        foreach ($h in $entry.hooks) {
+                            $cmd = $h.command.ToLower()
+                            foreach ($kw in $keywords) {
+                                if ($cmd -match $kw) {
+                                    Log "  WARNING: Existing notification hook detected in ${event}: $($h.command)"
+                                    $conflictFound = $true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if ($conflictFound) {
+                Log "  Skipping notification hook installation to avoid duplicate popups."
+                Log "  To force install, remove existing notification hooks first."
+                return
+            }
+        } catch {
+            # If settings.json can't be parsed, proceed with install
+        }
+    }
+
     # Windows uses flash.ps1
     $src = Join-Path $moduleDir "flash.ps1"
     if (Test-Path $src) {
@@ -405,6 +436,51 @@ function Configure-Permissions {
     }
 }
 
+function Configure-DenyRules {
+    Log "Configuring deny rules (blocking Read() on media/binary files)..."
+
+    if ($DryRun) {
+        Log "  WOULD ADD: deny rules to $SettingsFile"
+        return
+    }
+
+    $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
+
+    if (-not $settings.permissions) {
+        $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue @{} -Force
+    }
+    if (-not $settings.permissions.deny) {
+        $settings.permissions | Add-Member -NotePropertyName "deny" -NotePropertyValue @() -Force
+    }
+
+    $existing = @($settings.permissions.deny)
+
+    $rules = @(
+        "Read(*.mp3)", "Read(*.mp4)", "Read(*.avi)", "Read(*.mkv)", "Read(*.mov)",
+        "Read(*.wav)", "Read(*.flac)", "Read(*.aac)", "Read(*.ogg)",
+        "Read(*.zip)", "Read(*.tar.gz)", "Read(*.tar.bz2)", "Read(*.rar)", "Read(*.7z)",
+        "Read(*.exe)", "Read(*.dll)", "Read(*.so)", "Read(*.dylib)"
+    )
+
+    $added = @()
+    foreach ($rule in $rules) {
+        if ($existing -notcontains $rule) {
+            $settings.permissions.deny += $rule
+            $added += $rule
+        }
+    }
+
+    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile
+
+    if ($added.Count -gt 0) {
+        foreach ($r in $added) {
+            Log "  Added deny: $r"
+        }
+    } else {
+        Log "  Deny rules already present"
+    }
+}
+
 function New-Claudeignore {
     Log "Generating .claudeignore..."
 
@@ -543,6 +619,7 @@ if ($Target -eq "global" -and -not $DryRun) {
 Write-Host ""
 Merge-Settings
 Configure-Permissions
+if ($DenyRules) { Configure-DenyRules }
 New-Claudeignore
 Update-Gitignore
 

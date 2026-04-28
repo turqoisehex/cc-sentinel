@@ -3,7 +3,7 @@
 # Called by CLAUDE.md conversation script with discovered parameters.
 #
 # Usage:
-#   bash install.sh --modules "core,verification,..." --target project|global [--bar-style unicode|ascii|auto] [--context-source bundled|canonical] [--dry-run]
+#   bash install.sh --modules "core,verification,..." --target project|global [--bar-style unicode|ascii|auto] [--deny-rules] [--dry-run]
 
 set -euo pipefail
 
@@ -11,9 +11,10 @@ set -euo pipefail
 MODULES=""
 TARGET=""
 BAR_STYLE="auto"
-CONTEXT_SOURCE="bundled"
 DRY_RUN="false"
 INJECT_RULES="false"
+FORCE_OVERWRITE="false"
+DENY_RULES="false"
 SENTINEL_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
@@ -21,10 +22,10 @@ while [[ $# -gt 0 ]]; do
     --modules) MODULES="$2"; shift 2 ;;
     --target) TARGET="$2"; shift 2 ;;
     --bar-style) BAR_STYLE="$2"; shift 2 ;;
-    --context-source) CONTEXT_SOURCE="$2"; shift 2 ;;
     --dry-run) DRY_RUN="true"; shift ;;
     --inject-rules) INJECT_RULES="true"; shift ;;
     --force-overwrite) FORCE_OVERWRITE="true"; shift ;;
+    --deny-rules) DENY_RULES="true"; shift ;;
     --help|-h)
       echo "Usage: bash install.sh --modules \"core,verification,...\" --target project|global [options]"
       echo ""
@@ -32,7 +33,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --modules <list>        Comma-separated module names (core always included)"
       echo "  --target <type>         project (local .claude/) or global (~/.claude/)"
       echo "  --bar-style <style>     unicode, ascii, or auto (default: auto)"
-      echo "  --context-source <src>  bundled or canonical (default: bundled)"
+      echo "  --deny-rules            Add deny rules to settings.json permissions"
       echo "  --inject-rules          Inject behavioral rules into CLAUDE.md"
       echo "  --force-overwrite       Overwrite locally-modified files on reinstall (default: preserve)"
       echo "  --dry-run               Show what would be installed without doing it"
@@ -217,36 +218,17 @@ install_module() {
 install_context_awareness() {
   local module_dir="${SENTINEL_ROOT}/modules/context-awareness"
 
-  if [[ "$CONTEXT_SOURCE" == "canonical" ]]; then
-    log "Installing context-awareness from canonical repo..."
-    if [[ "$DRY_RUN" == "true" ]]; then
-      log "  WOULD CLONE: sdi2200262/cc-context-awareness → ~/.claude/cc-context-awareness"
-    else
-      if [[ -d "$HOME/.claude/cc-context-awareness" ]]; then
-        log "  Canonical cc-context-awareness already exists, updating..."
-        cd "$HOME/.claude/cc-context-awareness" && git pull --quiet && cd - > /dev/null
-      else
-        git clone https://github.com/sdi2200262/cc-context-awareness "$HOME/.claude/cc-context-awareness"
-      fi
-    fi
-  else
-    log "Installing bundled context-awareness..."
-    local ca_target="${CLAUDE_DIR}/cc-context-awareness"
-    for f in "$module_dir"/*.sh "$module_dir"/config.json; do
-      [[ ! -f "$f" ]] && continue
-      copy_file "$f" "${ca_target}/$(basename "$f")"
-      [[ "$DRY_RUN" != "true" && "$f" == *.sh ]] && chmod +x "${ca_target}/$(basename "$f")"
-    done
-  fi
+  log "Installing bundled context-awareness..."
+  local ca_target="${CLAUDE_DIR}/cc-context-awareness"
+  for f in "$module_dir"/*.sh "$module_dir"/config.json; do
+    [[ ! -f "$f" ]] && continue
+    copy_file "$f" "${ca_target}/$(basename "$f")"
+    [[ "$DRY_RUN" != "true" && "$f" == *.sh ]] && chmod +x "${ca_target}/$(basename "$f")"
+  done
 
   # Update bar_style in config
   if [[ "$DRY_RUN" != "true" ]]; then
-    local config_target
-    if [[ "$CONTEXT_SOURCE" == "canonical" ]]; then
-      config_target="$HOME/.claude/cc-context-awareness/config.json"
-    else
-      config_target="${CLAUDE_DIR}/cc-context-awareness/config.json"
-    fi
+    local config_target="${CLAUDE_DIR}/cc-context-awareness/config.json"
     if [[ -f "$config_target" ]]; then
       _SENTINEL_BAR_STYLE="$BAR_STYLE" "$PYTHON" -c "
 import json, os, sys
@@ -280,6 +262,37 @@ install_notification() {
   local module_dir="${SENTINEL_ROOT}/modules/notification"
   local os_type
   os_type="$(uname -s)"
+
+  # Conflict detection: warn if settings.json already has notification/flash/alert hooks
+  # to prevent duplicate popups per event.
+  if [[ -f "$SETTINGS_FILE" ]]; then
+    local conflict
+    conflict=$("$PYTHON" -c "
+import json, sys
+try:
+    with open('$SETTINGS_FILE') as f:
+        s = json.load(f)
+except Exception:
+    sys.exit(0)
+hooks = s.get('hooks', {})
+keywords = ('flash', 'notify', 'alert', 'notification')
+for event, entries in hooks.items():
+    if event not in ('Stop', 'Notification'):
+        continue
+    for entry in entries:
+        for h in entry.get('hooks', []):
+            cmd = h.get('command', '').lower()
+            if any(k in cmd for k in keywords):
+                print(f'  {event}: {h[\"command\"]}')
+" 2>/dev/null)
+    if [[ -n "$conflict" ]]; then
+      log "  WARNING: Existing notification hooks detected in $SETTINGS_FILE:"
+      echo "$conflict" | while IFS= read -r line; do log "$line"; done
+      log "  Skipping notification hook installation to avoid duplicate popups."
+      log "  To force install, remove existing notification hooks first."
+      return
+    fi
+  fi
 
   case "$os_type" in
     Linux*)
@@ -467,6 +480,54 @@ if added:
         print(f"  Added: {r}")
 else:
     print("  Allow rules already present")
+PYEOF
+}
+
+# --- Permission deny rules ---
+configure_deny_rules() {
+  log "Configuring deny rules (blocking Read() on media/binary files)..."
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log "  WOULD ADD: deny rules to $SETTINGS_FILE"
+    return
+  fi
+
+  "$PYTHON" << 'PYEOF'
+import json, os
+
+settings_file = os.environ.get("SETTINGS_FILE", "")
+
+with open(settings_file) as f:
+    settings = json.load(f)
+
+if "permissions" not in settings:
+    settings["permissions"] = {}
+if "deny" not in settings["permissions"]:
+    settings["permissions"]["deny"] = []
+
+existing = set(settings["permissions"]["deny"])
+
+rules = [
+    "Read(*.mp3)", "Read(*.mp4)", "Read(*.avi)", "Read(*.mkv)", "Read(*.mov)",
+    "Read(*.wav)", "Read(*.flac)", "Read(*.aac)", "Read(*.ogg)",
+    "Read(*.zip)", "Read(*.tar.gz)", "Read(*.tar.bz2)", "Read(*.rar)", "Read(*.7z)",
+    "Read(*.exe)", "Read(*.dll)", "Read(*.so)", "Read(*.dylib)",
+]
+
+added = []
+for rule in rules:
+    if rule not in existing:
+        settings["permissions"]["deny"].append(rule)
+        added.append(rule)
+
+with open(settings_file, "w") as f:
+    json.dump(settings, f, indent=2)
+
+if added:
+    for r in added:
+        print(f"  Added deny: {r}")
+else:
+    print("  Deny rules already present")
 PYEOF
 }
 
@@ -678,6 +739,11 @@ merge_settings
 
 # Configure permissions (allow rules for cc-sentinel scripts)
 configure_permissions
+
+# Configure deny rules (if requested)
+if [[ "$DENY_RULES" == "true" ]]; then
+  configure_deny_rules
+fi
 
 # Generate .claudeignore
 generate_claudeignore

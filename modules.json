@@ -128,18 +128,9 @@
         "core"
       ],
       "platform": {
-        "windows": {
-          "source": "bundled",
-          "note": "Only known working Windows version"
-        },
-        "linux": {
-          "source": "bundled|canonical",
-          "canonical_repo": "sdi2200262/cc-context-awareness"
-        },
-        "darwin": {
-          "source": "bundled|canonical",
-          "canonical_repo": "sdi2200262/cc-context-awareness"
-        }
+        "windows": { "source": "bundled" },
+        "linux": { "source": "bundled" },
+        "darwin": { "source": "bundled" }
       },
       "files": {
         "root": [
