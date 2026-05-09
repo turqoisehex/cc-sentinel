@@ -1,17 +1,54 @@
 ---
 name: cold
-description: Cold start preparation for context handoff. Makes state files zero-context ready with orphan scans and cross-document consistency checks. Use before session end or when context is high (85%+).
+description: Cold start preparation for context handoff. Default mode (slim) edits CT in place — parent-direct, no dispatch, ~1% context burn. `/cold full` adds backlog/plan reconciliation, transcript orphan scan, and grill. Use slim mid-session at 80%+; use full at session end.
 ---
 
 # /cold — Cold Start Preparation
 
-**Trigger:** Run before session end or when context is high (85%+). Makes CT cold-start ready for a zero-context session.
+**Modes:**
+- **`/cold`** (default, slim) — parent reads CT and edits it in place to be cold-start ready. No agents, no grill. Safe to run at 80%+ context.
+- **`/cold full`** — slim CT pass + two Sonnet agents (cold-prep + transcript-orphan) + parent grill. Use at session end when you want orphan rescue and full backlog/plan cross-check.
 
 **Channel:** CT=`CURRENT_TASK_chN.md` (channeled) or `CURRENT_TASK.md`. Scripts: `SENTINEL_CHANNEL=N`. `[chN/]`=dispatch subdir, `[_chN]`=file suffix, `[chN_]`=squad prefix. Full rules: `.claude/reference/channel-routing.md`.
 
-## Procedure
+---
 
-**Abbreviations:** CT=your channel CT file (or `CURRENT_TASK.md` if unchanneled). BACKLOG=your project backlog or sprint checklist (if you use one). PLAN=your implementation plan (if you use one).
+## Default (slim) procedure
+
+**Trigger:** Run when context is high (80%+) or before /clear/compact, to make CT readable by a zero-context session.
+
+### Step 0: Resolve target CT
+
+- Channeled session: target = `CURRENT_TASK_chN.md` for the active channel.
+- Unchanneled session: target = `CURRENT_TASK.md`.
+- If both shared CT and a channel CT are live in this session, edit both.
+
+### Step 1: Read CT in full
+
+Read the entire target CT file (Read tool, no offset). Do not skim. Do not delegate.
+
+### Step 2: Edit CT in place for cold-start readability
+
+Edit only — never rewrite from scratch, never blank. For each active section:
+
+- **Self-contained context.** Remove "see above" / "from earlier in this session" / "as we discussed" references. Replace with concrete content or a file:section pointer.
+- **Concrete file paths.** Every referenced file is a real, current path on disk. Spot-check the ones you're least sure about.
+- **Current status.** Status markers reflect what is actually true now, not what was true when the line was written. Phase markers (e.g., "/3 done", "R3 fixes applied") match the actual state.
+- **Active Channels table.** Each row's Phase and Status columns reflect the real current state. Remove or update stale "in flight" markers.
+- **Next action concrete.** The "Next action" for each active task is executable by a fresh session: command line, file paths, decision criteria — no implicit context.
+- **Resolve dangling references.** Anything pointing to a verification_findings/ file, a commit hash, or a plan section: confirm it still exists (Bash `ls` or grep). Fix or remove.
+
+If shared CT and channel CT both exist, ensure they don't contradict each other (Active Channels table in shared CT vs. channel CT's own status).
+
+Report: "/cold slim: edited <file>, fixed N stale refs, resolved N dangling references." If nothing needed changing: "/cold slim: CT already cold-start ready."
+
+---
+
+## `/cold full` procedure
+
+**Trigger:** Session end, or when you want backlog/plan reconciliation + transcript orphan rescue in addition to the CT pass.
+
+Run the slim procedure (Steps 0–2 above) first, then continue with the steps below.
 
 ### Step 0a: Read YAML frontmatter
 
@@ -21,7 +58,7 @@ If the state file (CT) starts with a `---` YAML frontmatter block, read it first
 
 1. **Sonnet check.** If `scripts/wait_for_results.sh` exists (Commit Enforcement installed): check for an active Sonnet listener. If no heartbeat, warn: "No Sonnet listener — Step 1 will use subagents instead of Sonnet dispatch." If `wait_for_results.sh` does not exist (Core-only install): skip — Step 1 uses subagents directly.
 2. **Template check.** If CT Active Task is `(none)` and no plan steps: report "CT at template — nothing to prepare" and **stop**.
-3. TaskCreate every step below. Mark in_progress→completed.
+3. TaskCreate every step below. Mark in_progress->completed.
 
 ### Step 1: Delegate cold-start preparation to Sonnet
 
@@ -50,7 +87,7 @@ In default mode, `CC_DUO_MODE` is unset and native dispatch takes priority regar
 **Duo mode:** Write prompt to `verification_findings/_pending_sonnet/[chN/]cold_prep_<timestamp>.md`. Wait for results:
 ```bash
 rm -f verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md
-bash scripts/wait_for_results.sh verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md
+bash ~/.claude/scripts/wait_for_results.sh verification_findings/cold_prep_result[_chN].md verification_findings/transcript_orphan_result[_chN].md
 ```
 
 **Prompt file content** (YAML frontmatter required). Resolve bracket notation before writing:
@@ -76,117 +113,40 @@ tasks:
 
 > **Cold-start preparation.** Read these files completely — no skimming:
 > 1. `CURRENT_TASK_chN.md` (CT — the channel file, not the shared index) when channeled; `CURRENT_TASK.md` when unchanneled
-> 2. Your project backlog file (if you maintain one — e.g., `BACKLOG.md`, `TODO.md`, or a sprint checklist)
-> 3. Your implementation plan file (if you maintain one — e.g., `PLAN.md`, `IMPLEMENTATION_PLAN.md`)
+> 2. Your project backlog file (if you maintain one)
+> 3. Your implementation plan file (if you maintain one)
 >
-> Since the session is ending, no further work will be completed. Classify each item by its current tracking state, not by whether it was "active."
+> Since the session is ending, no further work will be completed. Classify each item by its current tracking state.
 >
-> **A. Orphan scan.** Extract every discrete item from CT (tasks, decisions, TODOs, action items, follow-ups, deferred work, design choices, non-done status markers). For each, classify using the first matching row (evaluate top-to-bottom):
->
-> | Classification | Meaning | Action |
-> |---|---|---|
-> | **Incomplete** | Was active but will NOT be completed (the session is ending) | Write to BOTH backlog and plan now. Keep in CT with status and context for next session. |
-> | **Permanent-home** | Already tracked in BOTH backlog and plan with matching detail | Verify by grep in both files. If truly present in both, no action needed. |
-> | **Partial-home** | Tracked in backlog but not plan, or plan but not backlog | Write to the missing document now. |
-> | **Orphan** | Not in backlog, not in plan | Write to BOTH backlog AND plan now. |
-> | **Done** | Completed and verified | Must be in Completed Steps section of CT with a one-line summary (e.g., "Step 3: implemented X — verified by test"). If not, add it. |
-> | **Dead** | Explicitly dropped with rationale | Remove from CT. If rationale is worth preserving, note it in the relevant spec or backlog. |
->
-> Orphan = failure. Zero orphans is the target. Also grep every file path referenced in CT to verify it exists on disk.
->
-> **Placement guidance for backlog/plan writes:** When writing items to backlog, add them under the current sprint's section (find the sprint number in CT's header). When writing to plan, add under the relevant feature area or create a "Deferred from Sprint N" section if no area fits. Match the surrounding document's format (checkboxes for backlog, bullet descriptions for plan files).
->
-> **B. Cold-start quality pass on CT.** Update CT so a zero-context session can execute every item. For each plan step verify:
-> 1. Self-contained context — no "as discussed" or "per earlier decision." State the decision inline.
-> 2. Concrete file paths — not "the spec" but the actual path (e.g., `docs/specs/feature_spec.md`).
-> 3. Acceptance criteria — what does "done" look like?
-> 4. Explicit dependencies — if step N requires step M's output, say so.
-> 5. No stale references — grep to verify every path mentioned exists on disk.
-> 6. Status markers resolved — every non-done marker has context.
-> 7. Sprint/phase context in CT header area (next to Active Task/Status): sprint number, phase (/0-/5), and the most recent commit hash (run `git log --oneline -1`).
->
-> Litmus test: re-read CT as if you have never seen this project. Any "what does this mean?" = a gap to fix.
->
-> **C. Cross-document consistency.** Catalog all discrepancies first, then fix all:
-> - CT → backlog: every active/deferred CT item has a corresponding entry in backlog. If a CT item is a sub-bullet of a step already tracked in backlog, verify the parent item's backlog entry covers it. If unsure whether something is a sub-step or standalone, create a top-level backlog entry.
-> - backlog → CT: every "in progress" backlog item either appears in CT or has deferral rationale noted in backlog next to the item.
-> - CT → plan: multi-sprint items exist in plan.
-> - File references → disk: every path in CT exists (glob/grep).
->
-> **D. Write results to `verification_findings/cold_prep_result[_chN].md`** with this format:
-> ```
-> COLD_PREP_COMPLETE
-> Orphans found and resolved: N
-> Incomplete items written to backlog/plan: N
-> Stale references fixed: N
-> CT quality gaps fixed: N
-> Cross-doc discrepancies fixed: N
-> Unresolvable issues: [list, or "none"]
-> ```
-
-**Transcript orphan agent prompt** (second agent in the same prompt file — include the `SESSION_JSONL` path from the "Before dispatching" step):
-
-> **Transcript orphan scan.** The Opus session transcript is at `SESSION_JSONL_PATH_HERE`. This is a JSONL file where each line is a JSON object. Extract actionable items by filtering for these `type` values:
-> - `"user"` — the developer's messages (decisions, requests, questions, TODOs)
-> - `"assistant"` — Opus responses (design choices, commitments, deferred work)
->
-> Ignore `progress`, `hook_progress`, `tool_use`, `tool_result`, and `system` types — they are mechanical.
->
-> From the user and assistant messages, extract every discrete actionable item: decisions made, TODOs mentioned, design choices, user requests, questions raised, action items, deferred work, and anything the user said that implies future work.
->
-> For each extracted item, check whether it is captured in at least one of:
-> 1. `CURRENT_TASK.md` (CT)
-> 2. Your project backlog file (if you maintain one — e.g., `BACKLOG.md`, `TODO.md`, or a sprint checklist)
-> 3. Your implementation plan file (if you maintain one — e.g., `PLAN.md`, `IMPLEMENTATION_PLAN.md`)
->
-> Classify each item:
+> **A. Orphan scan.** Extract every discrete item from CT. For each, classify:
 >
 > | Classification | Meaning | Action |
 > |---|---|---|
-> | **Captured** | Present in CT, backlog, or plan with sufficient detail | No action. Note where it lives. |
-> | **Partial** | Referenced but missing key context (e.g., decision recorded but rationale omitted) | Add missing detail to the document where it already appears. |
-> | **Dropped** | Not in any document | Write to CT as a new action item or decision. If it's multi-sprint scope, also write to plan. If it's current-sprint scope, also write to backlog. |
+> | **Incomplete** | Was active but will NOT be completed | Write to BOTH backlog and plan. Keep in CT with status. |
+> | **Permanent-home** | Already tracked in BOTH backlog and plan | Verify by grep. If truly present in both, no action. |
+> | **Partial-home** | In one but not the other | Write to the missing document. |
+> | **Orphan** | Not in backlog, not in plan | Write to BOTH now. |
+> | **Done** | Completed and verified | Must be in Completed Steps with summary. |
+> | **Dead** | Explicitly dropped with rationale | Remove from CT. |
 >
-> Dropped = failure. The whole point of this scan is to catch things the session discussed that never made it to disk.
+> **B. Cold-start quality pass on CT.** For each plan step verify: self-contained context, concrete file paths, acceptance criteria, explicit dependencies, no stale references, status markers resolved, sprint/phase context in header.
 >
-> **Write results to `verification_findings/transcript_orphan_result[_chN].md`** with this format:
-> ```
-> TRANSCRIPT_SCAN_COMPLETE
-> Session transcript: [path]
-> Items scanned: N
-> Captured: N
-> Partial (enriched): N
-> Dropped (rescued): N
-> Unresolvable: [list, or "none"]
-> ```
-> For each Dropped item, include a one-line summary of what was rescued and where it was written.
+> **C. Cross-document consistency.** CT <-> backlog <-> plan. File references -> disk.
+>
+> **D. Write results to `verification_findings/cold_prep_result[_chN].md`.**
 
-When both results appear, read them. Unresolvable issues → add to CT as flagged items (e.g., "UNRESOLVED from /cold: [description]").
+**Transcript orphan agent** (second agent): scan session transcript for actionable items not captured in CT/backlog/plan. Write to `verification_findings/transcript_orphan_result[_chN].md`.
 
-### Step 2: Grill
+When both results appear, read them. Unresolvable issues -> add to CT as flagged items.
 
-Read both agent result files and CT. For each grill question, verify checkable answers with grep/read. Fix CT problems directly; for backlog/plan problems, add flagged items to CT (e.g., "FIX IN BACKLOG: [description]") — do NOT read backlog/plan in parent.
+### Step 2: Grill and report
 
-1. **"Where does this break?"** — Different day, sprint phase, or post-compaction start. What assumptions are baked in?
-2. **"What have I not checked?"** — Zero stale references? Recent commits (`git log --oneline -3`) reflected in CT?
-3. **"What's most likely wrong?"** — Implicit orphans (decisions buried in paragraphs). Stale status markers.
-4. **"What assumption haven't I verified?"** — Sprint number correct? Commit hash right (`git log --oneline -1`)? Agent results report zero unresolvable?
+Read both agent result files and CT. For each grill question, verify checkable answers with grep/read. Fix CT problems directly.
 
-### Step 3: Commit
-
-If CT, backlog, or plan were modified, commit. If all three are clean, skip — no empty commits.
-
-If `scripts/channel_commit.sh` exists (Commit Enforcement module installed):
-```bash
-bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md <backlog-file> <plan-file>" -m "cold: state files cold-start ready" --skip-squad
-```
-`--skip-squad` — per-commit agents provide sufficient coverage for state-file-only changes.
-
-If channel_commit.sh is not available (Core-only install):
-```bash
-git add CURRENT_TASK_chN.md <backlog-file> <plan-file>
-git commit -m "cold: state files cold-start ready"
-```
+1. **"Where does this break?"** — Different day, sprint phase, or post-compaction start.
+2. **"What have I not checked?"** — Zero stale references? Recent commits reflected in CT?
+3. **"What's most likely wrong?"** — Implicit orphans. Stale status markers.
+4. **"What assumption haven't I verified?"** — Sprint number? Commit hash? Agent results?
 
 Report: orphans resolved (N), transcript items rescued (N), incomplete items written (N), stale refs fixed (N), grill issues (N found/N fixed).
 
@@ -194,6 +154,6 @@ Report: orphans resolved (N), transcript items rescued (N), incomplete items wri
 
 ## Notes
 
-- State files only — code must already be committed.
-- /cold ≠ template reset. For that: `/5` Step 9. Step 0 guards against template-state CT.
-- Per-commit agents in channel_commit.sh provide verification. No /verify needed.
+- Slim `/cold` is parent-direct: no agents, no grill. Use freely at 80%+.
+- `/cold full` is state-file housekeeping only.
+- /cold != template reset. For that: `/5` Step 9.
