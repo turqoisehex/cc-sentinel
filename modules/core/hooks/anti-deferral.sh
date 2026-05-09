@@ -49,6 +49,26 @@ PUNT="$PUNT|revisit in a future|we can revisit"
 PUNT="$PUNT|next session|next conversation|separate session"
 PUNT="$PUNT|note.*(for|it).*(next|later)|note this for|flag.*(for|it).*(next|later)"
 
+# Tier 1c: Phase-handoff deferral — labeling unfinished work as "gaps"
+# and pushing it across a sprint phase boundary (e.g., build → quality →
+# finalize). The recap idiom "Known gaps for /4:" is the canonical
+# offender — it sounds like reasoned status but is unauthorized deferral
+# by another name. Each phase must leave no work behind for the next
+# phase to inherit.
+PUNT="$PUNT|(known|remaining|outstanding|pending|carry.over) gaps?( for|:|\b)"
+PUNT="$PUNT|gaps? for /[0-9]"
+PUNT="$PUNT|gaps? for /(perfect|finalize|build|design|audit|grill|verify)"
+PUNT="$PUNT|gaps? (to address|to fix|to resolve|to handle|to tackle) (in|during|at)"
+PUNT="$PUNT|(work|wiring|composition|dispatch|hookup|integration|plumbing) (for|in) /[0-9]"
+PUNT="$PUNT|(address|fix|resolve|handle|tackle|complete|wire|dispatch) (this |these |it )?in /[0-9]"
+PUNT="$PUNT|(address|fix|resolve|handle|tackle|complete) (this |these |it )?in /(perfect|finalize)"
+# "needs X-level Y" — passive deferral framing that sounds architectural
+PUNT="$PUNT|needs (session.level|future|separate|dedicated|later|subsequent|downstream|upstream) (dispatch|wiring|composition|integration|hookup|work|implementation|plumbing)"
+PUNT="$PUNT|(future|later|deferred|separate).session (work|wiring|dispatch|composition|hookup)"
+# Recap-section headers that frame unfinished work as acceptable
+PUNT="$PUNT|^(Known|Remaining|Outstanding|Carry.over|Pending) (gaps?|work|items?|tasks?)( for|:)"
+PUNT="$PUNT|^(## |### )?(Known|Remaining|Outstanding) (gaps?|work) for /[0-9]"
+
 # Tier 2: Soft minimization — CC downplaying severity to avoid fixing
 HEDGE="not urgent|not critical|minor issue|low priority"
 # Dot in as.is is intentional wildcard — matches as-is, as is, as.is
