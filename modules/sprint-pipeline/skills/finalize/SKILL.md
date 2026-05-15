@@ -35,7 +35,7 @@ Opus collects, deduplicates. For each decision: grep work product for evidence. 
 
 ### 4. Fidelity-audit gate
 
-**Gate authority:** `~/.claude/reference/spec-verification.md` Phases 0-5 + Phase 4.5 (field-consumption audit). Gate FAILs if `/perfect` Phase 2.5 outputs are missing OR if either output contains any unresolved [D]/[F]/[M]/[I]/[T] finding above INFO.
+**Gate authority:** `~/.claude/reference/spec-verification.md` Phases 0-5 (including Phase 4.5 field-consumption audit). Bracket codes: [D] declared-not-consumed, [F] silent-fallback, [M] missing-consumer, [I] incomplete-wiring, [T] test-only. Gate FAILs if `/perfect` Phase 2.5 outputs are missing OR if either output contains any unresolved [D]/[F]/[M]/[I]/[T] finding above INFO. "Unresolved" means the field/wiring problem is still live in code — fix it (wire, delete, or add an SC entry reserving forward-schema use). Prose-only deferral in the audit body is not resolution.
 
 Verify that `/perfect` Phase 2.5 ran. Check for both outputs:
 - `verification_findings/fidelity_audit[_chN].md`
