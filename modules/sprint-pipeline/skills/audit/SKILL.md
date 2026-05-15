@@ -17,6 +17,8 @@ description: "Sprint start: spec integrity checking, staleness scan, dependency 
 
 User specifies which spec(s). If not specified, ASK.
 
+**Full-module sweep escape hatch:** When sprint scope is full-module audit (spec > ~3000 lines OR explicit module rebuild), follow `docs/spec-sweep-playbook.md` § Steps 1-3 instead of the generic 6-check template in sub-step 1a below. The fidelity doctrine that governs what to verify is `~/.claude/reference/spec-verification.md` (Phases 0-5 + 4.5 field-consumption audit) — same doctrine `/perfect` Phase 2.5 invokes. The playbook extends that doctrine with operational detail for full-module scale.
+
 #### 1a. Dispatch agents
 
 For each spec, count lines and dispatch general-purpose agents (`run_in_background: true`). Explore agents cannot write — do not use them. Substitute ALL placeholders before dispatching: `[SPEC_FILE]`=full path, `[SPEC_NAME]`=filename stem (e.g., `feature_spec`), `[OUTPUT_FILE]`=set per dispatch path below.

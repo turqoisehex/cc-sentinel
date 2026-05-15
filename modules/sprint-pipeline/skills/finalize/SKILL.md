@@ -19,7 +19,7 @@ After `/perfect`, when sprint work is complete. Handles transcript mining, Sonne
 
 ### 1. Pre-verification checkpoint
 
-If uncommitted changes: `bash scripts/channel_commit.sh --channel N --files "<files>" -m "wip: pre-verification" --skip-squad`. If clean: skip.
+If uncommitted changes: `bash ~/.claude/scripts/channel_commit.sh --channel N --files "<files>" -m "wip: pre-verification" --skip-squad`. If clean: skip.
 
 ### 2. Review Sonnet's work
 
@@ -34,6 +34,8 @@ If Sonnet contributed this sprint: `git log` to identify Sonnet commits. Read ch
 Opus collects, deduplicates. For each decision: grep work product for evidence. Missing -> write it now.
 
 ### 4. Fidelity-audit gate
+
+**Gate authority:** `~/.claude/reference/spec-verification.md` Phases 0-5 + Phase 4.5 (field-consumption audit). Gate FAILs if `/perfect` Phase 2.5 outputs are missing OR if either output contains any unresolved [D]/[F]/[M]/[I]/[T] finding above INFO.
 
 Verify that `/perfect` Phase 2.5 ran. Check for both outputs:
 - `verification_findings/fidelity_audit[_chN].md`
@@ -68,10 +70,33 @@ Read `MANUAL_TEST_QUEUE.md` (project root). Prune first: for each existing entry
 
 If on feature branch: merge to main. If already on main: skip.
 
-### 10. Channel cleanup / Reset
+### 9.5. CT completeness audit (REQUIRED before any cleanup)
 
-**Channeled:** Delete `CURRENT_TASK_chN.md`, remove channel row from shared CT Active Channels table, delete `verification_findings/squad_chN_*/`. Commit: `bash scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md" -m "finalize: remove channel N" --skip-squad`
+Read both files in full:
+- **Channeled CT** (`CURRENT_TASK_chN.md`) — every line, top to bottom.
+- **Shared CT** (`CURRENT_TASK.md`) — every item belonging to this channel/session only (your section). Ignore other channels' sections.
 
-**Unchanneled:** Overwrite CT with `current-task-template.md` contents. Never blank the file.
+For every item in scope — task, acceptance criterion, sub-bullet, note, follow-up — ask three questions:
 
-Announce sprint complete. Next sprint begins with `/1`.
+1. **Done?** Is there explicit evidence it was completed (commit hash, PASS verdict, output file, code change)?
+2. **Fully done?** No partial completion, no "mostly done," no "needs one more thing." Partial = incomplete.
+3. **Not orphaned?** Not mentioned mid-file and then dropped without a resolution or a tracked deferral.
+
+**FAIL criteria (do not proceed to Step 10 if any apply):**
+- Any item with no completion evidence
+- Any item marked complete but with open sub-tasks
+- Any item that appears only in the middle of the file with no verdict
+- Any item marked "deferred" without EXPLICIT current-conversation permission from the user
+- Any TODO, FIXME, or follow-up note that was not converted to SC.md / CIP.md or resolved
+
+**On FAIL:** List every problematic item verbatim with the line it appears on. Resolve each — fix the work or get explicit user approval to defer with a SC.md entry — before proceeding. Do not batch-dismiss; each item requires individual resolution.
+
+**On PASS:** State "CT audit PASS — all N items verified complete" before moving to Step 10.
+
+### 10. Mark complete / Reset
+
+**Channeled:** Mark channel as complete in shared CT Active Channels table (strikethrough). Do NOT delete `CURRENT_TASK_chN.md` — that happens in `/cleanup`. Delete `verification_findings/squad_chN_*/`. Commit: `bash ~/.claude/scripts/channel_commit.sh --channel N --files "CURRENT_TASK_chN.md" -m "finalize: channel N sprint complete" --skip-squad`
+
+**Unchanneled:** Mark sprint complete in CT. Do NOT overwrite or blank CT — `/cleanup` handles reset.
+
+Announce sprint complete. Channel CT persists as a record until `/cleanup` runs. Next sprint begins with `/1`.
