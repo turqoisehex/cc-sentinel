@@ -7,6 +7,9 @@
 CLAUDE.md
 settings.json
 
+# Skill definitions (matches basename only — protects every SKILL.md globally; unlock via GOVERNANCE-EDIT-AUTHORIZED marker)
+SKILL.md
+
 # Slash commands (add your project-specific commands below)
 # verify.md
 # grill.md
