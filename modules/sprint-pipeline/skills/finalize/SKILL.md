@@ -45,7 +45,7 @@ Missing either → FAIL. Return to `/perfect` and run Phase 2.5 before continuin
 
 Read both files. Any unresolved [D]/[F]/[M]/[I]/[T] findings → FAIL. Return to `/perfect` — fix, re-run Phase 2.5, then resume `/5` from this step.
 
-Only proceed to Step 5 when both audits exist, both verdict PASS, and no unresolved [D]/[F]/[M]/[I]/[T] findings remain (fidelity-audit findings have no INFO tier — every bracket-code entry must be resolved per the rules above).
+Only proceed to Step 5 when both audits exist, both verdicts are PASS (or PASS (N/A) for `field_consumption_audit` when zero data-model fields were in scope this sprint), and no unresolved [D]/[F]/[M]/[I]/[T] findings remain (fidelity-audit findings have no INFO tier — every bracket-code entry must be resolved per the rules above). `PASS (N/A)` from `field_consumption_audit` is acceptable because the absence of declared fields means there is nothing to consume; it is not a softened PASS.
 
 ### 5. Accumulated Corrections
 

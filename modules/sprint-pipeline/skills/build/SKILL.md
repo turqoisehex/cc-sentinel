@@ -30,7 +30,7 @@ For each step in CT:
 
    **Duo mode fallback:** If `CC_DUO_MODE=1` is set and a Sonnet listener is active, `[SONNET]` tasks may be dispatched via file-based IPC to `_pending_sonnet/[chN/]` instead.
 
-   **Data model pre-flight (any task touching a declared field):** When a `[SONNET]`, `[OPUS]`, or `[PARENT]` task adds, removes, or renames a field on a data model (ExerciseDefinition, ModuleTemplate, ParameterDef, schema class, etc.), include in the dispatch prompt (or execute directly for `[PARENT]`): "grep every consumer of this field name in `lib/` + `test/`; confirm any matching consumer reads the same name with no silent fallback (`?? `, `|| `) substituting a default." Full source-spec-code fidelity audit waits for `/perfect` Phase 2.5 per `~/.claude/reference/spec-verification.md`; this pre-flight is cheap insurance, not a substitute.
+   **Data model pre-flight (any task touching a declared field):** When a `[SONNET]`, `[OPUS]`, or `[PARENT]` task adds, removes, renames, changes the type of, or changes the default value of a field on a data model (ExerciseDefinition, ModuleTemplate, ParameterDef, schema class, etc.) — silent-fallback bugs can arise from any of these, not just rename/remove, include in the dispatch prompt (or execute directly for `[PARENT]`): "grep every consumer of this field name in `lib/` + `test/`; confirm any matching consumer reads the same name with no silent fallback (`?? `, `|| `) substituting a default." Full source-spec-code fidelity audit waits for `/perfect` Phase 2.5 per `~/.claude/reference/spec-verification.md`; this pre-flight is cheap insurance, not a substitute.
 
 3. Update CT — cold-start ready, mark completed steps.
 
