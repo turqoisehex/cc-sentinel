@@ -35,7 +35,7 @@ Opus collects, deduplicates. For each decision: grep work product for evidence. 
 
 ### 4. Fidelity-audit gate
 
-**Gate authority:** `~/.claude/reference/spec-verification.md` Phases 0-5 (including Phase 4.5 field-consumption audit). Bracket codes: [D] declared-not-consumed, [F] silent-fallback, [M] missing-consumer, [I] incomplete-wiring, [T] test-only. Gate FAILs if `/perfect` Phase 2.5 outputs are missing OR if either output contains any unresolved [D]/[F]/[M]/[I]/[T] finding above INFO. "Unresolved" means the field/wiring problem is still live in code — fix it (wire, delete, or add an SC entry reserving forward-schema use). Prose-only deferral in the audit body is not resolution.
+**Gate authority:** `~/.claude/reference/spec-verification.md` Phases 0-5 (including Phase 4.5 field-consumption audit). Bracket codes: [D] declared-not-consumed, [F] silent-fallback, [M] missing-consumer, [I] incomplete-wiring, [T] test-only. Gate FAILs if `/perfect` Phase 2.5 outputs are missing OR if either output contains any unresolved [D]/[F]/[M]/[I]/[T] finding (each bracket code is a defect class — there is no severity scale within fidelity-audit findings; any [D]/[F]/[M]/[I]/[T] entry that is not yet resolved fails the gate). "Unresolved" means the field/wiring problem is still live in code — fix it (wire it, delete it, or add an SC entry reserving forward-schema use). Prose-only deferral in the audit body is not resolution. The /verify squad's separate HIGH/MEDIUM/LOW/INFO severity vocabulary does not apply here.
 
 Verify that `/perfect` Phase 2.5 ran. Check for both outputs:
 - `verification_findings/fidelity_audit[_chN].md`
@@ -45,7 +45,7 @@ Missing either → FAIL. Return to `/perfect` and run Phase 2.5 before continuin
 
 Read both files. Any unresolved [D]/[F]/[M]/[I]/[T] findings → FAIL. Return to `/perfect` — fix, re-run Phase 2.5, then resume `/5` from this step.
 
-Only proceed to Step 5 when both audits exist, both verdict PASS, and no unresolved findings above INFO.
+Only proceed to Step 5 when both audits exist, both verdict PASS, and no unresolved [D]/[F]/[M]/[I]/[T] findings remain (fidelity-audit findings have no INFO tier — every bracket-code entry must be resolved per the rules above).
 
 ### 5. Accumulated Corrections
 
