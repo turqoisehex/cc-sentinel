@@ -77,7 +77,7 @@ Parent enters the interleaved phase loop after writing manifest:
    Re-run Sonnet on any role where R1 OR R2 produced above-INFO findings.
    Roles that were all-PASS in both R1 and R2 are NOT re-run.
    Overwrites R1 output files for re-run roles.
-   **UX trace enforcement (cold_reader only):** After reading cold_reader output, if work product includes `lib/presentation/`, `lib/domain/`, or engine code AND the output lacks `## UX Journey Trace` section → treat as incomplete (re-run cold_reader with fresh prompt). Per design-spec section 5.5.
+   **UX trace enforcement (cold_reader only):** After reading cold_reader output, if work product includes presentation-layer, domain-layer, or engine code (e.g., `src/ui/`, `src/views/`, `lib/presentation/`, `src/domain/`, or equivalent project paths) AND the output lacks `## UX Journey Trace` section → treat as incomplete (re-run cold_reader with fresh prompt). Per design-spec section 5.5.
 
    **All-Codex-TRANSIENT in R2:** If all 5 Codex agents return TRANSIENT, R3 becomes a full 5-role Sonnet re-run (no cross-architecture data exists). Per design-spec section 8.3 all-transient degradation rule.
 
@@ -185,8 +185,8 @@ When all expected result files present:
    2. No fix-application Sonnet agents are still running (check via BashOutput on backgrounded agents).
    3. No design-decision pause is currently open.
    4. CWD is the project root (the `verification_findings/...` output path is project-relative).
-   5. Before first invocation in any session, confirm wrapper/draft byte-equality (the install wrapper and its in-tree mirror must be byte-identical — drift means the plan you reason about does not match what /verify invokes): `cmp ~/.claude/scripts/codex-postfix-scan.sh docs/superpowers/plans/2026-05-01-codex-postfix-scan.sh.draft` (exit 0 = identical; non-zero = drift — fix before scanning).
-   6. Confirm `<spec_path>` is not a symlink to a file outside `docs/` — a symlinked spec gets `cat`'d into the prompt and shipped to Codex (exfiltration risk). See `docs/superpowers/plans/2026-05-01-codex-postfix-integrity-scan.md` § "Threat model — symlinked spec path".
+   5. Before first invocation in any session, confirm wrapper/draft byte-equality (the install wrapper and its in-tree mirror must be byte-identical — drift means the plan you reason about does not match what /verify invokes): `cmp ~/.claude/scripts/codex-postfix-scan.sh <project-root>/codex-postfix-scan.sh.draft` (exit 0 = identical; non-zero = drift — fix before scanning). The draft location is project-specific — check your project's plan directory.
+   6. Confirm `<spec_path>` is not a symlink to a file outside `docs/` — a symlinked spec gets `cat`'d into the prompt and shipped to Codex (exfiltration risk).
 
    If any item is uncertain, do NOT run the scan yet. If the design-decision pause is currently in effect, defer this scan until the user resolves the decision and the remaining fixes are applied.
 
@@ -198,9 +198,9 @@ When all expected result files present:
 
    `~/.claude/scripts/codex-postfix-scan.sh <spec_path> verification_findings/squad_sonnet/integrity_scan.md`
 
-   *Worked example — substitute the spec path you are actually verifying; the path below is illustrative (specific to this project's Channel 3 sprint) and is not valid in a different repo or sprint. Assumes CWD = project root:*
+   *Worked example — substitute your own spec path; the path below is illustrative and project-specific. Assumes CWD = project root:*
 
-   `~/.claude/scripts/codex-postfix-scan.sh docs/superpowers/specs/2026-04-25-breathing-engine-fidelity-design.md verification_findings/squad_sonnet/integrity_scan.md`
+   `~/.claude/scripts/codex-postfix-scan.sh docs/specs/my-feature-design.md verification_findings/squad_sonnet/integrity_scan.md`
 
    Expect a 10–60 second wait (no progress indicator beyond a stderr banner). Maximum scan budget is 300 seconds; the wrapper times out beyond that and exits 2.
 
@@ -212,11 +212,11 @@ When all expected result files present:
 
    `~/.claude/scripts/codex-postfix-scan.sh <spec_path> verification_findings/squad_ch7_sonnet/integrity_scan.md`
 
-   **Substitute the actual channel before pasting.** The `[chN_]` notation is documentation prose, never a shell literal — bash treats `[…]` as a glob character class and the wrapper rejects bracket characters with exit 3. Unchanneled: `verification_findings/squad_sonnet/integrity_scan.md`. Channel N: substitute `N` (e.g., `squad_ch3_sonnet/`, `squad_ch7_sonnet/`). Placeholder definitions live in the Channel block at the top of this Procedure (full glossary in § Terminology of `docs/superpowers/plans/2026-05-01-codex-postfix-integrity-scan.md`).
+   **Substitute the actual channel before pasting.** The `[chN_]` notation is documentation prose, never a shell literal — bash treats `[…]` as a glob character class and the wrapper rejects bracket characters with exit 3. Unchanneled: `verification_findings/squad_sonnet/integrity_scan.md`. Channel N: substitute `N` (e.g., `squad_ch3_sonnet/`, `squad_ch7_sonnet/`). Placeholder definitions live in the Channel block at the top of this Procedure.
 
    The scan output file is OVERWRITTEN on each invocation. Squad dirs are gitignored (`verification_findings/squad*/`) and `safe-commit.sh` (an internal mechanism, never invoked directly — operators use `channel_commit.sh`) deletes their contents on each successful commit, so prior scan output is NOT preserved by committing. If preservation is needed for a specific round, copy `integrity_scan.md` out of the squad dir to a tracked location (e.g., the plan dir) before the next squad cycle.
 
-   **Wrapper / draft byte-equality contract:** The install wrapper at `~/.claude/scripts/codex-postfix-scan.sh` and its in-tree mirror at `docs/superpowers/plans/2026-05-01-codex-postfix-scan.sh.draft` MUST be byte-identical (`cmp` returns 0). Maintained via `cp + cmp` after every wrapper edit; operator-discipline, not hook-enforced. Verify with `cmp ~/.claude/scripts/codex-postfix-scan.sh docs/superpowers/plans/2026-05-01-codex-postfix-scan.sh.draft` before scan invocation if the wrapper has been edited recently.
+   **Wrapper / draft byte-equality contract:** The install wrapper at `~/.claude/scripts/codex-postfix-scan.sh` and its in-tree mirror (project-specific location) MUST be byte-identical (`cmp` returns 0). Maintained via `cp + cmp` after every wrapper edit; operator-discipline, not hook-enforced. Verify with `cmp ~/.claude/scripts/codex-postfix-scan.sh <project-root>/codex-postfix-scan.sh.draft` before scan invocation if the wrapper has been edited recently.
 
    **Pattern 5 is unconditional.** Round markers, tombstones, and "R<N> —" annotations are banned in spec body prose. There is no exemption — every round-marker artifact in the spec body trips Pattern 5. Audit-trail material that needs to survive lives in `verification_findings/` (squad output files) or git history, not in the spec.
 

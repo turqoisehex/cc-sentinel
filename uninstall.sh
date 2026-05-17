@@ -66,7 +66,8 @@ HOOKS=(
 )
 
 SCRIPTS=(
-  channel_commit.sh heartbeat_watcher.sh wait_for_results.sh wait_for_work.sh
+  channel_commit.sh codex-verify-agent.sh codex-postfix-scan.sh
+  heartbeat_watcher.sh wait_for_results.sh wait_for_work.sh
 )
 
 SKILLS=(
@@ -76,7 +77,8 @@ SKILLS=(
 )
 
 REFERENCE=(
-  audit-pointer-rules.md channel-routing.md commit-protocol.md
+  audit-pointer-rules.md channel-routing.md codex-postfix-prompt.md
+  codex-verification-prompts.md commit-protocol.md
   operator-cheat-sheet.md spec-verification.md
   verification-behavior.md verification-squad.md
 )

@@ -26,14 +26,14 @@ Read the project's `.claude/settings.json` (or `~/.claude/settings.json` for glo
 
 For each hook: check the command path exists as a file on disk. PASS if registered AND file exists. FAIL if either is missing.
 
-### 2. Command files
+### 2. Skill files
 
-Check that `.claude/commands/` contains all expected command files for installed modules:
+Check that `.claude/skills/` contains all expected skill directories for installed modules (each skill is a directory containing `SKILL.md`):
 
-- **Core:** `self-test.md`, `cold.md`, `cleanup.md`, `status.md`
-- **Verification:** `verify.md`, `grill.md`
-- **Sprint Pipeline:** `1.md` through `5.md`, `audit.md`, `design.md`, `build.md`, `perfect.md`, `finalize.md`, `opus.md`, `sonnet.md`, `rewrite.md`, `spawn.md`
-- **Governance Protection:** `mistake.md`, `prune-rules.md`
+- **Core:** `self-test`, `cold`, `cleanup`, `status`
+- **Verification:** `verify`, `grill`
+- **Sprint Pipeline:** `1` through `5`, `audit`, `design`, `build`, `perfect`, `finalize`, `opus`, `sonnet`, `rewrite`, `spawn`
+- **Governance Protection:** `mistake`, `prune-rules`
 
 ### 3. Reference files
 

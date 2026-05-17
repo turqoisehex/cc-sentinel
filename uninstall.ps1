@@ -36,14 +36,14 @@ $Hooks = @(
     "post-compact-reorient.sh", "pre-compact-state-save.sh", "safe-commit.sh",
     "session-orient.sh", "stop-task-check.sh", "flash-notification.sh", "flash.ps1"
 )
-$Scripts = @("channel_commit.sh", "heartbeat_watcher.sh", "wait_for_results.sh", "wait_for_work.sh")
+$Scripts = @("channel_commit.sh", "codex-verify-agent.sh", "codex-postfix-scan.sh", "heartbeat_watcher.sh", "wait_for_results.sh", "wait_for_work.sh")
 $Skills = @(
     "1","2","3","4","5","audit","build","cleanup","cold",
     "configure-context-awareness","design","finalize","grill","mistake",
     "opus","perfect","prune-rules","rewrite","self-test","sonnet",
     "spawn","status","verify"
 )
-$Reference = @("audit-pointer-rules.md","channel-routing.md","commit-protocol.md","operator-cheat-sheet.md","spec-verification.md","verification-behavior.md","verification-squad.md")
+$Reference = @("audit-pointer-rules.md","channel-routing.md","codex-postfix-prompt.md","codex-verification-prompts.md","commit-protocol.md","operator-cheat-sheet.md","spec-verification.md","verification-behavior.md","verification-squad.md")
 $Templates = @("channel-template.md","current-task-template.md","design-invariants.md","plugin-auto-invoke.md","terminology.md")
 $Tools = @("spawn.py", "spawn.json")
 $Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-verifier.md","commit-adversarial.md","commit-cold-reader.md")

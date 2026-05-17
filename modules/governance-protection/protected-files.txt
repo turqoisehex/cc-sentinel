@@ -12,7 +12,6 @@ terminology.md
 spec-verification.md
 plugin-auto-invoke.md
 testing.md
-exercise-exceptions.md
 verification-squad.md
 # Skill definitions (matches basename only — protects every SKILL.md globally; unlock via GOVERNANCE-EDIT-AUTHORIZED marker)
 SKILL.md
@@ -28,14 +27,11 @@ grill.md
 prune-rules.md
 rewrite.md
 status.md
-extract.md
 verify.md
 sonnet.md
 perfect.md
 cold.md
 finalize.md
 # Agent definitions
-code-simplifier.md
 commit-adversarial.md
 commit-cold-reader.md
-terminology-auditor.md

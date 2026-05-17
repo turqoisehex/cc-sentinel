@@ -487,7 +487,7 @@ SCOPE: [paste one-sentence scope]
 
 6. **UX Journey Trace (MANDATORY when work product includes presentation/domain/engine code)**
 
-   When the work product includes ANY file under `lib/presentation/`, `lib/domain/`, or files that implement user-facing behavior (engines, state machines, providers that drive UI), walk the user journey step by step:
+   When the work product includes ANY file under a presentation layer (e.g., `src/ui/`, `src/views/`, `lib/presentation/`), domain layer (e.g., `src/domain/`, `lib/domain/`), or files that implement user-facing behavior (engines, state machines, controllers, providers that drive UI), walk the user journey step by step:
 
    **6a. Identify the entry point.** How does the user arrive at this feature? What screen, what tap, what navigation path?
 

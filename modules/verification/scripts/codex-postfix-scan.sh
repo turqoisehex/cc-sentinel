@@ -20,13 +20,12 @@
 
 set -euo pipefail
 
-# Post-/3 maintenance: any edit MUST also update
-# docs/superpowers/plans/2026-05-01-codex-postfix-scan.sh.draft in the same commit
-# (verify with `diff -q`). The draft is the in-tree copy that lives alongside the
-# implementation plan, so a future operator reading the plan can see the wrapper
-# source without leaving the repo. The actual executable lives at
-# ~/.claude/scripts/codex-postfix-scan.sh; the draft must be byte-equal to it.
-# If the two diverge, operators reading the plan will reason about a wrapper
+# Post-/3 maintenance: any edit MUST also update the in-tree draft copy in the
+# same commit (verify with `diff -q`). The draft lives alongside the implementation
+# plan so a future operator can see the wrapper source without leaving the repo.
+# The actual executable lives at ~/.claude/scripts/codex-postfix-scan.sh; the draft
+# must be byte-equal to it. If the two diverge, operators reading the plan will
+# reason about a wrapper
 # that does not match the one the /verify skill actually invokes.
 
 # Defense-in-depth: an attacker controlling the parent environment (or a
@@ -561,8 +560,14 @@ case "${BASH_SOURCE[0]}" in
 esac
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROMPT_TEMPLATE="$SCRIPT_DIR/codex-postfix-prompt.md"
+if [ ! -f "$PROMPT_TEMPLATE" ]; then
+  REFERENCE_DIR="$(cd "$SCRIPT_DIR/../reference" 2>/dev/null && pwd)"
+  if [ -n "$REFERENCE_DIR" ] && [ -f "$REFERENCE_DIR/codex-postfix-prompt.md" ]; then
+    PROMPT_TEMPLATE="$REFERENCE_DIR/codex-postfix-prompt.md"
+  fi
+fi
 
-[ -f "$PROMPT_TEMPLATE" ]  || { echo "Prompt template missing: $PROMPT_TEMPLATE" >&2; exit 3; }
+[ -f "$PROMPT_TEMPLATE" ]  || { echo "Prompt template missing: $PROMPT_TEMPLATE (checked scripts/ and reference/)" >&2; exit 3; }
 
 # A15: reject unsubstituted channel-template placeholder characters in OUTPUT_PATH.
 # The `verify` SKILL.md uses `[chN/]`, `[chN_]`, `[_chN]` as channel-routing
@@ -846,7 +851,7 @@ END_SENTINEL="<!-- END_SPEC_${SPEC_NONCE} -->"
 # version collides on meta-specs).
 if ! grep -qF '{{BEGIN_SPEC_SENTINEL}}' "$PROMPT_TEMPLATE"; then
   echo "FATAL: Prompt template missing {{BEGIN_SPEC_SENTINEL}} placeholder in $PROMPT_TEMPLATE." >&2
-  echo "  Cause: stale install. Re-install from docs/superpowers/plans/2026-05-01-codex-postfix-scan.sh.draft's sibling prompt template." >&2
+  echo "  Cause: stale install. Re-install from the in-tree draft's sibling prompt template." >&2
   exit 3
 fi
 if ! grep -qF '{{END_SPEC_SENTINEL}}' "$PROMPT_TEMPLATE"; then

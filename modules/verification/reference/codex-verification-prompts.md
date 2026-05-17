@@ -286,12 +286,12 @@ SCOPE: {{SCOPE_SUMMARY}}
 
 6. **UX Journey Trace (MANDATORY when work product includes presentation/domain/engine code)**
 
-   When the work product includes ANY file under `lib/presentation/`, `lib/domain/`, or files that implement user-facing behavior (engines, state machines, providers that drive UI), walk the user journey step by step:
+   When the work product includes ANY file under a presentation layer (e.g., `src/ui/`, `src/views/`, `lib/presentation/`), domain layer (e.g., `src/domain/`, `lib/domain/`), or files that implement user-facing behavior (engines, state machines, controllers, providers that drive UI), walk the user journey step by step:
 
    **6a. Identify the entry point.** How does the user arrive at this feature? What screen, what tap, what navigation path?
 
    **6b. Walk each interaction step in user time.** At each step:
-   - What is on screen right now? Read the widget tree: `grep -n "Widget\|build(" file`
+   - What is on screen right now? Read the component/view tree — trace the render path from the entry point.
    - What can the user tap? Trace each button's handler. Connected or dead?
    - What audio is playing?
    - What happens when this step ends? Trace the completion condition.

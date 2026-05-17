@@ -80,7 +80,7 @@ Scan implementation for features NOT in spec. For each:
 
 ### Phase 4.5: Field-Consumption Audit (one page, every run)
 
-For each data model touched this sprint (ExerciseDefinition, ModuleTemplate, ParameterDef, any config/schema class with declared fields):
+For each data model touched this sprint (any entity class, schema definition, config type, or domain model with declared fields):
 
 1. List every field declared on the model.
 2. For each field, grep the entire `lib/` and `test/` tree for reads of that field name.

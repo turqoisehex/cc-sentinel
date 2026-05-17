@@ -194,9 +194,15 @@
           "stop-task-check.sh",
           "comment-replacement.sh"
         ],
+        "scripts": [
+          "codex-verify-agent.sh",
+          "codex-postfix-scan.sh"
+        ],
         "reference": [
           "verification-squad.md",
-          "verification-behavior.md"
+          "verification-behavior.md",
+          "codex-verification-prompts.md",
+          "codex-postfix-prompt.md"
         ],
         "skills": [
           "grill",
