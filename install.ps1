@@ -323,10 +323,15 @@ function Merge-Settings {
                             # Use ~/ prefix so allow rules match (bash expands ~ at runtime)
                             $cmd = $cmd -replace "\.claude/", "~/.claude/"
                         }
-                        # Handle notification placeholder (use ~/ for global so allow rules match)
+                        # Handle notification placeholder
+                        # PowerShell -File does NOT expand ~, so global installs use resolved path
                         if ($cmd -eq "__NOTIFICATION_SCRIPT__") {
-                            $cmdPrefix = if ($Target -eq "global") { "~/.claude" } else { $HookPrefix }
-                            $cmd = "powershell -ExecutionPolicy Bypass -File `"$cmdPrefix/hooks/flash.ps1`""
+                            if ($Target -eq "global") {
+                                $resolvedHookPath = Join-Path $env:USERPROFILE ".claude\hooks\flash.ps1"
+                                $cmd = "powershell -ExecutionPolicy Bypass -File `"$resolvedHookPath`""
+                            } else {
+                                $cmd = "powershell -ExecutionPolicy Bypass -File `"$HookPrefix/hooks/flash.ps1`""
+                            }
                         }
 
                         $newHooks += @{

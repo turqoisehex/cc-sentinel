@@ -241,7 +241,9 @@ Do NOT include `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp`, `*.svg`, `*.pdf`, 
 
 ### Step 6: Inject CLAUDE.md Rules
 
-After the installer completes, read `modules/core/claude-md-rules.md` and inject its contents into the user's CLAUDE.md:
+After the installer completes, read `modules/core/claude-md-rules.md` and inject its contents into the user's CLAUDE.md.
+
+**Important:** If governance-protection was installed, the `PreToolUse:Edit` hook blocks direct Edit calls on CLAUDE.md. Use Bash with a file-append command instead (e.g., Python `pathlib` or PowerShell `Add-Content`). This is expected — the hook protects CLAUDE.md from casual edits, but the installer must write rules during initial setup.
 
 1. Check if `CLAUDE.md` exists in the target (project root or `~/.claude/`).
 2. If it exists, check if cc-sentinel rules are already present (search for `<!-- cc-sentinel rules start -->`).
