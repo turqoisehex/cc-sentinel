@@ -36,7 +36,7 @@ $jqPath = Get-Command jq -ErrorAction SilentlyContinue
 if (-not $jqPath) {
     Write-Host ""
     Write-Host "[cc-sentinel] ERROR: jq is required but not found." -ForegroundColor Red
-    Write-Host "[cc-sentinel] All cc-sentinel hooks use jq for JSON parsing."
+    Write-Host "[cc-sentinel] Most cc-sentinel hooks use jq for JSON parsing."
     Write-Host "[cc-sentinel] Install it: choco install jq  OR  winget install jqlang.jq"
     Write-Host "[cc-sentinel] Download: https://jqlang.github.io/jq/download/"
     Write-Host ""
@@ -47,7 +47,7 @@ $bashPath = Get-Command bash -ErrorAction SilentlyContinue
 if (-not $bashPath) {
     Write-Host ""
     Write-Host "[cc-sentinel] ERROR: bash is required but not found." -ForegroundColor Red
-    Write-Host "[cc-sentinel] All cc-sentinel hooks require bash (Git Bash on Windows)."
+    Write-Host "[cc-sentinel] Most cc-sentinel hooks require bash (Git Bash on Windows)."
     Write-Host "[cc-sentinel] Install Git for Windows: https://git-scm.com/download/win"
     Write-Host ""
     exit 1
@@ -73,6 +73,8 @@ if ($Target -eq "global") {
     $ScriptsDir = "scripts"
 }
 
+$script:NotificationSkipped = $false
+
 function Log($msg) { Write-Host "[cc-sentinel] $msg" }
 
 function Copy-FileChecked($src, $dst) {
@@ -81,7 +83,7 @@ function Copy-FileChecked($src, $dst) {
         return
     }
     $dir = Split-Path -Parent $dst
-    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     # Local-preservation: on reinstall, skip files the user has modified locally.
     # Gated by .cc-sentinel-installed marker so fresh installs always proceed.
     # Pass -ForceOverwrite to replace locally-modified files with the canonical source.
@@ -264,6 +266,7 @@ function Install-Notification {
             if ($conflictFound) {
                 Log "  Skipping notification hook installation to avoid duplicate popups."
                 Log "  To force install, remove existing notification hooks first."
+                $script:NotificationSkipped = $true
                 return
             }
         } catch {
@@ -297,6 +300,7 @@ function Merge-Settings {
 
     $modList = $Modules -split "," | ForEach-Object { $_.Trim() }
     foreach ($modKey in $modList) {
+        if ($modKey -eq "notification" -and $script:NotificationSkipped) { continue }
         $mod = $manifest.modules.$modKey
         if (-not $mod) { continue }
         $merge = $mod.settings_merge
@@ -704,9 +708,9 @@ if ($Modules -match "sprint-pipeline") {
         } else {
             Log "Configuring spawn (auto-detect terminal + key sender)..."
             try {
-                & python3 $spawnPath --setup 2>$null
+                & python $spawnPath --setup 2>$null
             } catch {
-                Log "  spawn.py --setup failed - run manually: python3 ~/.claude/tools/spawn.py --setup"
+                Log "  spawn.py --setup failed - run manually: python ~/.claude/tools/spawn.py --setup"
             }
         }
     }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # setup-codex.sh — Probe, install, and verify Codex CLI
-# Called by cc-sentinel installer after user opts into dual-architecture verification.
+# Run during cc-sentinel installation conversation (Step 4d) when user opts into dual-architecture verification.
 #
 # Usage: bash setup-codex.sh [--probe-only | --install | --verify-auth]
 #

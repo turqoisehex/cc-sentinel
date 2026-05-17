@@ -1,5 +1,5 @@
 ﻿# setup-codex.ps1 — Probe, install, and verify Codex CLI (Windows)
-# Called by cc-sentinel installer after user opts into dual-architecture verification.
+# Run during cc-sentinel installation conversation (Step 4d) when user opts into dual-architecture verification.
 #
 # Usage: powershell -File setup-codex.ps1 [-Mode ProbeOnly|Install|VerifyAuth]
 #

@@ -9,7 +9,7 @@ When the user installs this package (by saying "Install" followed by this repo's
 ### Step 1: Detect Environment
 
 Before asking any questions, silently detect. Use built-in tools (Glob, Read) instead of Bash wherever possible — Bash triggers permission prompts, built-in tools do not:
-- **OS:** One Bash call: `uname -s` (macOS/Linux) or read `$env:OS` (Windows). This is the only Bash call needed for detection (later steps require Bash for installer and setup script execution).
+- **OS:** Claude Code already knows the platform from session metadata (`win32`, `darwin`, `linux`). Confirm with one Bash call if needed: `uname -s` on Unix or check `$env:OS` on Windows. This is the only Bash call needed for detection (later steps require Bash for installer and setup script execution).
 - **Existing .claude/:** Use Glob for `.claude/settings.json` and `~/.claude/settings.json`.
 - **Git:** Use Glob for `.git/` in the current directory.
 - **Project type:** Use Glob for `pubspec.yaml`, `package.json`, `Cargo.toml`, `go.mod`, `setup.py`, `pyproject.toml`, `Makefile`.
@@ -119,7 +119,7 @@ Announce briefly: "Configuring permissions so cc-sentinel scripts run without ma
 
 If the Verification module was selected (directly or via dependency), ask:
 
-"Do you want dual-architecture verification? This runs OpenAI Codex agents alongside Claude Sonnet during verification rounds. Different model architectures catch different bug classes — issues one model misses, the other catches. Requires an OpenAI account with API access (Plus at $20/mo, Pro, Team, or an API key with credits)."
+"Do you want dual-architecture verification? This runs OpenAI Codex agents alongside Claude Sonnet during verification rounds. Different model architectures catch different bug classes — issues one model misses, the other catches. Requires an OpenAI account with Codex access (Plus, Pro, Team, or an API key with credits — check OpenAI's current pricing)."
 
 Options: **Yes** / **No, Sonnet-only**
 
@@ -161,7 +161,7 @@ Options: **Yes** / **No, Sonnet-only**
 
 ### Step 5: Run Installer
 
-Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, skills, or settings. It also auto-configures permissions so cc-sentinel scripts run without manual approval."
+Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, skills, or settings (on reinstall, locally-modified files are preserved; use `-ForceOverwrite` to replace them with canonical versions). It also auto-configures permissions so cc-sentinel scripts run without manual approval."
 
 Determine the correct installer command based on OS. Use the full path to the installer scripts in this repository (the directory containing this CLAUDE.md file):
 
@@ -175,7 +175,7 @@ powershell -ExecutionPolicy Bypass -File "<this-repo-path>/install.ps1" -Modules
 bash "<this-repo-path>/install.sh" --modules "<selected>" --target "<target>"
 ```
 
-Replace `<this-repo-path>` with the absolute path to this cloned repository. For the initial install run, use only these arguments. Additional flags (`-DenyRules` / `--deny-rules`, `-ForceOverwrite`) are covered in subsequent steps. The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
+Replace `<this-repo-path>` with the absolute path to this cloned repository. For the initial install run, use only these arguments. Additional flags: `-DenyRules` / `--deny-rules` (Step 5c covers when to append this), `-ForceOverwrite` (forces replacement of locally-modified files — use when a previous install left stale files that should be updated to the canonical version). The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
 
 ### Step 5b: Configure Spawn (if Sprint Pipeline selected)
 
@@ -199,7 +199,9 @@ print('Spawn config written: startup_delay =', cfg['startup_delay'])
 $env:SPAWN_DELAY = "N"; python -c "import json, pathlib, os; p = pathlib.Path.home() / '.claude' / 'tools' / 'spawn.json'; p.parent.mkdir(parents=True, exist_ok=True); cfg = json.loads(p.read_text()) if p.exists() else {}; cfg['startup_delay'] = int(os.environ['SPAWN_DELAY']); p.write_text(json.dumps(cfg, indent=2)); print('Spawn config written: startup_delay =', cfg['startup_delay'])"
 ```
 
-Then run `python3 ~/.claude/tools/spawn.py --setup` to auto-detect terminal and key sender.
+Then run the setup command to auto-detect terminal and key sender:
+- **macOS/Linux:** `python3 ~/.claude/tools/spawn.py --setup`
+- **Windows:** `python ~/.claude/tools/spawn.py --setup`
 
 ### Step 5c: Review .claudeignore
 
@@ -230,7 +232,7 @@ If user picks D: make the requested changes.
 
 **Conservative (Recommended):** Block media, video, archives, and binaries. Keep images and PDFs readable for OCR."
 
-If they accept, re-run the installer with `--deny-rules` appended to the command. The installer handles the edit automatically (before file-protection hooks are active):
+If they accept, re-run the installer with `--deny-rules` appended to the command. The installer handles the edit automatically (governance hooks do not block the installer's own settings writes):
 
 **Windows:** append `-DenyRules` to the powershell command
 **macOS/Linux:** append `--deny-rules` to the bash command
@@ -298,7 +300,9 @@ Based on installed modules, suggest first commands:
 - **With Sprint Pipeline:** "Start your next project with `/audit` to see the full pipeline."
 - **With Context Awareness:** "Watch the status bar - it shows your context window usage in real time."
 
-Say: "cc-sentinel is installed and verified. Your sessions are now governed."
+If all checks above PASS: Say "cc-sentinel is installed and verified. Your sessions are now governed."
+
+If any check FAILs: Report the failures, suggest running `/self-test` in a new session to diagnose. Do NOT claim "verified" when checks failed.
 
 ## Uninstall
 
