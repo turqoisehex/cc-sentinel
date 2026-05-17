@@ -77,7 +77,7 @@ Store the answer as `spawn_startup_delay`. Default 5 if the user skips or says "
 
 If the Verification module was selected (directly or via dependency), ask:
 
-"Do you want dual-architecture verification? This runs OpenAI Codex agents alongside Claude Sonnet during verification rounds. Different model architectures catch different bug classes — typical verification converges in ~2 rounds instead of 5-10. Requires an OpenAI account with API access (Plus at $20/mo, Pro, Team, or an API key with credits)."
+"Do you want dual-architecture verification? This runs OpenAI Codex agents alongside Claude Sonnet during verification rounds. Different model architectures catch different bug classes — issues one model misses, the other catches. Requires an OpenAI account with API access (Plus at $20/mo, Pro, Team, or an API key with credits)."
 
 Options: **Yes** / **No, Sonnet-only**
 
