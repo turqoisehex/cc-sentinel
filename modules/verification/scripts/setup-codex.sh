@@ -156,7 +156,7 @@ verify_auth() {
     elif echo "$stderr_content" | grep -qiE "rate.limit|quota"; then
       # Rate limit = auth is valid (authenticated enough to hit limits)
       echo "STATUS: AUTH_OK"
-    elif echo "$stderr_content" | grep -qiE "model_not_found|invalid_model|no such model"; then
+    elif echo "$stderr_content" | grep -qiE "model_not_found|invalid_model|no such model|not supported"; then
       # Model issue = auth is valid (wrong model, not wrong credentials)
       echo "STATUS: AUTH_OK"
     else

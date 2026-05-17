@@ -88,6 +88,27 @@ function Invoke-Install {
     }
 }
 
+function Find-CodexJs {
+    # Resolve the actual codex.js entry point for direct node invocation.
+    # Shell wrappers (.cmd/.ps1) cause quoting hell with Start-Process.
+    $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+    if ($npmCmd) {
+        $npmPrefix = & npm config get prefix 2>$null
+        if ($npmPrefix) {
+            $jsPath = Join-Path $npmPrefix "node_modules\@openai\codex\bin\codex.js"
+            if (Test-Path $jsPath) { return $jsPath }
+        }
+    }
+    # Fallback: derive from codex.cmd location
+    $codexCmd = Get-Command codex.cmd -ErrorAction SilentlyContinue
+    if ($codexCmd) {
+        $dir = Split-Path $codexCmd.Source -Parent
+        $jsPath = Join-Path $dir "node_modules\@openai\codex\bin\codex.js"
+        if (Test-Path $jsPath) { return $jsPath }
+    }
+    return $null
+}
+
 function Invoke-VerifyAuth {
     $bin = Find-Codex
     if (-not $bin) {
@@ -95,15 +116,45 @@ function Invoke-VerifyAuth {
         return
     }
 
+    # Resolve node.exe and codex.js for direct invocation (avoids .cmd/.ps1 quoting issues)
+    $nodeExe = (Get-Command node -ErrorAction SilentlyContinue).Source
+    $codexJs = Find-CodexJs
+
+    if (-not $nodeExe -or -not $codexJs) {
+        # Fallback: use & operator (no timeout but avoids Start-Process wrapper issues)
+        try {
+            $result = & $bin exec -m gpt-4.1-mini --sandbox read-only --skip-git-repo-check --ephemeral "Reply with exactly one word: SENTINEL" 2>&1
+            $resultStr = $result -join "`n"
+            if ($resultStr -match "SENTINEL") {
+                Write-Output "STATUS: AUTH_OK"
+            } elseif ($resultStr -match "unauthorized|not configured|forbidden|403|auth.*fail|invalid.*key|no.*api.*key") {
+                Write-Output "STATUS: AUTH_FAILED"
+                Write-Output "CMD: codex login"
+            } elseif ($resultStr -match "rate.limit|quota|model_not_found|invalid_model|not supported") {
+                Write-Output "STATUS: AUTH_OK"
+            } else {
+                Write-Output "STATUS: AUTH_FAILED"
+                Write-Output "CMD: codex login"
+                Write-Output "DETAIL: $($result | Select-Object -Last 3 | Out-String)"
+            }
+        } catch {
+            Write-Output "STATUS: AUTH_FAILED"
+            Write-Output "CMD: codex login"
+            Write-Output "DETAIL: $($_.Exception.Message)"
+        }
+        return
+    }
+
     $stdoutFile = [System.IO.Path]::GetTempFileName()
     $stderrFile = [System.IO.Path]::GetTempFileName()
     try {
-        $proc = Start-Process -FilePath $bin -ArgumentList 'exec -m gpt-4.1-mini --sandbox read-only --skip-git-repo-check --ephemeral "Reply with exactly one word: SENTINEL"' -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile -NoNewWindow -PassThru
+        $proc = Start-Process -FilePath $nodeExe -ArgumentList "`"$codexJs`" exec -m gpt-4.1-mini --sandbox read-only --skip-git-repo-check --ephemeral `"Reply with exactly one word: SENTINEL`"" -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile -NoNewWindow -PassThru
         $exited = $proc.WaitForExit(30000)
         if (-not $exited) {
             $proc.Kill()
             Write-Output "STATUS: AUTH_FAILED"
             Write-Output "CMD: codex login"
+            Write-Output "DETAIL: timed out after 30s"
             return
         }
 
@@ -112,24 +163,26 @@ function Invoke-VerifyAuth {
 
         if ($output -and $output.Trim().Length -gt 0) {
             Write-Output "STATUS: AUTH_OK"
+        } elseif ($proc.ExitCode -eq 0 -and -not $stderr) {
+            Write-Output "STATUS: AUTH_OK"
         } else {
-            if ($stderr -match "auth|login|key|credential|unauthorized|not configured|forbidden|403") {
+            if ($stderr -match "unauthorized|not configured|forbidden|403|auth.*fail|invalid.*key|no.*api.*key") {
                 Write-Output "STATUS: AUTH_FAILED"
                 Write-Output "CMD: codex login"
             } elseif ($stderr -match "rate.limit|quota") {
-                # Rate limit = auth is valid (you're authenticated enough to hit limits)
                 Write-Output "STATUS: AUTH_OK"
-            } elseif ($stderr -match "model_not_found|invalid_model|no such model") {
-                # Model issue = auth is valid (wrong model, not wrong credentials)
+            } elseif ($stderr -match "model_not_found|invalid_model|no such model|not supported") {
                 Write-Output "STATUS: AUTH_OK"
             } else {
                 Write-Output "STATUS: AUTH_FAILED"
                 Write-Output "CMD: codex login"
+                if ($stderr) { Write-Output "DETAIL: $($stderr.Trim().Split([Environment]::NewLine) | Select-Object -Last 3 | Out-String)" }
             }
         }
     } catch {
         Write-Output "STATUS: AUTH_FAILED"
         Write-Output "CMD: codex login"
+        Write-Output "DETAIL: $($_.Exception.Message)"
     } finally {
         Remove-Item $stdoutFile -Force -ErrorAction SilentlyContinue
         Remove-Item $stderrFile -Force -ErrorAction SilentlyContinue
