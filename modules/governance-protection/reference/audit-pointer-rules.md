@@ -35,15 +35,15 @@ Prefer the most specific form that resolves uniquely.
 
 | Target | Format | Example |
 |---|---|---|
-| Top-level symbol | `file.dart :: symbolName` | `routine_engine.dart :: isBreathingModule` |
-| Dart class member | `file.dart :: ClassName.memberName` | `multi_phase_sequence_engine.dart :: Engine._advance` |
-| Keyed list entry | `file.dart :: ExerciseDefinition(id: 'x').field` | `breathwork_exercises.dart :: ExerciseDefinition(id: 'breathing_sitali').parameters.inhaleSeconds` |
-| Seeder entry | `file.dart :: _addContent('id')` | `content_tags_seeder.dart :: _addContent('breathing_bhramari')` |
-| Code branch within function | `file :: function :: branch description` | `routine_engine.dart :: _handleTick :: isBreathingModule check` |
-| Spec section | `spec.md § N.N Heading` | `breathwork_spec.md § P1.1 Surface Filter` |
+| Top-level symbol | `file.ext :: symbolName` | `auth_service.py :: validate_token` |
+| Class member | `file.ext :: ClassName.memberName` | `order_engine.ts :: Engine._processQueue` |
+| Keyed list entry | `file.ext :: ModelDef(id: 'x').field` | `products.py :: ProductDef(id: 'widget_pro').pricing.discount` |
+| Registry entry | `file.ext :: register('id')` | `routes.ts :: register('/api/users')` |
+| Code branch within function | `file :: function :: branch description` | `scheduler.go :: handleTick :: isRetryable check` |
+| Spec section | `spec.md § N.N Heading` | `api_spec.md § 3.1 Rate Limiting` |
 | CT section | `CURRENT_TASK_chN.md § Heading` | `CURRENT_TASK_ch3.md § /1 FOLLOW-UP` |
-| SC item | `SPRINT_CHECKLIST.md § Sprint Heading` | `SPRINT_CHECKLIST.md § Breathing Engine Fidelity Sprint` |
-| Comment | `file :: NOTE above symbol` | `breathwork_exercises.dart :: NOTE above breathing_power` |
+| SC item | `SPRINT_CHECKLIST.md § Sprint Heading` | `SPRINT_CHECKLIST.md § Auth Refactor Sprint` |
+| Comment | `file :: NOTE above symbol` | `scheduler.go :: NOTE above retryPolicy` |
 
 Do not include line numbers as "redundant belt-and-suspenders" alongside symbolic addresses — the line number will still rot and create drift. Pick one form, use it alone.
 
@@ -65,13 +65,13 @@ Mechanical, adversarial, dependency, and cold-reader agents may still cite `file
 
 Example — WRONG:
 
-> Finding: `fidelity_audit_ch3.md` cites `breathwork_exercises.dart:L487` — actual L438.
+> Finding: `fidelity_audit_ch3.md` cites `products.py:L487` — actual L438.
 > Fix: change `L487` to `L438`.
 
 Example — CORRECT:
 
-> Finding: `fidelity_audit_ch3.md` cites `breathwork_exercises.dart:L487` — this reference rots on every code edit above line 487.
-> Fix: replace with `breathwork_exercises.dart :: ExerciseDefinition(id: 'breathing_sitali').parameters.inhaleSeconds`.
+> Finding: `fidelity_audit_ch3.md` cites `products.py:L487` — this reference rots on every code edit above line 487.
+> Fix: replace with `products.py :: ProductDef(id: 'widget_pro').pricing.discount`.
 
 ## Exceptions
 

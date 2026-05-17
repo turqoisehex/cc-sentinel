@@ -168,13 +168,12 @@ The field-consumption audit checks "is this field consumed?" — but not "does e
 
 **The rule:** When the dependency agent encounters API calls, method invocations, CLI flags, or language features that are platform-specific or version-specific, it MUST verify compatibility against the project's declared targets using documentation tools (context7 `resolve-library-id` → `query-docs`, web search, or official docs). **Never trust training data for version-specific behavior.** Training data does not carry version annotations — it blends all versions into one undifferentiated pool.
 
-**Declared targets for this project:**
-- Flutter: Android (API 21+) and iOS (15.0+) — primary shipping platforms
-- Flutter: macOS — available but secondary
-- Dart SDK: version per `pubspec.yaml` `environment.sdk` constraint
-- PowerShell 5.1+ (cc-sentinel installer — NOT pwsh 7)
+**Declared targets (cc-sentinel infrastructure):**
+- PowerShell 5.1+ (Windows installer — NOT pwsh 7)
 - Bash: 3.2+ (macOS ships ancient bash) and 5.x (Linux)
 - Node.js: LTS (for Codex CLI tooling)
+
+**Project targets:** Determined at runtime by reading the project's config files (`pubspec.yaml`, `package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`, etc.). The dependency agent should identify the project's shipping platforms from these files and verify API compatibility against them.
 
 **What to check (dependency agent checklist for cross-platform code):**
 
@@ -188,7 +187,7 @@ The field-consumption audit checks "is this field consumed?" — but not "does e
 
 5. **Shell compatibility.** `[[` (bash-only, not POSIX sh), `echo -e` (not portable), array syntax (bash 4+ features), associative arrays (bash 4+), `local -n` (bash 4.3+), `readarray`/`mapfile` (bash 4+).
 
-6. **Feature gating.** Framework features that exist on some platforms but not others: Flutter desktop APIs unavailable on mobile, platform channels with native implementations, plugins without Windows/macOS/Linux support.
+6. **Feature gating.** Framework features that exist on some platforms but not others: desktop-only APIs called from mobile code, platform-specific plugins, browser APIs unavailable in native builds.
 
 **How to verify (procedure for the dependency agent):**
 
@@ -199,18 +198,17 @@ When you encounter a potentially version-gated API:
 4. If the API is NOT available on all targets: flag as HIGH with the specific version constraint and a suggested compatible alternative
 5. If you cannot determine availability with certainty: flag as MEDIUM with "version compatibility unverified — manual check needed"
 
-**This is NOT optional for the dependency agent.** Every verification round on cross-platform code (scripts, installers, Flutter code targeting multiple platforms) requires at least one documentation lookup per file to verify the most complex API call used. "It looks right" is the exact failure mode this rule prevents.
+**This is NOT optional for the dependency agent.** Every verification round on cross-platform code (scripts, installers, code targeting multiple platforms) requires at least one documentation lookup per file to verify the most complex API call used. "It looks right" is the exact failure mode this rule prevents.
 
-**Examples of bugs this catches:**
-- `Platform.isAndroid` in a widget that also renders on iOS — guarded code silently skips on the other platform
-- `just_audio` background playback behavior differs Android vs iOS (MediaSession requirements, AVAudioSession category)
-- `path_provider` `getExternalStorageDirectory()` → returns null on iOS (Android-only API)
-- `dart:io` `Platform.environment` → not available on web, throws on restricted iOS sandbox keys
-- `WakelockPlus.enable()` → requires different native permissions on Android (WAKE_LOCK) vs iOS (idleTimerDisabled)
-- `SharedPreferences` key length limits differ per platform (Android has no practical limit; iOS NSUserDefaults warns at 1MB total)
-- `Dart String.replaceAll()` with lookbehind regex → lookbehind support depends on Dart SDK version and underlying regex engine per platform
-- `flutter_local_notifications` scheduling → Android requires exact alarm permission (API 31+), iOS requires provisional/full notification permission
-- Timer/alarm precision: Android doze mode throttles inexact alarms; iOS suspends background timers after ~30s
+**Examples of bugs this catches (cc-sentinel infrastructure):**
+- `Join-Path` variadic form (PS 7 only — PS 5.1 accepts only 2 args)
+- `Get-Date -AsUTC` (PS 7 only — use `[DateTime]::UtcNow` for PS 5.1)
+- `readlink -f` (GNU only — macOS requires `realpath` or manual resolution)
+- `echo -e` (not portable — use `printf` instead)
+- `local -n` nameref (bash 4.3+ — not available on macOS default bash 3.2)
+- `timeout` command (GNU coreutils — not on macOS; use `gtimeout` or manual kill)
+- Array append `+=` in bash (3.1+ but behavior differs with `set -u` in 3.2 vs 4.x)
+- `sed -i ''` (macOS) vs `sed -i` (GNU) — in-place edit syntax diverges
 
 ### Sonnet Listener CT Isolation
 

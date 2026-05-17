@@ -45,6 +45,20 @@ if (-not $jqPath) {
 
 $bashPath = Get-Command bash -ErrorAction SilentlyContinue
 if (-not $bashPath) {
+    $gitBashCandidates = @(
+        "C:\Program Files\Git\bin\bash.exe",
+        "C:\Program Files (x86)\Git\bin\bash.exe",
+        (Join-Path $env:LOCALAPPDATA "Programs\Git\bin\bash.exe")
+    )
+    foreach ($candidate in $gitBashCandidates) {
+        if (Test-Path $candidate) {
+            $env:PATH = "$env:PATH;$(Split-Path $candidate)"
+            $bashPath = Get-Command bash -ErrorAction SilentlyContinue
+            break
+        }
+    }
+}
+if (-not $bashPath) {
     Write-Host ""
     Write-Host "[cc-sentinel] ERROR: bash is required but not found." -ForegroundColor Red
     Write-Host "[cc-sentinel] Most cc-sentinel hooks require bash (Git Bash on Windows)."

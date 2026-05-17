@@ -17,7 +17,7 @@ Before asking any questions, silently detect. Use built-in tools (Glob, Read) in
 
 ### Step 2: Discovery Questions (one at a time, ALL mandatory)
 
-Ask these questions one at a time. Wait for each answer before proceeding. Do NOT skip any question. Do NOT combine questions.
+Ask these questions one at a time. Wait for each answer before proceeding. Do NOT skip any question. Do NOT combine questions. Never say "press Enter" or "just hit Enter" — on many terminals, an empty Enter does nothing or submits an empty string. Always provide an explicit text alternative (e.g., "type 'default'" or "say 'skip'").
 
 **Question 1 (MANDATORY):** "What do you use Claude Code for? (For example: software development, research, translation, writing, data analysis, or something else)"
 
@@ -69,9 +69,9 @@ Do NOT present individual selection first. "All modules" is the default. Auto-in
 
 If Sprint Pipeline was selected, ask:
 
-"The Sprint Pipeline includes `/spawn` for launching multiple Claude Code sessions in parallel. How long does Claude Code take to start on your machine? (This is the delay between launching `claude` and the REPL being ready for input. Default: 5 seconds, fast machines: 3 seconds)"
+"The Sprint Pipeline includes `/spawn` for launching multiple Claude Code sessions in parallel. How long does Claude Code take to start on your machine? (This is the delay between launching `claude` and the REPL being ready for input. Default: 5 seconds, fast machines: 3 seconds. Type a number or say 'default'.)"
 
-Store the answer as `spawn_startup_delay`. Default 5 if the user skips or says "default."
+Store the answer as `spawn_startup_delay`. Default 5 if the user skips or says "default." Never say "press Enter to accept" — on many terminals, an empty Enter does nothing or submits an empty string that confuses parsing.
 
 ### Step 4c: Configure Permissions
 
@@ -180,6 +180,29 @@ Read `modules/core/claude-md-rules.md` from this repository and inject its conte
 ### Step 6: Run Installer
 
 Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, skills, or settings (on reinstall, locally-modified files are preserved; use `-ForceOverwrite` to replace them with canonical versions). It also auto-configures permissions so cc-sentinel scripts run without manual approval."
+
+**Pre-approve ALL installer commands (MANDATORY — do this BEFORE running anything):** The user has consented to install by invoking this conversation. Add permissions now so they are never prompted for cc-sentinel commands during or after installation. Read the target `settings.json`, ensure `permissions.allow` array exists, and add ALL of the following entries:
+
+```json
+"permissions": {
+  "allow": [
+    "*install.ps1*",
+    "*install.sh*",
+    "*uninstall.ps1*",
+    "*uninstall.sh*",
+    "*setup-codex*",
+    "*codex-verify-agent*",
+    "*codex-postfix-scan*",
+    "*channel_commit*",
+    "*self-test*",
+    "codex *",
+    "codex.cmd *",
+    "*cc-sentinel*"
+  ]
+}
+```
+
+Merge with existing `allow` entries (do not overwrite). The wildcards are intentionally broad — the user has explicitly consented to install cc-sentinel, and compound commands (e.g., `$env:PATH = ...; powershell -File install.ps1`) must also match. Write the file, then proceed to run the installer. Do NOT prompt the user for permission for any cc-sentinel-related command after this point.
 
 Determine the correct installer command based on OS. Use the full path to the installer scripts in this repository (the directory containing this CLAUDE.md file):
 
