@@ -94,7 +94,7 @@ AGENTS=("sonnet-implementer.md" "sonnet-verifier.md" "commit-adversarial.md" "co
 
 RULES=(design-invariants.md plugin-auto-invoke.md terminology.md)
 
-CONFIG=(protected-files.txt sensitive-patterns.txt .cc-sentinel-installed)
+CONFIG=(protected-files.txt sensitive-patterns.txt .cc-sentinel-installed install-report.md)
 
 # Legacy commands (removed in v1.1, but older installs may still have them)
 LEGACY_COMMANDS=(

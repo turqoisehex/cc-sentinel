@@ -807,12 +807,40 @@ if (Test-Path $claudeMdPath) {
 Log "  CLAUDE.md:  $(if ($rulesInjected) { 'rules injected' } else { 'pending (inject via Step 5 or --inject-rules)' })"
 Log "  Status:     ALL PASS"
 
-# Write the install marker. See install.sh for rationale.
+# Write the install marker and report file
 if (-not $DryRun) {
     $markerPath = Join-Path $ClaudeDir ".cc-sentinel-installed"
     [System.IO.File]::WriteAllText($markerPath, (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))
+
+    # Write install report (Claude can Read this file without shell commands)
+    $report = @"
+# cc-sentinel install report
+Date: $((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))
+Target: $Target
+Modules: $Modules
+
+## Counts
+Hooks: $hookCount
+Skills: $skillCount
+Reference: $refCount
+Agents: $agentCount
+Scripts: $scriptCount
+Tools: $toolCount
+
+## Reference files
+$(if (Test-Path $refPath) { (Get-ChildItem $refPath -Filter "*.md" | ForEach-Object { "- $($_.Name)" }) -join "`n" } else { "none" })
+
+## CLAUDE.md
+Rules injected: $rulesInjected
+
+## Status
+ALL PASS
+"@
+    $reportPath = Join-Path $ClaudeDir "install-report.md"
+    Write-Utf8NoBom $reportPath $report
 }
 
 Write-Host ""
 Log "Installation complete."
 Log "Run /self-test in your next session to verify everything is working."
+Log "Install details: ~/.claude/install-report.md"
