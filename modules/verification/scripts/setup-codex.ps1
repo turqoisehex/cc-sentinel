@@ -144,7 +144,7 @@ function Invoke-VerifyAuth {
             } elseif ($resultStr -match "auth|login|key|credential|unauthorized|not configured|forbidden|403") {
                 Write-Output "STATUS: AUTH_FAILED"
                 Write-Output "CMD: codex login"
-            } elseif ($resultStr -match "rate.limit|quota|model_not_found|invalid_model|not supported") {
+            } elseif ($resultStr -match "rate.limit|quota|model_not_found|invalid_model|no such model|not supported") {
                 Write-Output "STATUS: AUTH_OK"
             } else {
                 Write-Output "STATUS: AUTH_FAILED"
@@ -162,8 +162,8 @@ function Invoke-VerifyAuth {
     $stdoutFile = [System.IO.Path]::GetTempFileName()
     $stderrFile = [System.IO.Path]::GetTempFileName()
     try {
-        $args = @("`"$codexJs`"", "exec", "-m", "gpt-4.1-mini", "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "`"Reply with exactly one word: SENTINEL`"")
-        $proc = Start-Process -FilePath $nodeExe -ArgumentList $args -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile -NoNewWindow -PassThru
+        $codexArgs = @("`"$codexJs`"", "exec", "-m", "gpt-4.1-mini", "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "`"Reply with exactly one word: SENTINEL`"")
+        $proc = Start-Process -FilePath $nodeExe -ArgumentList $codexArgs -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile -NoNewWindow -PassThru
         $exited = $proc.WaitForExit(30000)
         if (-not $exited) {
             $proc.Kill()
@@ -177,8 +177,6 @@ function Invoke-VerifyAuth {
         $stderr = Get-Content $stderrFile -Raw -ErrorAction SilentlyContinue
 
         if ($proc.ExitCode -eq 0 -and $output -and $output -match "SENTINEL") {
-            Write-Output "STATUS: AUTH_OK"
-        } elseif ($proc.ExitCode -eq 0 -and -not $stderr) {
             Write-Output "STATUS: AUTH_OK"
         } else {
             if ($stderr -match "auth|login|key|credential|unauthorized|not configured|forbidden|403") {

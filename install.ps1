@@ -135,7 +135,7 @@ function Install-Module($moduleName) {
     # Scripts
     $scriptsModDir = Join-Path $moduleDir "scripts"
     if (Test-Path $scriptsModDir) {
-        Get-ChildItem $scriptsModDir -Filter "*.sh" | Where-Object { $_.Name -notlike "setup-*" } | ForEach-Object {
+        Get-ChildItem $scriptsModDir | Where-Object { $_.Extension -in ".sh",".ps1" -and $_.Name -notlike "setup-*" } | ForEach-Object {
             Copy-FileChecked $_.FullName (Join-Path $ScriptsDir $_.Name)
         }
     }
@@ -399,8 +399,6 @@ function Configure-Permissions {
         $settings.permissions | Add-Member -NotePropertyName "allow" -NotePropertyValue @() -Force
     }
 
-    $existing = @($settings.permissions.allow)
-
     if ($Target -eq "global") {
         $rules = @(
             "Bash(bash ~/.claude/hooks/*)",
@@ -468,8 +466,6 @@ function Configure-DenyRules {
         $settings.permissions | Add-Member -NotePropertyName "deny" -NotePropertyValue @() -Force
     }
 
-    $existing = @($settings.permissions.deny)
-
     $rules = @(
         "Read(*.mp3)", "Read(*.mp4)", "Read(*.avi)", "Read(*.mkv)", "Read(*.mov)",
         "Read(*.wav)", "Read(*.flac)", "Read(*.aac)", "Read(*.ogg)",
@@ -532,14 +528,17 @@ function New-Claudeignore {
     if ($content) {
         if (Test-Path ".claudeignore") {
             $existing = Get-Content ".claudeignore" -Raw
-            if ($existing -match "Added by cc-sentinel") {
-                Log "  .claudeignore already has cc-sentinel entries - skipping"
+            $newLines = $content -split "`n" | Where-Object { $_.Trim() -and -not $_.StartsWith("#") }
+            $missing = $newLines | Where-Object { $existing -notmatch [regex]::Escape($_) }
+            if ($missing.Count -gt 0) {
+                $appendBlock = ($missing -join "`n")
+                Add-Content ".claudeignore" "`n# Added by cc-sentinel`n$appendBlock" -Encoding UTF8
+                Log "  Appended $($missing.Count) new patterns to .claudeignore"
             } else {
-                Add-Content ".claudeignore" "`n# Added by cc-sentinel`n$content" -Encoding UTF8
-                Log "  Appended to existing .claudeignore"
+                Log "  .claudeignore already has all cc-sentinel patterns"
             }
         } else {
-            $content | Set-Content ".claudeignore" -Encoding UTF8
+            "# Added by cc-sentinel`n$content" | Set-Content ".claudeignore" -Encoding UTF8
             Log "  Created .claudeignore"
         }
     }
@@ -669,10 +668,16 @@ if (-not $DryRun) {
     $settings = Configure-Permissions -Settings $settings
     if ($DenyRules) { $settings = Configure-DenyRules -Settings $settings }
 
-    # Atomic write: temp file then move
+    # Write to temp then move (mitigates partial-write corruption)
     $tmpFile = "$SettingsFile.tmp"
     $settings | ConvertTo-Json -Depth 10 | Set-Content $tmpFile -Encoding UTF8
-    Move-Item -Path $tmpFile -Destination $SettingsFile -Force
+    try {
+        Move-Item -Path $tmpFile -Destination $SettingsFile -Force
+    } catch {
+        Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
+        Write-Error "ERROR: Failed to write $SettingsFile - $($_.Exception.Message)"
+        exit 1
+    }
     Log "Settings written: $SettingsFile"
 } else {
     Merge-Settings -Settings ([PSCustomObject]@{})
