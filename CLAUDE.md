@@ -140,7 +140,7 @@ Options: **Yes** / **No, Sonnet-only**
      - `STATUS: FOUND` or `STATUS: INSTALLED` → proceed to auth verification (step 3)
      - `STATUS: INSTALL_NEED_SUDO` → tell user: "Codex needs elevated permissions to install globally. Run this in a separate terminal (not here — sudo needs a password prompt that Claude Code can't provide):" and show the `CMD:` line verbatim (e.g., `sudo npm install -g @openai/codex`). Do NOT prefix with `!` — sudo requires a real TTY for password entry. Wait for user to confirm they've run it, then re-run `--probe-only` on the same platform script. If FOUND → proceed to auth verification (step 3). If still NOT_FOUND → bail: "Codex installation didn't complete. You can finish later with `npm install -g @openai/codex && codex login`." Skip to Step 5.
      - `STATUS: INSTALL_NO_NODE` → tell user: "Codex requires Node.js. Run this in a separate terminal:" and show the `CMD:` line from output. "Once installed, type anything here and I'll retry." After user's next message: re-run `--install`. If still `INSTALL_NO_NODE` → bail: "Node.js isn't visible in the current session. Restart Claude Code after installing Node, then re-run the installer." Skip to Step 5.
-     - `STATUS: INSTALL_FAILED` → tell user: "Codex installation didn't complete. You can set this up later by running `npm install -g @openai/codex && codex login`. Continuing without dual-architecture verification." Skip to Step 5.
+     - `STATUS: INSTALL_FAILED` → tell user: "Codex installation didn't complete. You can set this up later by running `npm install -g @openai/codex && codex login`. Once installed, verify with: (Windows) `powershell -ExecutionPolicy Bypass -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode VerifyAuth` or (macOS/Linux) `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --verify-auth`. Continuing without dual-architecture verification." Skip to Step 5.
 
 3. **Verify auth:**
    - **macOS/Linux:** `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --verify-auth`
@@ -149,7 +149,7 @@ Options: **Yes** / **No, Sonnet-only**
      - `STATUS: AUTH_OK` → "Codex verified and working." Proceed to Step 5.
      - `STATUS: NOT_FOUND` → Codex binary not visible (stale PATH after install). Bail: "Codex installed but not visible in current session. Restart Claude Code, then re-run installer to complete setup." Skip to Step 5.
      - `STATUS: AUTH_FAILED` → tell user: "Codex needs authentication. Type this:" and show the `CMD:` line prefixed with `! ` (e.g., `! codex login`). Explain: "This opens a browser for OAuth. Let me know and I'll verify the connection." After user's next message (regardless of content), re-run `--verify-auth`. Do NOT say "press Enter when done" — on an empty prompt, Enter may do nothing or confuse the user.
-     - Second auth failure → "Codex auth didn't complete. You can finish setup later with `codex login`. Continuing with Sonnet-only verification." Skip to Step 5.
+     - Second auth failure → "Codex auth didn't complete. You can finish setup later with `codex login`, then verify with: (Windows) `powershell -ExecutionPolicy Bypass -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode VerifyAuth` or (macOS/Linux) `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --verify-auth`. Continuing with Sonnet-only verification." Skip to Step 5.
 
 **Design notes:**
 - Never loop more than once on any step. Two failures = bail gracefully.
@@ -175,12 +175,13 @@ powershell -ExecutionPolicy Bypass -File "<this-repo-path>/install.ps1" -Modules
 bash "<this-repo-path>/install.sh" --modules "<selected>" --target "<target>"
 ```
 
-Replace `<this-repo-path>` with the absolute path to this cloned repository. Pass ONLY these arguments — no other flags or parameters exist. The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
+Replace `<this-repo-path>` with the absolute path to this cloned repository. For the initial install run, use only these arguments. Additional flags (`-DenyRules` / `--deny-rules`, `-ForceOverwrite`) are covered in subsequent steps. The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
 
 ### Step 5b: Configure Spawn (if Sprint Pipeline selected)
 
 If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config. Substitute the actual integer for `N` before running:
 
+**macOS/Linux:**
 ```bash
 SPAWN_DELAY=N python3 -c "
 import json, pathlib, os
@@ -191,6 +192,11 @@ cfg['startup_delay'] = int(os.environ['SPAWN_DELAY'])
 p.write_text(json.dumps(cfg, indent=2))
 print('Spawn config written: startup_delay =', cfg['startup_delay'])
 "
+```
+
+**Windows:**
+```powershell
+$env:SPAWN_DELAY = "N"; python -c "import json, pathlib, os; p = pathlib.Path.home() / '.claude' / 'tools' / 'spawn.json'; p.parent.mkdir(parents=True, exist_ok=True); cfg = json.loads(p.read_text()) if p.exists() else {}; cfg['startup_delay'] = int(os.environ['SPAWN_DELAY']); p.write_text(json.dumps(cfg, indent=2)); print('Spawn config written: startup_delay =', cfg['startup_delay'])"
 ```
 
 Then run `python3 ~/.claude/tools/spawn.py --setup` to auto-detect terminal and key sender.

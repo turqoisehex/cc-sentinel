@@ -59,6 +59,9 @@ if ($Target -eq "global") {
     $SettingsFile = Join-Path $ClaudeDir "settings.json"
     $HookPrefix = Join-Path $env:USERPROFILE ".claude"
 } else {
+    if (-not (Test-Path ".git")) {
+        Write-Host "[cc-sentinel] WARNING: No .git directory in current directory. Run the installer from your project root." -ForegroundColor Yellow
+    }
     $ClaudeDir = ".claude"
     $SettingsFile = Join-Path ".claude" "settings.json"
     $HookPrefix = ".claude"
@@ -137,7 +140,7 @@ function Install-Module($moduleName) {
         }
     }
 
-    # Tools (go to ~/.claude/tools/)
+    # Tools always install globally (shared utilities, not project-specific)
     $toolsDir = Join-Path $moduleDir "tools"
     if (Test-Path $toolsDir) {
         $toolsDest = Join-Paths @($env:USERPROFILE, ".claude", "tools")
@@ -277,24 +280,15 @@ function Install-Notification {
 }
 
 function Merge-Settings {
+    param([Parameter(Mandatory)][PSCustomObject]$Settings)
+
     Log "Merging hook registrations into settings.json..."
 
     if ($DryRun) {
         Log "  WOULD MERGE: hook registrations into $SettingsFile"
-        return
+        return $Settings
     }
 
-    # Create settings.json if needed
-    $settingsDir = Split-Path -Parent $SettingsFile
-    if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
-    if (-not (Test-Path $SettingsFile)) { '{}' | Set-Content $SettingsFile -Encoding UTF8 }
-
-    try {
-        $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
-    } catch {
-        Write-Error "ERROR: $SettingsFile contains invalid JSON. Please fix or delete the file and re-run the installer."
-        exit 1
-    }
     $manifest = Get-Content (Join-Path $SentinelRoot "modules.json") -Raw | ConvertFrom-Json
 
     if (-not $settings.hooks) {
@@ -325,18 +319,10 @@ function Merge-Settings {
                             # Use ~/ prefix so allow rules match (bash expands ~ at runtime)
                             $cmd = $cmd -replace "\.claude/", "~/.claude/"
                         }
-                        # Windows: wrap bash commands with full path
-                        if ($cmd -match "^bash ") {
-                            $gitBash = "C:/Program Files/Git/bin/bash.exe"
-                            if (Test-Path $gitBash) {
-                                # Keep as-is — CC handles bash invocation
-                            }
-                        }
-
                         # Handle notification placeholder (use ~/ for global so allow rules match)
                         if ($cmd -eq "__NOTIFICATION_SCRIPT__") {
                             $cmdPrefix = if ($Target -eq "global") { "~/.claude" } else { $HookPrefix }
-                            $cmd = "powershell -ExecutionPolicy Bypass -File $cmdPrefix/hooks/flash.ps1"
+                            $cmd = "powershell -ExecutionPolicy Bypass -File `"$cmdPrefix/hooks/flash.ps1`""
                         }
 
                         $newHooks += @{
@@ -383,7 +369,7 @@ function Merge-Settings {
         }
 
         # StatusLine (outside hooks loop — a module may have statusLine without hooks)
-        if ($merge.statusLine) {
+        if ($merge.statusLine -and -not $settings.statusLine) {
             $sl = $merge.statusLine.PSObject.Copy()
             if ($Target -eq "global") {
                 $sl.command = $sl.command -replace "\.claude/", "~/.claude/"
@@ -392,19 +378,19 @@ function Merge-Settings {
         }
     }
 
-    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
-    Log "Settings merged: $SettingsFile"
+    Log "Settings merged."
+    return $Settings
 }
 
 function Configure-Permissions {
+    param([Parameter(Mandatory)][PSCustomObject]$Settings)
+
     Log "Configuring allow rules for cc-sentinel scripts..."
 
     if ($DryRun) {
         Log "  WOULD ADD: allow rules to $SettingsFile"
-        return
+        return $Settings
     }
-
-    $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
 
     if (-not $settings.permissions) {
         $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue @{} -Force
@@ -423,6 +409,7 @@ function Configure-Permissions {
             "Bash(python3 ~/.claude/tools/*)",
             "Bash(powershell *setup-codex*)",
             "Bash(powershell -File *setup-codex*)",
+            "Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
             "Bash(mkdir -p verification_findings/*)",
             "Bash(mkdir -p verification_findings/*/*)",
             "Bash(ls verification_findings/*)",
@@ -436,6 +423,7 @@ function Configure-Permissions {
             "Bash(python3 ~/.claude/tools/*)",
             "Bash(powershell *setup-codex*)",
             "Bash(powershell -File *setup-codex*)",
+            "Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
             "Bash(mkdir -p verification_findings/*)",
             "Bash(mkdir -p verification_findings/*/*)",
             "Bash(ls verification_findings/*)",
@@ -444,14 +432,14 @@ function Configure-Permissions {
     }
 
     $added = @()
+    $newAllow = @($settings.permissions.allow)
     foreach ($rule in $rules) {
-        if ($existing -notcontains $rule) {
-            $settings.permissions.allow += $rule
+        if ($newAllow -notcontains $rule) {
+            $newAllow += $rule
             $added += $rule
         }
     }
-
-    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
+    $settings.permissions | Add-Member -NotePropertyName "allow" -NotePropertyValue $newAllow -Force
 
     if ($added.Count -gt 0) {
         foreach ($r in $added) {
@@ -460,17 +448,18 @@ function Configure-Permissions {
     } else {
         Log "  Allow rules already present"
     }
+    return $Settings
 }
 
 function Configure-DenyRules {
+    param([Parameter(Mandatory)][PSCustomObject]$Settings)
+
     Log "Configuring deny rules (blocking Read() on media/binary files)..."
 
     if ($DryRun) {
         Log "  WOULD ADD: deny rules to $SettingsFile"
-        return
+        return $Settings
     }
-
-    $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
 
     if (-not $settings.permissions) {
         $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue @{} -Force
@@ -489,14 +478,14 @@ function Configure-DenyRules {
     )
 
     $added = @()
+    $newDeny = @($settings.permissions.deny)
     foreach ($rule in $rules) {
-        if ($existing -notcontains $rule) {
-            $settings.permissions.deny += $rule
+        if ($newDeny -notcontains $rule) {
+            $newDeny += $rule
             $added += $rule
         }
     }
-
-    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
+    $settings.permissions | Add-Member -NotePropertyName "deny" -NotePropertyValue $newDeny -Force
 
     if ($added.Count -gt 0) {
         foreach ($r in $added) {
@@ -505,9 +494,15 @@ function Configure-DenyRules {
     } else {
         Log "  Deny rules already present"
     }
+    return $Settings
 }
 
 function New-Claudeignore {
+    if ($Target -eq "global") {
+        Log "  Skipping .claudeignore for global install (use deny rules instead)"
+        return
+    }
+
     Log "Generating .claudeignore..."
 
     if ($DryRun) {
@@ -540,7 +535,7 @@ function New-Claudeignore {
             if ($existing -match "Added by cc-sentinel") {
                 Log "  .claudeignore already has cc-sentinel entries - skipping"
             } else {
-                Add-Content ".claudeignore" "`n# Added by cc-sentinel`n$content"
+                Add-Content ".claudeignore" "`n# Added by cc-sentinel`n$content" -Encoding UTF8
                 Log "  Appended to existing .claudeignore"
             }
         } else {
@@ -557,7 +552,7 @@ function Update-Gitignore {
             if ($DryRun) {
                 Log "  WOULD ADD: verification_findings/ to .gitignore"
             } else {
-                Add-Content ".gitignore" "`n# cc-sentinel working directory`nverification_findings/"
+                Add-Content ".gitignore" "# cc-sentinel working directory`nverification_findings/" -Encoding UTF8
                 Log "  Added verification_findings/ to .gitignore"
             }
         }
@@ -579,9 +574,20 @@ Write-Host ""
 if ($Modules -notmatch "core") { $Modules = "core,$Modules" }
 
 # Resolve dependencies
-$manifest = Get-Content (Join-Path $SentinelRoot "modules.json") -Raw | ConvertFrom-Json
+$manifestPath = Join-Path $SentinelRoot "modules.json"
+if (-not (Test-Path $manifestPath)) {
+    Write-Host "[cc-sentinel] ERROR: modules.json not found - the repository may be incomplete." -ForegroundColor Red
+    exit 1
+}
+$manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
 $changed = $true
+$depIterations = 0
 while ($changed) {
+    $depIterations++
+    if ($depIterations -gt 100) {
+        Write-Host "[cc-sentinel] ERROR: Circular dependency detected in modules.json" -ForegroundColor Red
+        exit 1
+    }
     $changed = $false
     $checkArray = $Modules -split "," | ForEach-Object { $_.Trim() }
     foreach ($mod in $checkArray) {
@@ -618,8 +624,8 @@ if ($Target -eq "global" -and -not $DryRun) {
     if (Test-Path $refPath) {
         Get-ChildItem $refPath -Filter "*.md" | ForEach-Object {
             $content = Get-Content $_.FullName -Raw
-            if ($content -match "bash scripts/") {
-                $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
+            if ($content -match "(?m)^bash scripts/|``bash scripts/") {
+                $content = $content -replace "(?m)(?<=^|``)bash scripts/", "bash ~/.claude/scripts/"
                 $content | Set-Content $_.FullName -NoNewline -Encoding UTF8
                 Log "  Updated paths in: $($_.Name)"
             }
@@ -632,8 +638,8 @@ if ($Target -eq "global" -and -not $DryRun) {
             $skillFile = Join-Path $_.FullName "SKILL.md"
             if (Test-Path $skillFile) {
                 $content = Get-Content $skillFile -Raw
-                if ($content -match "bash scripts/") {
-                    $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
+                if ($content -match "(?m)^bash scripts/|``bash scripts/") {
+                    $content = $content -replace "(?m)(?<=^|``)bash scripts/", "bash ~/.claude/scripts/"
                     $content | Set-Content $skillFile -NoNewline -Encoding UTF8
                     Log "  Updated paths in: skills/$($_.Name)/SKILL.md"
                 }
@@ -643,9 +649,37 @@ if ($Target -eq "global" -and -not $DryRun) {
 }
 
 Write-Host ""
-Merge-Settings
-Configure-Permissions
-if ($DenyRules) { Configure-DenyRules }
+
+# Single read-modify-write for settings.json (avoids TOCTOU race)
+if (-not $DryRun) {
+    $settingsDir = Split-Path -Parent $SettingsFile
+    if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
+    if (-not (Test-Path $SettingsFile)) { '{}' | Set-Content $SettingsFile -Encoding UTF8 }
+
+    try {
+        $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
+    } catch {
+        Write-Error "ERROR: $SettingsFile contains invalid JSON. Please fix or delete the file and re-run the installer."
+        exit 1
+    }
+    if ($null -eq $settings) { $settings = [PSCustomObject]@{} }
+
+    $settings = Merge-Settings -Settings $settings
+    # Safety net: conversation (CLAUDE.md section 4c) writes permissions first; installer re-adds any missed
+    $settings = Configure-Permissions -Settings $settings
+    if ($DenyRules) { $settings = Configure-DenyRules -Settings $settings }
+
+    # Atomic write: temp file then move
+    $tmpFile = "$SettingsFile.tmp"
+    $settings | ConvertTo-Json -Depth 10 | Set-Content $tmpFile -Encoding UTF8
+    Move-Item -Path $tmpFile -Destination $SettingsFile -Force
+    Log "Settings written: $SettingsFile"
+} else {
+    Merge-Settings -Settings ([PSCustomObject]@{})
+    Configure-Permissions -Settings ([PSCustomObject]@{})
+    if ($DenyRules) { Configure-DenyRules -Settings ([PSCustomObject]@{}) }
+}
+
 New-Claudeignore
 Update-Gitignore
 
@@ -687,9 +721,9 @@ Log "$skillCount skills installed"
 # Write the install marker. See install.sh for rationale.
 if (-not $DryRun) {
     $markerPath = Join-Path $ClaudeDir ".cc-sentinel-installed"
-    ((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")) | Out-File -FilePath $markerPath -Encoding utf8 -NoNewline
+    [System.IO.File]::WriteAllText($markerPath, (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))
 }
 
 Write-Host ""
 Log "Installation complete!"
-Log "Run /self-test to verify your installation."
+Log "Start a new session and run /self-test to verify, or continue - the AI will verify inline."

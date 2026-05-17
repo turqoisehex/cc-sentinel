@@ -71,7 +71,7 @@ install_codex() {
 
   # npm available — check if global dir is writable
   local npm_prefix
-  npm_prefix="$(npm config get prefix 2>/dev/null | grep -v '^npm ' | head -1)"
+  npm_prefix="$(npm config get prefix 2>/dev/null | grep -v '^npm ' | tail -1)"
   if [[ -z "$npm_prefix" ]]; then
     echo "STATUS: INSTALL_NEED_SUDO"
     echo "CMD: sudo npm install -g @openai/codex"
@@ -117,8 +117,10 @@ portable_timeout() {
     local watchdog=$!
     wait "$pid" 2>/dev/null
     local ret=$?
-    kill "$watchdog" 2>/dev/null
-    wait "$watchdog" 2>/dev/null
+    kill "$watchdog" 2>/dev/null || true
+    wait "$watchdog" 2>/dev/null || true
+    # bash 3.2: wait returns 127 if PID already reaped — treat as success
+    if [[ $ret -eq 127 ]]; then ret=0; fi
     return $ret
   fi
 }
@@ -133,6 +135,7 @@ verify_auth() {
 
   local output stderr_tmp
   stderr_tmp=$(mktemp)
+  trap 'rm -f "$stderr_tmp"' EXIT
   local exit_code=0
   output=$(echo "Reply with exactly one word: SENTINEL" | portable_timeout 30 "$bin" exec -m gpt-4.1-mini --sandbox read-only --skip-git-repo-check --ephemeral 2>"$stderr_tmp") || exit_code=$?
 
@@ -143,7 +146,7 @@ verify_auth() {
     exit 0
   fi
 
-  if [[ $exit_code -eq 0 ]] && [[ -n "$output" ]]; then
+  if [[ $exit_code -eq 0 ]] && echo "$output" | grep -q "SENTINEL"; then
     rm -f "$stderr_tmp"
     echo "STATUS: AUTH_OK"
   else

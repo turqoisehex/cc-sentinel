@@ -70,7 +70,7 @@ function Invoke-Install {
         $bin = Find-Codex
         if ($bin) {
             try {
-                $ver = & $bin --version 2>$null
+                $ver = @(& $bin --version 2>$null)[0]
                 if (-not $ver) { $ver = "unknown" }
             } catch {
                 $ver = "unknown"
@@ -127,7 +127,7 @@ function Invoke-VerifyAuth {
             $resultStr = $result -join "`n"
             if ($resultStr -match "SENTINEL") {
                 Write-Output "STATUS: AUTH_OK"
-            } elseif ($resultStr -match "unauthorized|not configured|forbidden|403|auth.*fail|invalid.*key|no.*api.*key") {
+            } elseif ($resultStr -match "auth|login|key|credential|unauthorized|not configured|forbidden|403") {
                 Write-Output "STATUS: AUTH_FAILED"
                 Write-Output "CMD: codex login"
             } elseif ($resultStr -match "rate.limit|quota|model_not_found|invalid_model|not supported") {
@@ -148,7 +148,8 @@ function Invoke-VerifyAuth {
     $stdoutFile = [System.IO.Path]::GetTempFileName()
     $stderrFile = [System.IO.Path]::GetTempFileName()
     try {
-        $proc = Start-Process -FilePath $nodeExe -ArgumentList "`"$codexJs`" exec -m gpt-4.1-mini --sandbox read-only --skip-git-repo-check --ephemeral `"Reply with exactly one word: SENTINEL`"" -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile -NoNewWindow -PassThru
+        $args = @("`"$codexJs`"", "exec", "-m", "gpt-4.1-mini", "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "`"Reply with exactly one word: SENTINEL`"")
+        $proc = Start-Process -FilePath $nodeExe -ArgumentList $args -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile -NoNewWindow -PassThru
         $exited = $proc.WaitForExit(30000)
         if (-not $exited) {
             $proc.Kill()
@@ -161,12 +162,12 @@ function Invoke-VerifyAuth {
         $output = Get-Content $stdoutFile -Raw -ErrorAction SilentlyContinue
         $stderr = Get-Content $stderrFile -Raw -ErrorAction SilentlyContinue
 
-        if ($output -and $output.Trim().Length -gt 0) {
+        if ($proc.ExitCode -eq 0 -and $output -and $output -match "SENTINEL") {
             Write-Output "STATUS: AUTH_OK"
         } elseif ($proc.ExitCode -eq 0 -and -not $stderr) {
             Write-Output "STATUS: AUTH_OK"
         } else {
-            if ($stderr -match "unauthorized|not configured|forbidden|403|auth.*fail|invalid.*key|no.*api.*key") {
+            if ($stderr -match "auth|login|key|credential|unauthorized|not configured|forbidden|403") {
                 Write-Output "STATUS: AUTH_FAILED"
                 Write-Output "CMD: codex login"
             } elseif ($stderr -match "rate.limit|quota") {
