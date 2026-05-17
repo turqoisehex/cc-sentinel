@@ -650,7 +650,7 @@ if ($Target -eq "global" -and -not $DryRun) {
 
 Write-Host ""
 
-# Single read-modify-write for settings.json (avoids TOCTOU race)
+# Single read-modify-write for settings.json (mitigates TOCTOU race and partial-write corruption)
 if (-not $DryRun) {
     $settingsDir = Split-Path -Parent $SettingsFile
     if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }

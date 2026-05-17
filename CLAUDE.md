@@ -9,7 +9,7 @@ When the user installs this package (by saying "Install" followed by this repo's
 ### Step 1: Detect Environment
 
 Before asking any questions, silently detect. Use built-in tools (Glob, Read) instead of Bash wherever possible — Bash triggers permission prompts, built-in tools do not:
-- **OS:** One Bash call: `uname -s` (macOS/Linux) or read `$env:OS` (Windows). This is the only Bash call needed.
+- **OS:** One Bash call: `uname -s` (macOS/Linux) or read `$env:OS` (Windows). This is the only Bash call needed for detection (later steps require Bash for installer and setup script execution).
 - **Existing .claude/:** Use Glob for `.claude/settings.json` and `~/.claude/settings.json`.
 - **Git:** Use Glob for `.git/` in the current directory.
 - **Project type:** Use Glob for `pubspec.yaml`, `package.json`, `Cargo.toml`, `go.mod`, `setup.py`, `pyproject.toml`, `Makefile`.
@@ -272,7 +272,7 @@ If the Sprint Pipeline module was installed, recommend complementary plugins. Pr
 Skills installed during this session are not loadable until the next session — do NOT invoke `/self-test`. Instead, verify inline using built-in tools (Glob, Read) to avoid permission prompts:
 
 1. Read settings.json — count hook event types and total hook entries.
-2. Glob for hook files on disk (`~/.claude/hooks/*.sh` or `.claude/hooks/*.sh`) — count them.
+2. Glob for hook files on disk (`~/.claude/hooks/*` or `.claude/hooks/*`) — count them (includes both `.sh` and `.ps1` hook files).
 3. Glob for skill directories (`~/.claude/skills/*/SKILL.md` or `.claude/skills/*/SKILL.md`) — count them.
 4. Read the target CLAUDE.md — search for `cc-sentinel rules start`.
 5. Read settings.json — confirm `permissions.allow` contains cc-sentinel allow rules.

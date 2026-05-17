@@ -3,7 +3,7 @@
 #
 # Usage: powershell -File setup-codex.ps1 [-Mode ProbeOnly|Install|VerifyAuth]
 #
-# Output: machine-readable STATUS lines (same format as setup-codex.sh)
+# Output: machine-readable STATUS lines (same vocabulary as setup-codex.sh, minus INSTALL_NEED_SUDO which is Unix-only)
 
 param(
     [ValidateSet("ProbeOnly", "Install", "VerifyAuth")]
@@ -121,9 +121,23 @@ function Invoke-VerifyAuth {
     $codexJs = Find-CodexJs
 
     if (-not $nodeExe -or -not $codexJs) {
-        # Fallback: use & operator (no timeout but avoids Start-Process wrapper issues)
+        # Fallback: use PS Job with 30s timeout (& operator has no native timeout)
         try {
-            $result = & $bin exec -m gpt-4.1-mini --sandbox read-only --skip-git-repo-check --ephemeral "Reply with exactly one word: SENTINEL" 2>&1
+            $job = Start-Job -ScriptBlock {
+                param($b)
+                & $b exec -m gpt-4.1-mini --sandbox read-only --skip-git-repo-check --ephemeral "Reply with exactly one word: SENTINEL" 2>&1
+            } -ArgumentList $bin
+            $null = Wait-Job $job -Timeout 30
+            if ($job.State -ne "Completed") {
+                Stop-Job $job
+                Remove-Job $job -Force
+                Write-Output "STATUS: AUTH_FAILED"
+                Write-Output "CMD: codex login"
+                Write-Output "DETAIL: timed out after 30s"
+                return
+            }
+            $result = Receive-Job $job
+            Remove-Job $job -Force
             $resultStr = $result -join "`n"
             if ($resultStr -match "SENTINEL") {
                 Write-Output "STATUS: AUTH_OK"

@@ -15,6 +15,7 @@
 #   STATUS: INSTALLED <version>
 #   STATUS: INSTALL_NEED_SUDO
 #   STATUS: INSTALL_NO_NODE
+#   STATUS: INSTALL_FAILED
 #   STATUS: AUTH_OK
 #   STATUS: AUTH_FAILED
 #   CMD: <command the user must run>
