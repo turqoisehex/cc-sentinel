@@ -1,4 +1,4 @@
-# install.ps1 — cc-sentinel Windows installer
+﻿# install.ps1 — cc-sentinel Windows installer
 # Called by CLAUDE.md conversation script with discovered parameters.
 #
 # Usage:
@@ -351,18 +351,33 @@ function Merge-Settings {
                         hooks = $newHooks
                     }
 
-                    # Append (avoid duplicates by command string)
-                    $existing = $settings.hooks.$eventType | Where-Object { $_.matcher -eq $newEntry.matcher }
-                    if ($existing) {
-                        foreach ($nh in $newHooks) {
-                            $isDup = $existing.hooks | Where-Object { $_.command -eq $nh.command }
-                            if (-not $isDup) {
-                                $existing.hooks += $nh
+                    # Merge hooks (rebuild array to avoid PS5.1 in-place mutation bug)
+                    $matcherVal = if ($newEntry.matcher) { $newEntry.matcher } else { "" }
+                    $found = $false
+                    $newEventArray = @()
+                    foreach ($existEntry in @($settings.hooks.$eventType)) {
+                        $existMatcher = if ($existEntry.matcher) { $existEntry.matcher } else { "" }
+                        if ($existMatcher -eq $matcherVal) {
+                            $found = $true
+                            $mergedHooks = @($existEntry.hooks)
+                            foreach ($nh in $newHooks) {
+                                $isDup = $mergedHooks | Where-Object { $_.command -eq $nh.command }
+                                if (-not $isDup) {
+                                    $mergedHooks += $nh
+                                }
                             }
+                            $newEventArray += [PSCustomObject]@{
+                                matcher = $existMatcher
+                                hooks   = $mergedHooks
+                            }
+                        } else {
+                            $newEventArray += $existEntry
                         }
-                    } else {
-                        $settings.hooks.$eventType += $newEntry
                     }
+                    if (-not $found) {
+                        $newEventArray += $newEntry
+                    }
+                    $settings.hooks | Add-Member -NotePropertyName $eventType -NotePropertyValue $newEventArray -Force
                 }
             }
         }
@@ -523,7 +538,7 @@ function New-Claudeignore {
         if (Test-Path ".claudeignore") {
             $existing = Get-Content ".claudeignore" -Raw
             if ($existing -match "Added by cc-sentinel") {
-                Log "  .claudeignore already has cc-sentinel entries — skipping"
+                Log "  .claudeignore already has cc-sentinel entries - skipping"
             } else {
                 Add-Content ".claudeignore" "`n# Added by cc-sentinel`n$content"
                 Log "  Appended to existing .claudeignore"
@@ -652,7 +667,7 @@ if ($Modules -match "sprint-pipeline") {
             try {
                 & python3 $spawnPath --setup 2>$null
             } catch {
-                Log "  spawn.py --setup failed — run manually: python3 ~/.claude/tools/spawn.py --setup"
+                Log "  spawn.py --setup failed - run manually: python3 ~/.claude/tools/spawn.py --setup"
             }
         }
     }
