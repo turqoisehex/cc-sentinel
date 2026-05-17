@@ -73,7 +73,49 @@ If Sprint Pipeline was selected, ask:
 
 Store the answer as `spawn_startup_delay`. Default 5 if the user skips or says "default."
 
-### Step 4c: Dual-Architecture Verification (if Verification module selected)
+### Step 4c: Configure Permissions
+
+Before running the installer or setup scripts, add allow rules to the target settings.json so cc-sentinel scripts execute without manual approval. Without these, every hook and script triggers a permission prompt — defeating the purpose of automation.
+
+Determine the settings file:
+- **Global:** `~/.claude/settings.json`
+- **Project:** `.claude/settings.json`
+
+Read the current settings.json (create `{"permissions":{"allow":[]}}` if it doesn't exist). Merge these entries into `permissions.allow` — never overwrite existing rules:
+
+**Global install:**
+```json
+"Bash(bash ~/.claude/hooks/*)",
+"Bash(bash ~/.claude/scripts/*)",
+"Bash(bash ~/.claude/cc-context-awareness/*)",
+"Bash(python3 ~/.claude/tools/*)",
+"Bash(powershell *setup-codex*)",
+"Bash(powershell -File *setup-codex*)",
+"Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
+"Bash(mkdir -p verification_findings/*)",
+"Bash(mkdir -p verification_findings/*/*)",
+"Bash(ls verification_findings/*)",
+"Bash(ls verification_findings/*/*)"
+```
+
+**Project install:**
+```json
+"Bash(bash .claude/hooks/*)",
+"Bash(bash scripts/*)",
+"Bash(bash .claude/cc-context-awareness/*)",
+"Bash(python3 ~/.claude/tools/*)",
+"Bash(powershell *setup-codex*)",
+"Bash(powershell -File *setup-codex*)",
+"Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
+"Bash(mkdir -p verification_findings/*)",
+"Bash(mkdir -p verification_findings/*/*)",
+"Bash(ls verification_findings/*)",
+"Bash(ls verification_findings/*/*)"
+```
+
+Do this silently — no user prompt needed. The installer will also add these rules mechanically as a safety net.
+
+### Step 4d: Dual-Architecture Verification (if Verification module selected)
 
 If the Verification module was selected (directly or via dependency), ask:
 
@@ -81,7 +123,7 @@ If the Verification module was selected (directly or via dependency), ask:
 
 Options: **Yes** / **No, Sonnet-only**
 
-**If No:** Skip to Step 4d. Codex is not installed; verification runs Sonnet-only.
+**If No:** Skip to Step 5. Codex is not installed; verification runs Sonnet-only.
 
 **If Yes:** Run the setup script immediately (no further configuration questions — but the flow may pause for user action like running `codex login`). The script probes, installs if needed, and tests auth:
 
@@ -96,18 +138,18 @@ Options: **Yes** / **No, Sonnet-only**
      - **Windows:** `powershell -ExecutionPolicy Bypass -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode Install`
    - Result handling:
      - `STATUS: FOUND` or `STATUS: INSTALLED` → proceed to auth verification (step 3)
-     - `STATUS: INSTALL_NEED_SUDO` → tell user: "Codex needs elevated permissions to install globally. Run this in a separate terminal (not here — sudo needs a password prompt that Claude Code can't provide):" and show the `CMD:` line verbatim (e.g., `sudo npm install -g @openai/codex`). Do NOT prefix with `!` — sudo requires a real TTY for password entry. Wait for user to confirm they've run it, then re-run `--probe-only` on the same platform script. If FOUND → proceed to auth verification (step 3). If still NOT_FOUND → bail: "Codex installation didn't complete. You can finish later with `npm install -g @openai/codex && codex login`." Skip to Step 4d.
-     - `STATUS: INSTALL_NO_NODE` → tell user: "Codex requires Node.js. Run this, then press Enter:" and show the `CMD:` line from output. After confirmation: re-run `--install`. If still `INSTALL_NO_NODE` → bail: "Node.js isn't visible in the current session. Restart Claude Code after installing Node, then re-run the installer." Skip to Step 4d.
-     - `STATUS: INSTALL_FAILED` → tell user: "Codex installation didn't complete. You can set this up later by running `npm install -g @openai/codex && codex login`. Continuing without dual-architecture verification." Skip to Step 4d.
+     - `STATUS: INSTALL_NEED_SUDO` → tell user: "Codex needs elevated permissions to install globally. Run this in a separate terminal (not here — sudo needs a password prompt that Claude Code can't provide):" and show the `CMD:` line verbatim (e.g., `sudo npm install -g @openai/codex`). Do NOT prefix with `!` — sudo requires a real TTY for password entry. Wait for user to confirm they've run it, then re-run `--probe-only` on the same platform script. If FOUND → proceed to auth verification (step 3). If still NOT_FOUND → bail: "Codex installation didn't complete. You can finish later with `npm install -g @openai/codex && codex login`." Skip to Step 5.
+     - `STATUS: INSTALL_NO_NODE` → tell user: "Codex requires Node.js. Run this, then press Enter:" and show the `CMD:` line from output. After confirmation: re-run `--install`. If still `INSTALL_NO_NODE` → bail: "Node.js isn't visible in the current session. Restart Claude Code after installing Node, then re-run the installer." Skip to Step 5.
+     - `STATUS: INSTALL_FAILED` → tell user: "Codex installation didn't complete. You can set this up later by running `npm install -g @openai/codex && codex login`. Continuing without dual-architecture verification." Skip to Step 5.
 
 3. **Verify auth:**
    - **macOS/Linux:** `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --verify-auth`
    - **Windows:** `powershell -ExecutionPolicy Bypass -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode VerifyAuth`
    - Result handling:
-     - `STATUS: AUTH_OK` → "Codex verified and working." Proceed to Step 4d.
-     - `STATUS: NOT_FOUND` → Codex binary not visible (stale PATH after install). Bail: "Codex installed but not visible in current session. Restart Claude Code, then re-run installer to complete setup." Skip to Step 4d.
+     - `STATUS: AUTH_OK` → "Codex verified and working." Proceed to Step 5.
+     - `STATUS: NOT_FOUND` → Codex binary not visible (stale PATH after install). Bail: "Codex installed but not visible in current session. Restart Claude Code, then re-run installer to complete setup." Skip to Step 5.
      - `STATUS: AUTH_FAILED` → tell user: "Codex needs authentication. Run this, then press Enter:" and show the `CMD:` line prefixed with `! ` (e.g., `! codex login`). This runs in the user's terminal via CC's `!` escape, which opens a browser for OAuth or prompts for an API key. After user confirms, re-run `--verify-auth`.
-     - Second auth failure → "Codex auth didn't complete. You can finish setup later with `codex login`. Continuing with Sonnet-only verification." Skip to Step 4d.
+     - Second auth failure → "Codex auth didn't complete. You can finish setup later with `codex login`. Continuing with Sonnet-only verification." Skip to Step 5.
 
 **Design notes:**
 - Never loop more than once on any step. Two failures = bail gracefully.
@@ -116,42 +158,6 @@ Options: **Yes** / **No, Sonnet-only**
 - On macOS with Homebrew Node, no sudo needed (Homebrew prefix is user-writable). On Linux with system Node (apt/dnf/pacman), sudo is typical.
 - **Never use `!` with `sudo`** — Claude Code's `!` prefix does not provide a PTY, so sudo cannot prompt for a password. Always direct the user to run sudo commands in a separate terminal.
 - User-action pauses are sequential: install confirmation first (re-probe to confirm), then auth if needed. This ensures each step's success is verified before proceeding. Aim for minimal pauses (typically 0–2 total), not batching commands that depend on each other's success.
-
-### Step 4d: Configure Permissions
-
-Before running the installer, add allow rules to the target settings.json so cc-sentinel scripts execute without manual approval. Without these, every hook and script triggers a permission prompt — defeating the purpose of automation.
-
-Determine the settings file:
-- **Global:** `~/.claude/settings.json`
-- **Project:** `.claude/settings.json`
-
-Read the current settings.json (create `{"permissions":{"allow":[]}}` if it doesn't exist). Merge these entries into `permissions.allow` — never overwrite existing rules:
-
-**Global install:**
-```json
-"Bash(bash ~/.claude/hooks/*)",
-"Bash(bash ~/.claude/scripts/*)",
-"Bash(bash ~/.claude/cc-context-awareness/*)",
-"Bash(python3 ~/.claude/tools/*)",
-"Bash(mkdir -p verification_findings/*)",
-"Bash(mkdir -p verification_findings/*/*)",
-"Bash(ls verification_findings/*)",
-"Bash(ls verification_findings/*/*)"
-```
-
-**Project install:**
-```json
-"Bash(bash .claude/hooks/*)",
-"Bash(bash scripts/*)",
-"Bash(bash .claude/cc-context-awareness/*)",
-"Bash(python3 ~/.claude/tools/*)",
-"Bash(mkdir -p verification_findings/*)",
-"Bash(mkdir -p verification_findings/*/*)",
-"Bash(ls verification_findings/*)",
-"Bash(ls verification_findings/*/*)"
-```
-
-Do this silently — no user prompt needed. The installer will also add these rules mechanically as a safety net.
 
 ### Step 5: Run Installer
 
