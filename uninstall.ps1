@@ -7,6 +7,9 @@ param(
 )
 
 function Log { param([string]$msg) Write-Host "[cc-sentinel] $msg" }
+function Write-Utf8NoBom($path, $text) {
+    [System.IO.File]::WriteAllText($path, $text, [System.Text.UTF8Encoding]::new($false))
+}
 
 # --- Resolve paths ---
 if ($Target -eq "global") {
@@ -48,7 +51,7 @@ $Templates = @("channel-template.md","current-task-template.md","design-invarian
 $Tools = @("spawn.py", "spawn.json")
 $Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-adversarial.md","commit-cold-reader.md")
 $Rules = @("design-invariants.md","plugin-auto-invoke.md","terminology.md")
-$Config = @("protected-files.txt","sensitive-patterns.txt")
+$Config = @("protected-files.txt","sensitive-patterns.txt",".cc-sentinel-installed")
 
 # Legacy commands (removed in v1.1, but older installs may still have them)
 $LegacyCommands = @(
@@ -89,6 +92,12 @@ foreach ($f in $Agents) { Remove-SentinelItem (Join-Path (Join-Path $Base "agent
 foreach ($f in $Rules) { Remove-SentinelItem (Join-Path (Join-Path $Base "rules") $f) }
 foreach ($f in $Config) { Remove-SentinelItem (Join-Path $Base $f) }
 
+# Project-install templates land at project root, not .claude/templates/
+if ($Target -eq "project") {
+    $ProjectRootTemplates = @("channel-template.md","current-task-template.md")
+    foreach ($f in $ProjectRootTemplates) { Remove-SentinelItem $f }
+}
+
 # Legacy commands cleanup (from pre-v1.1 installs)
 $LegacyCommandsDir = Join-Path $Base "commands"
 foreach ($f in $LegacyCommands) { Remove-SentinelItem (Join-Path $LegacyCommandsDir $f) }
@@ -126,11 +135,27 @@ if (Test-Path $SettingsFile) {
 
         if ($settings.hooks) {
             foreach ($eventType in @($settings.hooks.PSObject.Properties.Name)) {
-                $hooks = @($settings.hooks.$eventType)
-                $filtered = @($hooks | Where-Object {
-                    $cmd = if ($_ -is [PSCustomObject]) { $_.command } else { "" }
-                    -not ($hookPatterns | Where-Object { $cmd -like "*$_*" })
-                })
+                $entries = @($settings.hooks.$eventType)
+                $filtered = @()
+                foreach ($entry in $entries) {
+                    if ($entry -is [PSCustomObject] -and $entry.PSObject.Properties['hooks']) {
+                        $nestedFiltered = @($entry.hooks | Where-Object {
+                            $cmd = if ($_ -is [PSCustomObject]) { $_.command } else { "" }
+                            -not ($hookPatterns | Where-Object { $cmd -like "*$_*" })
+                        })
+                        if ($nestedFiltered.Count -gt 0) {
+                            $entry.hooks = $nestedFiltered
+                            $filtered += $entry
+                        }
+                    } elseif ($entry -is [PSCustomObject] -and $entry.PSObject.Properties['command']) {
+                        $cmd = $entry.command
+                        if (-not ($hookPatterns | Where-Object { $cmd -like "*$_*" })) {
+                            $filtered += $entry
+                        }
+                    } else {
+                        $filtered += $entry
+                    }
+                }
                 if ($filtered.Count -eq 0) {
                     $settings.hooks.PSObject.Properties.Remove($eventType)
                 } else {
@@ -142,7 +167,7 @@ if (Test-Path $SettingsFile) {
             }
         }
 
-        $allowPatterns = @("hooks","scripts","cc-context-awareness","tools","mkdir -p verification_findings","ls verification_findings")
+        $allowPatterns = @("hooks/","hooks\","scripts/","scripts\","cc-context-awareness/","cc-context-awareness\","tools/","tools\","mkdir -p verification_findings","ls verification_findings","setup-codex","flash.ps1")
         if ($settings.permissions -and $settings.permissions.allow) {
             $settings.permissions.allow = @($settings.permissions.allow | Where-Object {
                 $rule = $_; -not ($allowPatterns | Where-Object { $rule -like "*$_*" })
@@ -150,9 +175,18 @@ if (Test-Path $SettingsFile) {
             if ($settings.permissions.allow.Count -eq 0) {
                 $settings.permissions.PSObject.Properties.Remove("allow")
             }
-            if (@($settings.permissions.PSObject.Properties).Count -eq 0) {
-                $settings.PSObject.Properties.Remove("permissions")
+        }
+        if ($settings.permissions -and $settings.permissions.deny) {
+            $sentinelDenyPatterns = @("*.mp3","*.mp4","*.wav","*.avi","*.zip","*.tar")
+            $settings.permissions.deny = @($settings.permissions.deny | Where-Object {
+                $rule = $_; -not ($sentinelDenyPatterns -contains $rule)
+            })
+            if ($settings.permissions.deny.Count -eq 0) {
+                $settings.permissions.PSObject.Properties.Remove("deny")
             }
+        }
+        if ($settings.permissions -and @($settings.permissions.PSObject.Properties).Count -eq 0) {
+            $settings.PSObject.Properties.Remove("permissions")
         }
 
         if ($settings.statusLine -and $settings.statusLine.command -like "*context-awareness*") {
@@ -160,7 +194,7 @@ if (Test-Path $SettingsFile) {
             Log "  Removed statusLine"
         }
 
-        $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile
+        Write-Utf8NoBom $SettingsFile ($settings | ConvertTo-Json -Depth 10)
         Log "  Cleaned settings.json"
     }
 }
@@ -180,7 +214,7 @@ if (Test-Path $ClaudeMd) {
                 Remove-Item $ClaudeMd
                 Log "  Removed CLAUDE.md (was sentinel-only)"
             } else {
-                Set-Content $ClaudeMd $newContent
+                Write-Utf8NoBom $ClaudeMd $newContent
                 Log "  Removed cc-sentinel rules block"
             }
         } else {

@@ -12,11 +12,11 @@ Invariants are non-negotiable constraints. Each one should state the rule AND th
 
 **Example invariants (replace these):**
 
-1. **No gamification.** No badges, achievements, streaks, confetti, or evaluative messaging. Consistency features are opt-in (e.g., calendar dots) and never presented as rewards. Why: the target audience includes people for whom external rewards undermine intrinsic motivation; gamification framing also conflicts with the clinical/wellness positioning.
+1. **No silent data loss.** Every destructive action requires explicit confirmation. Undo must be available for at least 30 seconds. Batch operations preview their scope before executing. Why: users lose trust permanently after one accidental deletion; the cost of a confirmation step is negligible compared to the cost of lost data.
 
-2. **Privacy-first data model.** All user data stays on-device. No analytics, no crash reporting that includes content, no sync that passes content through a server. Why: the product promise is explicitly private; violating this in a background subsystem would be a breach of trust even if not visible to the user.
+2. **API responses are always typed.** No `any`, no `unknown` at API boundaries, no unvalidated JSON casts. All external data passes through a validation layer before entering the domain. Why: untyped boundaries are where runtime crashes hide — the type system cannot catch what it never sees.
 
-3. **Invitational language only.** "You might try..." not "You should..." or "You must..." Every instruction in user-facing copy is framed as an invitation, never a directive. Why: the user base includes trauma-informed and autonomy-sensitive individuals; directive language activates resistance and undermines the therapeutic frame.
+3. **Offline-first.** The app must function without network. Sync is additive (push when available); degraded mode is never an error state. Why: intermittent connectivity is the norm for the target deployment environment; network-dependent critical paths block users.
 
 4. **[Your invariant name].** [Your rule]. Why: [Your reason].
 

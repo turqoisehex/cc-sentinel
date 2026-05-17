@@ -216,7 +216,7 @@ function Install-Module($moduleName) {
     # claude-md rules
     $rulesFile = Join-Path $moduleDir "claude-md-rules.md"
     if (Test-Path $rulesFile) {
-        Log "  Rules file available: claude-md-rules.md (will be injected into CLAUDE.md)"
+        Log "  Rules file available: claude-md-rules.md (inject via CLAUDE.md Step 5 or manual copy)"
     }
 }
 
@@ -731,6 +731,7 @@ if ($Modules -match "verification" -and -not $DryRun) {
 # Auto-configure spawn (if sprint-pipeline installed)
 if ($Modules -match "sprint-pipeline") {
     $spawnPath = Join-Paths @($env:USERPROFILE, ".claude", "tools", "spawn.py")
+    $spawnJsonPath = Join-Paths @($env:USERPROFILE, ".claude", "tools", "spawn.json")
     if (Test-Path $spawnPath) {
         if ($DryRun) {
             Log "  WOULD RUN: spawn.py --setup"
@@ -740,6 +741,16 @@ if ($Modules -match "sprint-pipeline") {
                 & python $spawnPath --setup 2>$null
             } catch {
                 Log "  spawn.py --setup failed - run manually: python ~/.claude/tools/spawn.py --setup"
+            }
+            # Write default startup_delay to spawn.json
+            $spawnJson = @{}
+            if (Test-Path $spawnJsonPath) {
+                $spawnJson = Get-Content $spawnJsonPath -Raw | ConvertFrom-Json
+            }
+            if (-not $spawnJson.startup_delay) {
+                $spawnJson | Add-Member -NotePropertyName "startup_delay" -NotePropertyValue 5 -Force
+                Write-Utf8NoBom $spawnJsonPath ($spawnJson | ConvertTo-Json -Depth 5)
+                Log "  Spawn config: startup_delay = 5s"
             }
         }
     }

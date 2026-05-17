@@ -110,7 +110,7 @@ SCOPE: [paste one-sentence scope]
    - Names/constants: Grep `src/` or `lib/` for exact string.
    - Counts: actually count (grep + wc, or read and count).
    - Line refs: INFO by default. Promote to WARN only if (a) the line is inside an AC grep command, (b) it is the sole navigation breadcrumb in a large file, OR (c) the drift is >100 lines (reader lands in the wrong function). When raising above INFO, cite the grep anchor the reader would actually use instead of the line number.
-   - **Method/API calls: find the DEFINITION** (not usage). Verify parameters (names, types, count), return type. External libs: context7 MCP or grep `.pub-cache/`.
+   - **Method/API calls: find the DEFINITION** (not usage). Verify parameters (names, types, count), return type. External libs: context7 MCP or grep the language-specific package cache (`.pub-cache/`, `node_modules/`, `site-packages/`, `.cargo/`, `pkg/mod/`).
    - **Enum/constant values: verify actual value**, not just name exists. Count members. Read definitions.
 
 4. Mark: `[V]` VERIFIED, `[X]` UNVERIFIED (searched: [where], closest: [match]), `[~]` APPROXIMATE (differs how).
@@ -152,7 +152,7 @@ Claimed, found, searched
 - Verify every instance updated — not just the ones the work product mentions
 - Check implementation matches surrounding code style (naming, structure, error handling)
 
-**Step 10 — Pre-commit diff scan (step numbers reference `.claude/reference/spec-verification.md`):**
+**Step 10 — Pre-commit diff scan (requires sprint-pipeline module if installed; otherwise use project-specific commit review):**
 - Review staged changes for out-of-scope file modifications
 - Flag any file changed that is not mentioned in the work product or task scope
 
@@ -479,7 +479,7 @@ SCOPE: [paste one-sentence scope]
 4. For CODE files: What does each function ACTUALLY do (not what comments say)? Flag comment-code mismatches. Check: default values sensible without caller context? Error messages accurate?
 
 5. **End-to-end path trace (for code changes):**
-   - Pick ONE user-visible path that the work product touches (e.g., "user taps Surprise Me → session plays"). Trace it from UI tap to final screen.
+   - Pick ONE user-visible path that the work product touches (e.g., "user clicks Submit → confirmation displays"). Trace it from UI interaction to final screen.
    - Name every function called and every data value passed at each boundary.
    - At each handoff, verify: does the caller's output type/shape/field names match the callee's expected input? Flag any point where the data contract between caller and callee doesn't match (field name mismatch, value set mismatch, type mismatch, missing null check).
    - Mark: `[PATH_OK]` traced clean, `[PATH_BREAK]` contract mismatch at boundary (cite caller → callee, expected vs actual).
@@ -498,10 +498,10 @@ SCOPE: [paste one-sentence scope]
    - What happens when this step ends? Trace the completion condition.
 
    **6c. Walk the seams:**
-   - Exercise → exercise: advancement trigger, cleanup, next load
+   - Step → step: advancement trigger, cleanup, next load
    - Round → round: counter increment, UI reset
    - Pause → resume: state preservation, timer restart vs continue
-   - Session completion: final screen, navigation, session recording
+   - Flow completion: final screen, navigation, state persistence
    - Background → foreground (only if work product handles lifecycle)
 
    **6d. Hunt for silent nothing:**
@@ -520,8 +520,8 @@ SCOPE: [paste one-sentence scope]
    | Button visible but handler disconnected/null | FAIL | User sees affordance, taps it, nothing happens. Broken trust. |
    | Timer/counter never starts or never completes | FAIL | Feature hangs indefinitely with no user escape. |
    | State machine advances but UI doesn't update | FAIL | Silent nothing — user stares at stale screen. |
-   | Exercise ends but next doesn't load | FAIL | Session dead-ends. User must force-quit. |
-   | Audio continues after feature ends | WARN | Confusing but feature still completes. |
+   | Step ends but next doesn't load | FAIL | Flow dead-ends. User must force-quit. |
+   | Audio/animation continues after feature ends | WARN | Confusing but feature still completes. |
    | Counter counts wrong direction | WARN | Disorienting but user can still finish. |
    | Pause/resume loses partial progress | WARN | Frustrating but recoverable by restarting. |
    | Missing completion screen | LOW | Feature works; polish gap only. |

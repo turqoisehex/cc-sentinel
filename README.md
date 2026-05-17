@@ -60,18 +60,44 @@ If Claude Code can do it, cc-sentinel can govern it.
 Install https://github.com/turqoisehex/cc-sentinel
 ```
 
-Claude Code clones the repo and runs an interactive installer. The expected flow:
+Claude Code clones the repo and runs the installer — two commands, then conversation.
+
+**Step 1 — Clone** (one command, no prior exploration needed):
+
+```bash
+git clone https://github.com/turqoisehex/cc-sentinel.git ~/.claude/cc-sentinel
+```
+
+Windows:
+
+```powershell
+git clone https://github.com/turqoisehex/cc-sentinel.git "$env:USERPROFILE\.claude\cc-sentinel"
+```
+
+**Step 2 — Run the installer** (starts the interactive flow):
+
+```bash
+bash ~/.claude/cc-sentinel/install.sh
+```
+
+Windows (run directly — do not wrap in `powershell -File`, which spawns a nested process):
+
+```powershell
+& "$env:USERPROFILE\.claude\cc-sentinel\install.ps1"
+```
+
+**Interactive flow (after installer starts):**
 
 1. **Detect** your OS, shell, terminal, and project type. Report findings.
-2. **Ask your use case** -- what you use Claude Code for (development, research, writing, etc.).
-3. **Present a problem→solution table** showing each failure mode and the module that solves it.
-4. **Present a module table** with recommendations. Always offer "All modules" as the first option.
-5. **Ask about global vs project install.** Recommend global for most users.
-6. **Run the installer** with the selected modules. Do not ask for confirmation after module selection -- just run it.
-7. **Offer deny rules** for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
-8. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
-9. **Print a summary** of what was installed: modules, hooks, skills, status line, spawn config.
-10. **Print an inline install summary** (hooks, skills, reference files — each with PASS/FAIL count). Skills installed this session are not loadable until the next session; **tell the user to run `/self-test`** then for ongoing validation.
+3. **Ask your use case** — use `AskUserQuestion` to ask what you use Claude Code for (development, research, writing, etc.).
+4. **Present a problem→solution table** showing each failure mode and the module that solves it.
+5. **Recommend modules** — use `AskUserQuestion` with module options. Always offer "All modules" as the first option. Include one-line descriptions of what each module prevents.
+6. **Ask about global vs project install** — use `AskUserQuestion`. Recommend global for most users.
+7. **Run the installer** with the selected modules. Do not ask for confirmation after module selection — just run it.
+8. **Offer deny rules** — use `AskUserQuestion` for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
+9. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
+10. **Print a summary** of what was installed: modules, hooks, skills, status line, spawn config.
+11. **Print an inline install summary** (hooks, skills, reference files — each with PASS/FAIL count). Skills installed this session are not loadable until the next session; **tell the user to run `/self-test`** then for ongoing validation.
 
 **Manual installation:**
 
@@ -86,7 +112,7 @@ bash ~/.claude/cc-sentinel/install.sh --modules "core,context-awareness,verifica
 bash ~/.claude/cc-sentinel/install.sh --modules "core,context-awareness" --target global
 
 # Windows (PowerShell)
-powershell -File ~/.claude/cc-sentinel/install.ps1 -Modules "core,context-awareness" -Target project
+& "$env:USERPROFILE\.claude\cc-sentinel\install.ps1" -Modules "core,context-awareness" -Target project
 ```
 
 ## Modules
@@ -485,10 +511,10 @@ bash ~/.claude/cc-sentinel/uninstall.sh --target global --dry-run
 **Manual (Windows PowerShell):**
 
 ```powershell
-powershell -File "$env:USERPROFILE\.claude\cc-sentinel\uninstall.ps1" -Target global
+& "$env:USERPROFILE\.claude\cc-sentinel\uninstall.ps1" -Target global
 
 # Or with dry run:
-powershell -File "$env:USERPROFILE\.claude\cc-sentinel\uninstall.ps1" -Target global -DryRun
+& "$env:USERPROFILE\.claude\cc-sentinel\uninstall.ps1" -Target global -DryRun
 ```
 
 Replace `global` with `project` if you installed to `.claude/` in a specific project directory.

@@ -24,7 +24,7 @@ SCOPE: {{SCOPE_SUMMARY}}
    - Names/constants: `grep -rn "exact_string" lib/` or `grep -rn "exact_string" src/`
    - Counts: actually count (`grep -c` or `wc -l`).
    - Line refs: INFO by default. Promote to WARN only if (a) the line is inside an AC grep command, (b) it is the sole navigation breadcrumb in a large file, OR (c) the drift is >100 lines.
-   - Method/API calls: find the DEFINITION (not usage). Verify parameters (names, types, count), return type.
+   - Method/API calls: find the DEFINITION (not usage). Verify parameters (names, types, count), return type. External libs: grep the language-specific package cache (`.pub-cache/`, `node_modules/`, `site-packages/`, `.cargo/`, `pkg/mod/`).
    - Enum/constant values: verify actual value, not just name exists. Count members. Read definitions.
 
 4. Mark: `[V]` VERIFIED, `[X]` UNVERIFIED (searched: [where], closest: [match]), `[~]` APPROXIMATE (differs how).
@@ -279,7 +279,7 @@ SCOPE: {{SCOPE_SUMMARY}}
 4. For CODE files: What does each function ACTUALLY do (not what comments say)? Flag comment-code mismatches. Check: default values sensible without caller context? Error messages accurate?
 
 5. **End-to-end path trace (for code changes):**
-   - Pick ONE user-visible path that the work product touches. Trace it from UI tap to final screen.
+   - Pick ONE user-visible path that the work product touches. Trace it from UI interaction to final screen.
    - Name every function called and every data value passed at each boundary.
    - At each handoff, verify: does the caller's output type/shape/field names match the callee's expected input?
    - Mark: `[PATH_OK]` traced clean, `[PATH_BREAK]` contract mismatch at boundary (cite caller → callee, expected vs actual).
@@ -297,10 +297,10 @@ SCOPE: {{SCOPE_SUMMARY}}
    - What happens when this step ends? Trace the completion condition.
 
    **6c. Walk the seams:**
-   - Exercise → exercise: advancement trigger, cleanup, next load
+   - Step → step: advancement trigger, cleanup, next load
    - Round → round: counter increment, UI reset
    - Pause → resume: state preservation, timer restart vs continue
-   - Session completion: final screen, navigation, session recording
+   - Flow completion: final screen, navigation, state persistence
    - Background → foreground (only if work product handles lifecycle)
 
    **6d. Hunt for silent nothing:**
@@ -319,7 +319,7 @@ SCOPE: {{SCOPE_SUMMARY}}
    | Button visible but handler disconnected | FAIL |
    | Timer/counter never starts or completes | FAIL |
    | State machine advances but UI doesn't update | FAIL |
-   | Exercise ends but next doesn't load | FAIL |
+   | Step ends but next doesn't load | FAIL |
    | Audio continues after feature ends | WARN |
    | Counter counts wrong direction | WARN |
    | Pause/resume loses partial progress | WARN |

@@ -94,7 +94,7 @@ AGENTS=("sonnet-implementer.md" "sonnet-verifier.md" "commit-adversarial.md" "co
 
 RULES=(design-invariants.md plugin-auto-invoke.md terminology.md)
 
-CONFIG=(protected-files.txt sensitive-patterns.txt)
+CONFIG=(protected-files.txt sensitive-patterns.txt .cc-sentinel-installed)
 
 # Legacy commands (removed in v1.1, but older installs may still have them)
 LEGACY_COMMANDS=(
@@ -134,6 +134,11 @@ for f in "${TOOLS[@]}"; do remove_file "$TOOLS_DIR/$f"; done
 for f in "${AGENTS[@]}"; do remove_file "$BASE/agents/$f"; done
 for f in "${RULES[@]}"; do remove_file "$BASE/rules/$f"; done
 for f in "${CONFIG[@]}"; do remove_file "$BASE/$f"; done
+
+# Project-install templates land at project root, not .claude/templates/
+if [[ "$TARGET" == "project" ]]; then
+  for f in channel-template.md current-task-template.md; do remove_file "$f"; done
+fi
 
 # Legacy commands cleanup (from pre-v1.1 installs)
 LEGACY_COMMANDS_DIR="$BASE/commands"
@@ -227,6 +232,7 @@ if "hooks" in settings:
 sentinel_allow_patterns = [
     "hooks/", "scripts/", "cc-context-awareness/", "tools/",
     "mkdir -p verification_findings", "ls verification_findings",
+    "setup-codex", "flash.ps1",
 ]
 
 if "permissions" in settings:
@@ -240,6 +246,17 @@ if "permissions" in settings:
         settings["permissions"]["allow"] = filtered
         if not filtered:
             del settings["permissions"]["allow"]
+    if "deny" in settings["permissions"]:
+        original_deny = settings["permissions"]["deny"]
+        sentinel_deny_patterns = ["*.mp3", "*.mp4", "*.wav", "*.avi", "*.zip", "*.tar"]
+        filtered_deny = [r for r in original_deny
+                         if not any(r.endswith(p.lstrip("*")) for p in sentinel_deny_patterns)]
+        removed_deny = [r for r in original_deny if r not in filtered_deny]
+        for r in removed_deny:
+            changes.append(f"  Removed deny rule: {r}")
+        settings["permissions"]["deny"] = filtered_deny
+        if not filtered_deny:
+            del settings["permissions"]["deny"]
     if not settings["permissions"] or settings["permissions"] == {}:
         del settings["permissions"]
 

@@ -5,12 +5,10 @@
 *.dylib
 *.zip
 *.tar.gz
-*.png
-*.jpg
-*.gif
 *.mp4
 *.mp3
-*.pdf
+*.wav
+*.avi
 .idea/
 .vscode/
 *.swp

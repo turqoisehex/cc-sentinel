@@ -77,12 +77,12 @@ Parent enters the interleaved phase loop after writing manifest:
    Re-run Sonnet on any role where R1 OR R2 produced above-INFO findings.
    Roles that were all-PASS in both R1 and R2 are NOT re-run.
    Overwrites R1 output files for re-run roles.
-   **UX trace enforcement (cold_reader only):** After reading cold_reader output, if work product includes presentation-layer, domain-layer, or engine code (e.g., `src/ui/`, `src/views/`, `lib/presentation/`, `src/domain/`, or equivalent project paths) AND the output lacks `## UX Journey Trace` section → treat as incomplete (re-run cold_reader with fresh prompt). Per interleaved squad design § 5.5.
+   **UX trace enforcement (cold_reader only):** After reading cold_reader output, if work product includes presentation-layer, domain-layer, or engine code (e.g., `src/ui/`, `src/views/`, `lib/presentation/`, `src/domain/`, or equivalent project paths) AND the output lacks `## UX Journey Trace` section → treat as incomplete (re-run cold_reader with fresh prompt).
 
-   **All-Codex-TRANSIENT in R2:** If all 5 Codex agents return TRANSIENT, R3 becomes a full 5-role Sonnet re-run (no cross-architecture data exists). Per interleaved squad design § 8.3.
+   **All-Codex-TRANSIENT in R2:** If all 5 Codex agents return TRANSIENT, R3 becomes a full 5-role Sonnet re-run (no cross-architecture data exists).
 
 7. **Gate decision:**
-   - All R3 Sonnet PASS → Opus closure (interleaved squad design § 12)
+   - All R3 Sonnet PASS → Opus closure
    - Any R3 Sonnet FAIL/WARN → R4
 
 8. **R4 (conditional): Codex on failing roles only**
@@ -91,7 +91,7 @@ Parent enters the interleaved phase loop after writing manifest:
    Fix → re-run Sonnet on those roles → re-evaluate gate.
    Max 2 additional R4+R3' cycles. Total phase cap: 7 phases before VERIFICATION_BLOCKED.
 
-9. **Opus closure:** After gate passes, write new manifest to `squad_[chN_]opus/` BEFORE any progress message (ensures `stop-task-check.sh` sees the Opus dir immediately). Then dispatch 5 Opus agents (interleaved squad design § 12). Both squad dirs must pass commit gate independently.
+9. **Opus closure:** After gate passes, write new manifest to `squad_[chN_]opus/` BEFORE any progress message (ensures `stop-task-check.sh` sees the Opus dir immediately). Then dispatch 5 Opus agents. Both squad dirs must pass commit gate independently.
 
 **NEVER spawn a "dispatcher" subagent to launch agents on your behalf. Subagents cannot spawn subagents.** Launching fewer than 5 Sonnet agents in R1 is a procedural failure.
 
@@ -266,7 +266,7 @@ When all expected result files present:
    > **WARNING:** Do NOT export `CODEX_POSTFIX_NO_STREAK=1` into a shell profile (`.bashrc`, `.zshrc`, project `.env` sourced at startup) — that silently disables streak tracking for every subsequent session, making the safety counter inert without warning.
 
    > **Env-var bypass via captured stderr.** The wrapper treats `CODEX_POSTFIX_NO_STREAK=1` as equivalent to `--no-streak`. When the env var is set WITHOUT the flag, the wrapper emits a one-shot stderr tripwire WARN — but the WARN is suppressed when stderr is captured or discarded by a wrapping script (Sonnet listener, CI pipeline, direnv, `.envrc`, Nix shell). The env var still wins silently. If you have exported the env var anywhere in your environment, two operator-discipline rules apply: **(1) If you want streak tracking ACTIVE for a run, explicitly unset the env var on the invocation:** `env -u CODEX_POSTFIX_NO_STREAK ~/.claude/scripts/codex-postfix-scan.sh ...`. **(2) If you want streak tracking DISABLED, pass `--no-streak` explicitly** even if you've also exported the env var — the explicit flag in the invocation line is the only signal a code reviewer can audit later; the env var leaves no trace in shell history.
-7. **Phase progression (interleaved squad active):** R1 Sonnet → R2 Codex → R3 Sonnet re-validation → gate → conditional R4. Re-run only roles flagged in prior phases. In 5-agent fallback (Codex absent): re-run only agents that returned above-INFO. Fresh prompts in all modes — no prior-phase references. See the interleaved squad design § 7 for full phase rules.
+7. **Phase progression (interleaved squad active):** R1 Sonnet → R2 Codex → R3 Sonnet re-validation → gate → conditional R4. Re-run only roles flagged in prior phases. In 5-agent fallback (Codex absent): re-run only agents that returned above-INFO. Fresh prompts in all modes — no prior-phase references.
 8. **Opus closure (interleaved squad active):** Fires ONLY after the R3 gate passes (all re-run Sonnet agents PASS). Manifest written to `squad_[chN_]opus/` BEFORE any progress message (ensures `stop-task-check.sh` sees the Opus dir immediately). Uses unprefixed filenames (`mechanical.md`, etc.). Both `squad_[chN_]sonnet/` and `squad_[chN_]opus/` dirs checked independently by commit gate. In 5-agent fallback (Codex absent): fires after all 5 Sonnet agents PASS in a round (existing behavior, unchanged).
 
 ### Step 6: Fix loop

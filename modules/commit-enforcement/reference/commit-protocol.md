@@ -121,7 +121,7 @@ When editing any of the files below, sync all copies listed. `install.sh` preser
 | File | Canonical | Sync targets |
 |------|-----------|--------------|
 | `channel_commit.sh` | `cc-sentinel/modules/commit-enforcement/scripts/` | Project `scripts/`, `~/.claude/scripts/` |
-| `safe-commit.sh` | `cc-sentinel/modules/commit-enforcement/hooks/` | `~/.claude/hooks/` (may carry documented local divergences — e.g., project-specific `flutter test --exclude-tags` overrides. Mark the divergence inline with `# INTENTIONAL DIVERGENCE: <reason>` so reinstall diff-check preserves it.) |
+| `safe-commit.sh` | `cc-sentinel/modules/commit-enforcement/hooks/` | `~/.claude/hooks/` (may carry documented local divergences — e.g., project-specific test-command overrides or custom linter flags. Mark the divergence inline with `# INTENTIONAL DIVERGENCE: <reason>` so reinstall diff-check preserves it.) |
 | `commit-adversarial.md` | `cc-sentinel/modules/commit-enforcement/agents/` | `~/.claude/agents/`, project `.claude/agents/` |
 | `commit-cold-reader.md` | `cc-sentinel/modules/commit-enforcement/agents/` | `~/.claude/agents/`, project `.claude/agents/` |
 | `commit-protocol.md` (this file) | `cc-sentinel/modules/commit-enforcement/reference/` | `~/.claude/reference/`, project `.claude/reference/` |

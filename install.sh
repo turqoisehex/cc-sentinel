@@ -211,7 +211,7 @@ install_module() {
 
   # claude-md rules
   if [[ -f "$module_dir/claude-md-rules.md" ]]; then
-    log "  Rules file available: claude-md-rules.md (will be injected into CLAUDE.md)"
+    log "  Rules file available: claude-md-rules.md (inject via --inject-rules flag, CLAUDE.md Step 5, or manual copy)"
   fi
 }
 
@@ -291,6 +291,7 @@ for event, entries in hooks.items():
       echo "$conflict" | while IFS= read -r line; do log "$line"; done
       log "  Skipping notification hook installation to avoid duplicate popups."
       log "  To force install, remove existing notification hooks first."
+      export NOTIFICATION_SKIPPED=1
       return
     fi
   fi
@@ -340,6 +341,7 @@ hook_prefix = os.environ.get("HOOK_PREFIX", ".claude")
 target = os.environ.get("TARGET", "project")
 
 modules = [m.strip() for m in modules_str.split(",") if m.strip()]
+notification_skipped = os.environ.get("NOTIFICATION_SKIPPED", "") == "1"
 
 # Resolve notification placeholder before merge so dedup check sees final commands
 import platform
@@ -370,6 +372,8 @@ if "hooks" not in settings:
 
 # For each installed module, merge its settings_merge.hooks
 for mod_key in modules:
+    if mod_key == "notification" and notification_skipped:
+        continue
     mod = manifest["modules"].get(mod_key, {})
     merge = mod.get("settings_merge", {})
     hooks = merge.get("hooks", {})
@@ -384,14 +388,21 @@ for mod_key in modules:
             for hook in entry.get("hooks", []):
                 cmd = hook.get("command", "")
                 # Resolve notification placeholder to platform-specific command
-                if cmd == "__NOTIFICATION_SCRIPT__" and notif_cmd:
-                    cmd = notif_cmd
+                if cmd == "__NOTIFICATION_SCRIPT__":
+                    if notif_cmd:
+                        cmd = notif_cmd
+                    else:
+                        continue  # Skip unresolvable placeholder on unknown OS
                 # Replace .claude/ prefix with global path (keep ~ unexpanded so allow rules match)
                 elif target == "global":
                     cmd = cmd.replace(".claude/", "~/.claude/")
                 new_hook = dict(hook)
                 new_hook["command"] = cmd
                 new_entry["hooks"].append(new_hook)
+
+            # Skip entries with no resolvable hooks (e.g., unknown OS with only placeholder)
+            if not new_entry["hooks"]:
+                continue
 
             # Check if this exact matcher already exists
             existing = [e for e in settings["hooks"][event_type] if e.get("matcher") == new_entry["matcher"]]
@@ -779,6 +790,19 @@ if echo "$MODULES" | grep -q "sprint-pipeline"; then
     else
       log "Configuring spawn (auto-detect terminal + key sender)..."
       "$PYTHON" "${HOME}/.claude/tools/spawn.py" --setup 2>/dev/null || log "  spawn.py --setup failed — run manually: python3 ~/.claude/tools/spawn.py --setup"
+      # Write default startup_delay to spawn.json
+      local spawn_json="${HOME}/.claude/tools/spawn.json"
+      if [[ ! -f "$spawn_json" ]] || ! "$PYTHON" -c "import json; d=json.load(open('$spawn_json')); assert 'startup_delay' in d" 2>/dev/null; then
+        "$PYTHON" -c "
+import json, pathlib
+p = pathlib.Path('$spawn_json')
+p.parent.mkdir(parents=True, exist_ok=True)
+cfg = json.loads(p.read_text()) if p.exists() else {}
+cfg.setdefault('startup_delay', 5)
+p.write_text(json.dumps(cfg, indent=2))
+print('  Spawn config: startup_delay =', cfg['startup_delay'])
+"
+      fi
     fi
   fi
 fi
