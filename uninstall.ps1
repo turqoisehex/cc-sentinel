@@ -27,7 +27,7 @@ $HooksDir = Join-Path $Base "hooks"
 $SkillsDir = Join-Path $Base "skills"
 $ReferenceDir = Join-Path $Base "reference"
 $TemplatesDir = Join-Path $Base "templates"
-$ToolsDir = if ($Target -eq "global") { Join-Path $Base "tools" } else { Join-Path $env:USERPROFILE ".claude" "tools" }
+$ToolsDir = if ($Target -eq "global") { Join-Path $Base "tools" } else { Join-Path (Join-Path $env:USERPROFILE ".claude") "tools" }
 
 # --- Known sentinel files ---
 $Hooks = @(
@@ -85,8 +85,8 @@ foreach ($f in $Skills) { Remove-SentinelItem (Join-Path $SkillsDir $f) }
 foreach ($f in $Reference) { Remove-SentinelItem (Join-Path $ReferenceDir $f) }
 foreach ($f in $Templates) { Remove-SentinelItem (Join-Path $TemplatesDir $f) }
 foreach ($f in $Tools) { Remove-SentinelItem (Join-Path $ToolsDir $f) }
-foreach ($f in $Agents) { Remove-SentinelItem (Join-Path $Base "agents" $f) }
-foreach ($f in $Rules) { Remove-SentinelItem (Join-Path $Base "rules" $f) }
+foreach ($f in $Agents) { Remove-SentinelItem (Join-Path (Join-Path $Base "agents") $f) }
+foreach ($f in $Rules) { Remove-SentinelItem (Join-Path (Join-Path $Base "rules") $f) }
 foreach ($f in $Config) { Remove-SentinelItem (Join-Path $Base $f) }
 
 # Legacy commands cleanup (from pre-v1.1 installs)
@@ -115,13 +115,13 @@ if (Test-Path $SettingsFile) {
         $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
 
         $hookPatterns = @(
-            "hooks/anti-deferral","hooks/agent-file-reminder","hooks/session-orient",
-            "hooks/post-compact-reorient","hooks/pre-compact-state-save",
-            "hooks/auto-checkpoint","hooks/auto-format","hooks/comment-replacement",
-            "hooks/file-protection","hooks/safe-commit","hooks/stop-task-check",
-            "hooks/flash-notification","hooks/flash.ps1",
-            "scripts/channel_commit","scripts/wait_for_results","scripts/wait_for_work",
-            "scripts/heartbeat_watcher","cc-context-awareness/context-awareness"
+            "anti-deferral","agent-file-reminder","session-orient",
+            "post-compact-reorient","pre-compact-state-save",
+            "auto-checkpoint","auto-format","comment-replacement",
+            "file-protection","safe-commit","stop-task-check",
+            "flash-notification","flash.ps1",
+            "channel_commit","wait_for_results","wait_for_work",
+            "heartbeat_watcher","context-awareness"
         )
 
         if ($settings.hooks) {
@@ -142,7 +142,7 @@ if (Test-Path $SettingsFile) {
             }
         }
 
-        $allowPatterns = @("hooks/","scripts/","cc-context-awareness/","tools/","mkdir -p verification_findings","ls verification_findings")
+        $allowPatterns = @("hooks","scripts","cc-context-awareness","tools","mkdir -p verification_findings","ls verification_findings")
         if ($settings.permissions -and $settings.permissions.allow) {
             $settings.permissions.allow = @($settings.permissions.allow | Where-Object {
                 $rule = $_; -not ($allowPatterns | Where-Object { $rule -like "*$_*" })

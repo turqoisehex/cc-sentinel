@@ -30,7 +30,7 @@ For each step in CT:
 
    **Duo mode fallback:** If `CC_DUO_MODE=1` is set and a Sonnet listener is active, `[SONNET]` tasks may be dispatched via file-based IPC to `_pending_sonnet/[chN/]` instead.
 
-   **Data model pre-flight (any task touching a declared field):** When a `[SONNET]`, `[OPUS]`, or `[PARENT]` task adds, removes, renames, changes the type of, or changes the default value of a field on a data model (ExerciseDefinition, ModuleTemplate, ParameterDef, schema class, etc.) — silent-fallback bugs can arise from any of these, not just rename/remove, include in the dispatch prompt (or execute directly for `[PARENT]`): "grep every consumer of this field name in `lib/` + `test/`; confirm any matching consumer reads the same name with no silent fallback (`?? `, `|| `) substituting a default." Full source-spec-code fidelity audit waits for `/perfect` Phase 2.5 per `~/.claude/reference/spec-verification.md`; this pre-flight is cheap insurance, not a substitute.
+   **Data model pre-flight (any task touching a declared field):** When a `[SONNET]`, `[OPUS]`, or `[PARENT]` task adds, removes, renames, changes the type of, or changes the default value of a field on a data model (data model classes, schema definitions, entity types, etc.) — silent-fallback bugs can arise from any of these, not just rename/remove, include in the dispatch prompt (or execute directly for `[PARENT]`): "grep every consumer of this field name in `src/` (or `lib/`) + `test/`; confirm any matching consumer reads the same name with no silent fallback (`?? `, `|| `) substituting a default." Full source-spec-code fidelity audit waits for `/perfect` Phase 2.5 per `~/.claude/reference/spec-verification.md`; this pre-flight is cheap insurance, not a substitute.
 
 3. Update CT — cold-start ready, mark completed steps.
 
@@ -63,7 +63,7 @@ In default mode, /verify spawns `sonnet-verifier` natively. In duo mode, /verify
 - **/2 (design):** No commit. Plan and CT updates are included in the /3 commit.
 - **/4 (perfect):** No commit. /4 code changes are committed in /5.
 
-**Exception — commit mid-/3 only when:** (1) a plan-defined commit task explicitly separates two phases for a stated reason (e.g., infrastructure must land before exercises that depend on it AND they cannot be batched), AND (2) you cannot complete /3 in one session. Even then, verify the plan's reason is real before splitting.
+**Exception — commit mid-/3 only when:** (1) a plan-defined commit task explicitly separates two phases for a stated reason (e.g., infrastructure must land before features that depend on it AND they cannot be batched), AND (2) you cannot complete /3 in one session. Even then, verify the plan's reason is real before splitting.
 
 **Plan-generated commit tasks:** Plans are sometimes generated with mid-/3 "Commit Phase N" tasks. Ignore them — they are non-compliant with the one-commit rule. Follow the commit boundaries here, not the plan's task structure. If the plan has a genuinely load-bearing mid-/3 split (infrastructure dependency), the exception above applies; state the reason in CT before committing early.
 

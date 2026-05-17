@@ -132,7 +132,7 @@ When editing any of the files below, sync all copies listed. `install.sh` preser
 
 **Delete candidates (legacy, no canonical role):**
 - `~/.claude/hooks/enforcement/safe-commit.sh` — predates the hook migration to `~/.claude/hooks/`. Not registered in any hook object, only in permissions allowlists. Remove file + allowlist entry when encountered.
-- Project-local `scripts/claude-hooks/safe-commit.sh` (Wakeful pattern) — pre-migration copy, unreferenced.
+- Project-local `scripts/claude-hooks/safe-commit.sh` — pre-migration copy, unreferenced.
 
 ## Governance sessions
 

@@ -91,7 +91,7 @@ After tagging, re-group [SONNET] tasks into the minimum number of dispatches. Ev
 
 **Merge when ALL true:**
 - Tasks touch adjacent files in the same layer (e.g., all data-layer, all filter-chain, all test files).
-- Tasks follow the same pattern (e.g., "add field X to N exercises" — one agent, one instruction, N edits).
+- Tasks follow the same pattern (e.g., "add field X to N entities" — one agent, one instruction, N edits).
 - Combined task scope is still reviewable in one diff (<~200 LOC changed, <~6 files).
 - No hard ordering dependency between the tasks being merged.
 

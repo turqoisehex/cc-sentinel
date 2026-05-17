@@ -33,6 +33,13 @@ case "$ROLE" in
   *) echo "ERROR: Invalid role '$ROLE'" >&2; exit 1 ;;
 esac
 
+# Ensure output directory exists (squad dir may have been cleaned by channel_commit.sh)
+OUTPUT_DIR="$(dirname "$OUTPUT_PATH")"
+if ! mkdir -p "$OUTPUT_DIR" 2>/dev/null; then
+  echo "ERROR: Cannot create output directory: $OUTPUT_DIR" >&2
+  exit 3
+fi
+
 TMP_FILE="${OUTPUT_PATH}.tmp"
 RAW_FILE="${OUTPUT_PATH}.raw.md"
 STDERR_TMP="${OUTPUT_PATH}.stderr.tmp"
@@ -48,6 +55,18 @@ if ! grep -q '"auth_mode"' "$AUTH_FILE" 2>/dev/null; then
   echo "VERDICT: TRANSIENT — auth not configured" > "$TMP_FILE"
   mv -f "$TMP_FILE" "$OUTPUT_PATH"
   exit 0
+fi
+
+# Step 1b: PowerShell ConstrainedLanguage mode check (Windows only)
+# When active, Codex CLI (invoked via codex.cmd/PS) fails with "Cannot set property.
+# Property setting is supported only on core types in this language mode."
+if [[ -n "${SYSTEMROOT:-}" ]]; then
+  lang_mode=$(powershell.exe -NoProfile -Command '$ExecutionContext.SessionState.LanguageMode' 2>/dev/null | tr -d '\r\n' || echo "unknown")
+  if [[ "$lang_mode" == "ConstrainedLanguage" ]]; then
+    echo "VERDICT: TRANSIENT — PowerShell ConstrainedLanguage mode blocks Codex CLI property assignment. Remove __PSLockdownPolicy from system environment variables and restart shell." > "$TMP_FILE"
+    mv -f "$TMP_FILE" "$OUTPUT_PATH"
+    exit 0
+  fi
 fi
 
 # Step 2: Build prompt from template

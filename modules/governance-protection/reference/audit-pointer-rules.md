@@ -84,4 +84,4 @@ None load-bearing. If a situation seems to require a line number, check:
 
 ## Rationale — why this matters
 
-Observed in Wakeful project: 25+ WARN findings across 4 verification rounds were 100% line-drift. Each fix-pass corrected cited line numbers, which moved on the next code edit, which triggered the next verification round to re-flag the same class of issue at different numbers. Rule of thumb: if your R(N+1) squad reports the same finding class at different line numbers than R(N), you are on a drift treadmill. Switching the citation format breaks the cycle structurally.
+Observed in practice: 25+ WARN findings across 4 verification rounds were 100% line-drift. Each fix-pass corrected cited line numbers, which moved on the next code edit, which triggered the next verification round to re-flag the same class of issue at different numbers. Rule of thumb: if your R(N+1) squad reports the same finding class at different line numbers than R(N), you are on a drift treadmill. Switching the citation format breaks the cycle structurally.
