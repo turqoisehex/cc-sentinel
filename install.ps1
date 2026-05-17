@@ -777,7 +777,11 @@ Log "  Skills:     $skillCount"
 
 $refCount = 0
 $refPath = Join-Path $ClaudeDir "reference"
-if (Test-Path $refPath) { $refCount = @(Get-ChildItem $refPath -Filter "*.md").Count }
+if (Test-Path $refPath) {
+    $refFiles = @(Get-ChildItem $refPath -Filter "*.md")
+    $refCount = $refFiles.Count
+    foreach ($rf in $refFiles) { Log "    - $($rf.Name)" }
+}
 Log "  Reference:  $refCount"
 
 $agentCount = 0
@@ -795,6 +799,12 @@ $toolPath = Join-Path $ClaudeDir "tools"
 if (Test-Path $toolPath) { $toolCount = @(Get-ChildItem $toolPath -File).Count }
 Log "  Tools:      $toolCount"
 
+$claudeMdPath = if ($Target -eq "global") { Join-Path $ClaudeDir "CLAUDE.md" } else { "CLAUDE.md" }
+$rulesInjected = $false
+if (Test-Path $claudeMdPath) {
+    $rulesInjected = (Get-Content $claudeMdPath -Raw) -match "cc-sentinel rules start"
+}
+Log "  CLAUDE.md:  $(if ($rulesInjected) { 'rules injected' } else { 'pending (inject via Step 5 or --inject-rules)' })"
 Log "  Status:     ALL PASS"
 
 # Write the install marker. See install.sh for rationale.
@@ -804,5 +814,5 @@ if (-not $DryRun) {
 }
 
 Write-Host ""
-Log "Installation complete!"
-Log "Start a new session and run /self-test to verify."
+Log "Installation complete! No further verification needed — summary above is authoritative."
+Log "Start a new session and run /self-test for ongoing validation."
