@@ -90,7 +90,7 @@ PROMPT_BODY=$(echo "$PROMPT_BODY" | sed \
   -e "s|{{SOURCE_SPEC}}|${SOURCE_SPEC}|g" \
   -e "s|{{SCOPE_SUMMARY}}|${SCOPE_SUMMARY}|g")
 
-# Step 3: Invoke codex exec (with reasoning-flag fallback per design-spec section 4.2)
+# Step 3: Invoke codex exec (with reasoning-flag fallback)
 CODEX_ARGS=(-m "$MODEL" -s read-only --skip-git-repo-check --ephemeral)
 USED_REASONING=""
 if [[ -n "$REASONING" ]]; then

@@ -90,7 +90,7 @@ TEMPLATES=(
 
 TOOLS=(spawn.py spawn.json)
 
-AGENTS=("sonnet-implementer.md" "sonnet-verifier.md" "commit-verifier.md" "commit-adversarial.md" "commit-cold-reader.md")
+AGENTS=("sonnet-implementer.md" "sonnet-verifier.md" "commit-adversarial.md" "commit-cold-reader.md")
 
 RULES=(design-invariants.md plugin-auto-invoke.md terminology.md)
 

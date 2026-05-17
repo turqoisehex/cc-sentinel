@@ -522,7 +522,7 @@ Look for issues labeled [`good first issue`](https://github.com/turqoisehex/cc-s
 
 - **Boris Cherny** -- Creator of Claude Code at Anthropic. His publicly documented workflow principles form the philosophical foundation. cc-sentinel implements his methodology as enforceable infrastructure. Community index: [howborisusesclaudecode.com](https://howborisusesclaudecode.com). Config reconstruction: [github.com/0xquinto/bcherny-claude](https://github.com/0xquinto/bcherny-claude).
 - **cc-context-awareness** by [sdi2200262](https://github.com/sdi2200262/cc-context-awareness) -- Canonical context window monitoring tool for macOS/Linux. cc-sentinel includes a Windows-compatible rewrite (the only known working Windows version) and recommends the canonical version for non-Windows users.
-- **Production-refined** through hundreds of hours of iterative development on a production Flutter project, translating Cherny's principles into hooks, agents, and skills that enforce behavior rather than suggest it.
+- **Production-refined** through hundreds of hours of iterative development on a production codebase, translating Cherny's principles into hooks, agents, and skills that enforce behavior rather than suggest it. Works with any tech stack — Flutter, React, Python, Go, Rust, and more.
 
 ## License
 

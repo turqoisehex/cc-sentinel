@@ -53,7 +53,7 @@ Review all issues found this sprint. For each: search CLAUDE.md for existing rul
 
 ### 6. Reconcile SC and CIP (MANDATORY — not skippable even for doc-only sprints)
 
-Read `SPRINT_CHECKLIST.md` and `COMPREHENSIVE_IMPLEMENTATION_PLAN.md`. This step is the canonical moment when sprint progress reaches the project's two durable tracking surfaces.
+Read your project's sprint tracking files (e.g., `SPRINT_CHECKLIST.md` and/or a comprehensive implementation plan). This step is the canonical moment when sprint progress reaches the project's durable tracking surfaces. If your project does not use these files, skip this step.
 
 For each item completed this sprint:
 - SC: check off (`- [x]`) with commit hash and date. One-line summary of what shipped.
@@ -72,7 +72,7 @@ Read `MANUAL_TEST_QUEUE.md` (project root). Prune first: for each existing entry
 
 - Requirements extracted/verified: N
 - Fixed during verification: N (list each)
-- Budget: run `ccusage` for the sprint date range and include total input/output tokens and estimated cost.
+- Budget: if `ccusage` is installed, run it for the sprint date range and include total input/output tokens and estimated cost. If unavailable, skip this line.
 - Quality gate: PASS (spec verified, code verified, 100% implementation, no remaining issues) or FAIL (any gap)
 
 ### 9. Merge (if on feature branch)

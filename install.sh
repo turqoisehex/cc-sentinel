@@ -802,4 +802,4 @@ fi
 
 echo ""
 log "Installation complete!"
-log "Run /self-test to verify your installation."
+log "Start a new Claude Code session, then run /self-test to verify your installation."

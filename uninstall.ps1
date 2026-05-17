@@ -46,7 +46,7 @@ $Skills = @(
 $Reference = @("audit-pointer-rules.md","channel-routing.md","codex-postfix-prompt.md","codex-verification-prompts.md","commit-protocol.md","operator-cheat-sheet.md","spec-verification.md","verification-behavior.md","verification-squad.md")
 $Templates = @("channel-template.md","current-task-template.md","design-invariants.md","plugin-auto-invoke.md","terminology.md")
 $Tools = @("spawn.py", "spawn.json")
-$Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-verifier.md","commit-adversarial.md","commit-cold-reader.md")
+$Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-adversarial.md","commit-cold-reader.md")
 $Rules = @("design-invariants.md","plugin-auto-invoke.md","terminology.md")
 $Config = @("protected-files.txt","sensitive-patterns.txt")
 

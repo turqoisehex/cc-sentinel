@@ -40,7 +40,7 @@ Check that `.claude/skills/` contains all expected skill directories for install
 Check `.claude/reference/` for expected files:
 
 - **Core:** `operator-cheat-sheet.md`
-- **Verification:** `verification-squad.md`
+- **Verification:** `verification-squad.md`, `verification-behavior.md`, `codex-verification-prompts.md`, `codex-postfix-prompt.md`
 - **Commit Enforcement:** `channel-routing.md`
 - **Sprint Pipeline:** `spec-verification.md`
 

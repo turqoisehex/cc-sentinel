@@ -271,6 +271,7 @@
         "tests": [
           "test_channel_commit.sh",
           "test_wait_for_results.sh",
+          "test_wait_for_work.sh",
           "test_safe_commit.sh",
           "test_auto_format.sh"
         ]

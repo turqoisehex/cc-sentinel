@@ -10,7 +10,7 @@
 
 "Foreign staging" = files staged into the index by a different session (a different channel's `channel_commit.sh` invocation, or a manual `git add` from another terminal). Your session cannot see which files it owns once they are in the shared index.
 
-## Forbidden (when `channel_commit.sh` is available — the default in this repo)
+## Forbidden (when `channel_commit.sh` is available — installed by default with the commit-enforcement module)
 
 - `git add` (in any form, including `-A` or specific files)
 - `git diff --cached` (reads the shared index, not your file)
@@ -132,7 +132,7 @@ When editing any of the files below, sync all copies listed. `install.sh` preser
 
 **Delete candidates (legacy, no canonical role):**
 - `~/.claude/hooks/enforcement/safe-commit.sh` — predates the hook migration to `~/.claude/hooks/`. Not registered in any hook object, only in permissions allowlists. Remove file + allowlist entry when encountered.
-- Project-local `scripts/claude-hooks/safe-commit.sh` — pre-migration copy, unreferenced.
+- Any project-local `scripts/claude-hooks/` directory — pre-migration layout, unreferenced by current hooks.
 
 ## Governance sessions
 

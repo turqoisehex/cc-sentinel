@@ -928,7 +928,7 @@ echo "Running Codex integrity scan on $(basename "$SPEC_PATH")..." >&2
 
 # Pipe prompt via STDIN — `codex exec` reads from stdin when no positional prompt is
 # given. This sidesteps the Windows CreateProcess ~32K command-line limit; the
-# breathing engine spec at ~330 KB exceeds the limit by 10x and would crash if passed
+# large specs at ~330 KB exceed the limit by 10x and would crash if passed
 # positionally. Empirically verified 2026-05-01: `codex exec` writes ONLY the agent's
 # final reply to stdout; banner, session metadata, model name, prompt echo, and token
 # count all go to stderr. So stdout -> $OUTPUT_PATH gives a clean findings file with

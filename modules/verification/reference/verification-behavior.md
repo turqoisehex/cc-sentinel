@@ -27,7 +27,7 @@ When a verification round finds wrong text in a spec, code, or any file, the fix
 - Writing a "fix_summary" that lists changes as if they were applied, when the original text is untouched
 - Any structure where the wrong text and its correction coexist in the same file
 
-**Why this matters for convergence:** Cold readers read linearly. If § 2.3 says X, they implement X — they will never find the correction in § 3.8. Each round's appendix becomes new surface area for the next round's agents to flag. Findings compound instead of subtracting. R11→R15 on the breathing engine spec went from 30 to 40 findings because four rounds of appendix "fixes" never edited the original wrong prose.
+**Why this matters for convergence:** Cold readers read linearly. If § 2.3 says X, they implement X — they will never find the correction in § 3.8. Each round's appendix becomes new surface area for the next round's agents to flag. Findings compound instead of subtracting. In one observed case, rounds 11→15 went from 30 to 40 findings because four rounds of appendix "fixes" never edited the original wrong prose.
 
 **Convergence diagnostic:** If round N+1 has more findings than round N, stop. The fix method is broken. Re-read every "fix" from round N. If any fix was an annotation rather than an in-place edit, convert it before launching the next round.
 
@@ -61,7 +61,7 @@ The scan output file is OVERWRITTEN on each invocation. Squad dirs are gitignore
 
 The output path MUST sit at the top level of the squad directory — never inside a `spec_rN/` subdir; the wrapper rejects nested paths with exit 3 because `safe-commit.sh`'s squad cleanup is flat (rm + rmdir).
 
-**What the scan flags (controlled vocabulary — 7 patterns).** These are the only artifact classes the scan is contracted to detect; full prompt definitions live in `~/.claude/scripts/codex-postfix-prompt.md`:
+**What the scan flags (controlled vocabulary — 7 patterns).** These are the only artifact classes the scan is contracted to detect; full prompt definitions live in `~/.claude/reference/codex-postfix-prompt.md`:
 
 1. **DUPLICATE PARAGRAPHS** — same sentence/paragraph copied into two places (often R{N} appendix vs original section).
 2. **APPEND-INSTEAD-OF-EDIT** — a "Consolidated fixes," "Bindings," "R{N} corrections," or "Appendix — RN fixes" section that describes what earlier sections should say instead of editing them.
