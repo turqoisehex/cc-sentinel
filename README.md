@@ -136,7 +136,7 @@ Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the lo
 Multi-model verification squad that independently audits work before any completion claim. Supports two architectures:
 
 - **Sonnet-only (5 agents):** Default when Codex CLI is not installed. Five Claude Sonnet agents with different adversarial perspectives run in parallel.
-- **Interleaved (up to 15 agents):** When OpenAI Codex CLI is available, runs 5 Sonnet + 5 Codex + conditional re-validation rounds. Architecturally diverse models find different classes of bugs, compressing typical 5-10 round verification cycles to ~2 rounds.
+- **Interleaved (up to 15 agents):** When OpenAI Codex CLI is available, runs 5 Sonnet + 5 Codex + conditional re-validation rounds. Architecturally diverse models find different classes of bugs -- issues one model misses, the other catches.
 
 | Agent | What It Catches |
 |---|---|
@@ -330,7 +330,7 @@ Claude's self-assessment of its own work is structurally unreliable. Cherny's wo
 
 > "Say 'Grill me on these changes and don't make a PR until I pass your test.'" -- Cherny
 
-**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Up to fifteen independent verification agents across two model architectures (Sonnet + Codex) audit in interleaved rounds -- architecturally diverse models find different bug classes, compressing verification cycles from 5-10 rounds to ~2. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
+**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Up to fifteen independent verification agents across two model architectures (Sonnet + Codex) audit in interleaved rounds -- architecturally diverse models find different bug classes that no single model catches alone. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
 
 ### Context is infrastructure, not conversation
 
