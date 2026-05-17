@@ -158,7 +158,7 @@ Gate: All PASS → Opus closure
 
 The `setup-codex.sh` / `setup-codex.ps1` scripts handle Codex CLI probe, install, and auth verification during installation. Codex is optional -- the system degrades gracefully to Sonnet-only when unavailable.
 
-The `stop-task-check.sh` hook fires when Claude tries to stop, requiring verification evidence before allowing completion claims through. Self-attestation ("I verified this") is explicitly rejected -- the hook checks for actual squad output files on disk. The `comment-replacement.sh` hook silently strips stale inline comments (TODO, FIXME, HACK) from edited files.
+The `stop-task-check.sh` hook fires when Claude tries to stop, requiring verification evidence before allowing completion claims through. Self-attestation ("I verified this") is explicitly rejected -- the hook checks for actual squad output files on disk. The `comment-replacement.sh` hook detects when code is replaced with comment placeholders (indicating incomplete work) and warns immediately.
 
 Commands: `/verify`, `/grill` (iterative self-challenge)
 
