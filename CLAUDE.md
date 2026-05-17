@@ -73,7 +73,50 @@ If Sprint Pipeline was selected, ask:
 
 Store the answer as `spawn_startup_delay`. Default 5 if the user skips or says "default."
 
-### Step 4c: Configure Permissions
+### Step 4c: Dual-Architecture Verification (if Verification module selected)
+
+If the Verification module was selected (directly or via dependency), ask:
+
+"Do you want dual-architecture verification? This runs OpenAI Codex agents alongside Claude Sonnet during verification rounds. Different model architectures catch different bug classes — typical verification converges in ~2 rounds instead of 5-10. Requires an OpenAI account with API access (Plus at $20/mo, Pro, Team, or an API key with credits)."
+
+Options: **Yes** / **No, Sonnet-only**
+
+**If No:** Skip to Step 4d. Codex is not installed; verification runs Sonnet-only.
+
+**If Yes:** Run the setup script immediately (no further configuration questions — but the flow may pause for user action like running `codex login`). The script probes, installs if needed, and tests auth:
+
+1. **Probe:** Run the platform-appropriate setup script:
+   - **macOS/Linux:** `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --probe-only`
+   - **Windows:** `powershell -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode ProbeOnly`
+
+2. **Handle probe result:**
+   - `STATUS: FOUND` → proceed to auth verification (step 3)
+   - `STATUS: NOT_FOUND` → attempt install:
+     - **macOS/Linux:** `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --install`
+     - **Windows:** `powershell -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode Install`
+   - Result handling:
+     - `STATUS: FOUND` or `STATUS: INSTALLED` → proceed to auth verification (step 3)
+     - `STATUS: INSTALL_NEED_SUDO` → tell user: "Codex needs elevated permissions to install globally. Run this, then press Enter:" and show the `CMD:` line prefixed with `! ` (e.g., `! sudo npm install -g @openai/codex`). Wait for user confirmation, then re-run `--probe-only` on the same platform script. If FOUND → proceed to auth verification (step 3). If still NOT_FOUND → bail: "Codex installation didn't complete. You can finish later with `npm install -g @openai/codex && codex login`." Skip to Step 4d.
+     - `STATUS: INSTALL_NO_NODE` → tell user: "Codex requires Node.js. Run this, then press Enter:" and show the `CMD:` line from output. After confirmation: re-run `--install`. If still `INSTALL_NO_NODE` → bail: "Node.js isn't visible in the current session. Restart Claude Code after installing Node, then re-run the installer." Skip to Step 4d.
+     - `STATUS: INSTALL_FAILED` → tell user: "Codex installation didn't complete. You can set this up later by running `npm install -g @openai/codex && codex login`. Continuing without dual-architecture verification." Skip to Step 4d.
+
+3. **Verify auth:**
+   - **macOS/Linux:** `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --verify-auth`
+   - **Windows:** `powershell -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode VerifyAuth`
+   - Result handling:
+     - `STATUS: AUTH_OK` → "Codex verified and working." Proceed to Step 4d.
+     - `STATUS: NOT_FOUND` → Codex binary not visible (stale PATH after install). Bail: "Codex installed but not visible in current session. Restart Claude Code, then re-run installer to complete setup." Skip to Step 4d.
+     - `STATUS: AUTH_FAILED` → tell user: "Codex needs authentication. Run this, then press Enter:" and show the `CMD:` line prefixed with `! ` (e.g., `! codex login`). This runs in the user's terminal via CC's `!` escape, which opens a browser for OAuth or prompts for an API key. After user confirms, re-run `--verify-auth`.
+     - Second auth failure → "Codex auth didn't complete. You can finish setup later with `codex login`. Continuing with Sonnet-only verification." Skip to Step 4d.
+
+**Design notes:**
+- Never loop more than once on any step. Two failures = bail gracefully.
+- The script handles OS-appropriate install paths internally.
+- `INSTALL_NEED_SUDO` is Unix-only (macOS/Linux). On Windows, npm global installs go to `%AppData%` — no elevation needed, so the Windows script never emits this status.
+- On macOS with Homebrew Node, no sudo needed. On Linux with system Node, sudo is typical.
+- User-action pauses are sequential: install confirmation first (re-probe to confirm), then auth if needed. This ensures each step's success is verified before proceeding. Aim for minimal pauses (typically 0–2 total), not batching commands that depend on each other's success.
+
+### Step 4d: Configure Permissions
 
 Before running the installer, add allow rules to the target settings.json so cc-sentinel scripts execute without manual approval. Without these, every hook and script triggers a permission prompt — defeating the purpose of automation.
 

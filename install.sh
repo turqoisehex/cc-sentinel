@@ -147,6 +147,7 @@ install_module() {
   if [[ -d "$module_dir/scripts" ]]; then
     for f in "$module_dir"/scripts/*.sh; do
       [[ ! -f "$f" ]] && continue
+      [[ "$(basename "$f")" == setup-* ]] && continue
       copy_file "$f" "${SCRIPTS_DIR}/$(basename "$f")"
       [[ "$DRY_RUN" != "true" ]] && chmod +x "${SCRIPTS_DIR}/$(basename "$f")"
     done

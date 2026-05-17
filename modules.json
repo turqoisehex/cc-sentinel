@@ -182,11 +182,13 @@
     },
     "verification": {
       "name": "Verification",
-      "description": "Up to 5-agent /verify squad, adversarial self-check, completion gate",
+      "description": "Multi-agent /verify squad (5 Sonnet, or 5+5+5 interleaved with Codex), adversarial self-check, completion gate",
       "required": false,
       "dependencies": [
         "core"
       ],
+      "install_scripts": ["setup-codex.sh", "setup-codex.ps1"],
+      "install_scripts_note": "Called during installation only (from repo path), not copied to destination",
       "files": {
         "hooks": [
           "stop-task-check.sh",

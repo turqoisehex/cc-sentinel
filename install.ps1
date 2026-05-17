@@ -125,7 +125,7 @@ function Install-Module($moduleName) {
     # Scripts
     $scriptsModDir = Join-Path $moduleDir "scripts"
     if (Test-Path $scriptsModDir) {
-        Get-ChildItem $scriptsModDir -Filter "*.sh" | ForEach-Object {
+        Get-ChildItem $scriptsModDir -Filter "*.sh" | Where-Object { $_.Name -notlike "setup-*" } | ForEach-Object {
             Copy-FileChecked $_.FullName (Join-Path $ScriptsDir $_.Name)
         }
     }
