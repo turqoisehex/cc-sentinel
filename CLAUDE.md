@@ -159,7 +159,25 @@ Options: **Yes** / **No, Sonnet-only**
 - **Never use `!` with `sudo`** — Claude Code's `!` prefix does not provide a PTY, so sudo cannot prompt for a password. Always direct the user to run sudo commands in a separate terminal.
 - User-action pauses are sequential: install confirmation first (re-probe to confirm), then auth if needed. This ensures each step's success is verified before proceeding. Aim for minimal pauses (typically 0–2 total), not batching commands that depend on each other's success.
 
-### Step 5: Run Installer
+### Step 5: Inject CLAUDE.md Rules
+
+Before running the installer (which installs governance hooks that protect CLAUDE.md), inject behavioral rules now while no hooks are active.
+
+Read `modules/core/claude-md-rules.md` from this repository and inject its contents into the user's CLAUDE.md:
+
+1. Check if `CLAUDE.md` exists in the target (project root or `~/.claude/`).
+2. If it exists, check if cc-sentinel rules are already present (search for `<!-- cc-sentinel rules start -->`).
+3. If not present, append the rules block wrapped in delimiters:
+
+```markdown
+<!-- cc-sentinel rules start -->
+[contents of claude-md-rules.md]
+<!-- cc-sentinel rules end -->
+```
+
+4. If CLAUDE.md doesn't exist, create it with the rules block.
+
+### Step 6: Run Installer
 
 Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, skills, or settings (on reinstall, locally-modified files are preserved; use `-ForceOverwrite` to replace them with canonical versions). It also auto-configures permissions so cc-sentinel scripts run without manual approval."
 
@@ -175,9 +193,9 @@ powershell -ExecutionPolicy Bypass -File "<this-repo-path>/install.ps1" -Modules
 bash "<this-repo-path>/install.sh" --modules "<selected>" --target "<target>"
 ```
 
-Replace `<this-repo-path>` with the absolute path to this cloned repository. For the initial install run, use only these arguments. Additional flags: `-DenyRules` / `--deny-rules` (Step 5c covers when to append this), `-ForceOverwrite` (forces replacement of locally-modified files — use when a previous install left stale files that should be updated to the canonical version). The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
+Replace `<this-repo-path>` with the absolute path to this cloned repository. For the initial install run, use only these arguments. Additional flags: `-DenyRules` / `--deny-rules` (Step 6c covers when to append this), `-ForceOverwrite` (forces replacement of locally-modified files — use when a previous install left stale files that should be updated to the canonical version). The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
 
-### Step 5b: Configure Spawn (if Sprint Pipeline selected)
+### Step 6b: Configure Spawn (if Sprint Pipeline selected)
 
 If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config. Substitute the actual integer for `N` before running:
 
@@ -203,7 +221,7 @@ Then run the setup command to auto-detect terminal and key sender:
 - **macOS/Linux:** `python3 ~/.claude/tools/spawn.py --setup`
 - **Windows:** `python ~/.claude/tools/spawn.py --setup`
 
-### Step 5c: Review .claudeignore
+### Step 6c: Review .claudeignore
 
 After the installer runs, tell the user:
 
@@ -238,24 +256,6 @@ If they accept, re-run the installer with `--deny-rules` appended to the command
 **macOS/Linux:** append `--deny-rules` to the bash command
 
 Do NOT include `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp`, `*.svg`, `*.pdf`, or `*.docx` — these are formats Claude can usefully read.
-
-### Step 6: Inject CLAUDE.md Rules
-
-After the installer completes, read `modules/core/claude-md-rules.md` and inject its contents into the user's CLAUDE.md.
-
-**Important:** If governance-protection was installed, the `PreToolUse:Edit` hook blocks direct Edit calls on CLAUDE.md. Use Bash with a file-append command instead (e.g., Python `pathlib` or PowerShell `Add-Content`). This is expected — the hook protects CLAUDE.md from casual edits, but the installer must write rules during initial setup.
-
-1. Check if `CLAUDE.md` exists in the target (project root or `~/.claude/`).
-2. If it exists, check if cc-sentinel rules are already present (search for `<!-- cc-sentinel rules start -->`).
-3. If not present, append the rules block wrapped in delimiters:
-
-```markdown
-<!-- cc-sentinel rules start -->
-[contents of claude-md-rules.md]
-<!-- cc-sentinel rules end -->
-```
-
-4. If CLAUDE.md doesn't exist, create it with the rules block.
 
 ### Step 7: Plugin Suggestions
 
