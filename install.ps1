@@ -217,7 +217,7 @@ function Install-ContextAwareness {
                 $config | Add-Member -NotePropertyName "statusline" -NotePropertyValue @{} -Force
             }
             $config.statusline | Add-Member -NotePropertyName "bar_style" -NotePropertyValue $BarStyle -Force
-            $config | ConvertTo-Json -Depth 10 | Set-Content $configPath
+            $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
         }
     }
 
@@ -287,7 +287,7 @@ function Merge-Settings {
     # Create settings.json if needed
     $settingsDir = Split-Path -Parent $SettingsFile
     if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
-    if (-not (Test-Path $SettingsFile)) { '{}' | Set-Content $SettingsFile }
+    if (-not (Test-Path $SettingsFile)) { '{}' | Set-Content $SettingsFile -Encoding UTF8 }
 
     try {
         $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
@@ -392,7 +392,7 @@ function Merge-Settings {
         }
     }
 
-    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile
+    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
     Log "Settings merged: $SettingsFile"
 }
 
@@ -451,7 +451,7 @@ function Configure-Permissions {
         }
     }
 
-    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile
+    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
 
     if ($added.Count -gt 0) {
         foreach ($r in $added) {
@@ -496,7 +496,7 @@ function Configure-DenyRules {
         }
     }
 
-    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile
+    $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
 
     if ($added.Count -gt 0) {
         foreach ($r in $added) {
@@ -544,7 +544,7 @@ function New-Claudeignore {
                 Log "  Appended to existing .claudeignore"
             }
         } else {
-            $content | Set-Content ".claudeignore"
+            $content | Set-Content ".claudeignore" -Encoding UTF8
             Log "  Created .claudeignore"
         }
     }
@@ -620,7 +620,7 @@ if ($Target -eq "global" -and -not $DryRun) {
             $content = Get-Content $_.FullName -Raw
             if ($content -match "bash scripts/") {
                 $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
-                $content | Set-Content $_.FullName -NoNewline
+                $content | Set-Content $_.FullName -NoNewline -Encoding UTF8
                 Log "  Updated paths in: $($_.Name)"
             }
         }
@@ -634,7 +634,7 @@ if ($Target -eq "global" -and -not $DryRun) {
                 $content = Get-Content $skillFile -Raw
                 if ($content -match "bash scripts/") {
                     $content = $content -replace "bash scripts/", "bash ~/.claude/scripts/"
-                    $content | Set-Content $skillFile -NoNewline
+                    $content | Set-Content $skillFile -NoNewline -Encoding UTF8
                     Log "  Updated paths in: skills/$($_.Name)/SKILL.md"
                 }
             }
