@@ -208,7 +208,19 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     [[ ! -d "$SQUAD_DIR" ]] && continue
     SQUAD_TAG="$(basename "$SQUAD_DIR")"
 
-    # Scope check: only examine squad dirs belonging to active channels
+    # Hard channel isolation (primary gate): channeled sessions only check
+    # their own channel's squad dirs; unchanneled sessions only check
+    # unchanneled squad dirs. Prevents cross-channel blocking entirely.
+    if [[ -n "$HOOK_CHANNEL" ]]; then
+      [[ "$SQUAD_TAG" != squad_ch${HOOK_CHANNEL}_* ]] && continue
+    else
+      # Unchanneled: skip any channeled squad dir
+      [[ "$SQUAD_TAG" == squad_ch[0-9]* ]] && continue
+      # Also skip unchanneled squad dirs unless there's active unchanneled work
+      [[ "$HAS_UNCHANNELED_ACTIVE" == "false" ]] && continue
+    fi
+
+    # Secondary scope check via ACTIVE_FILES (handles multi-channel edge cases)
     SQUAD_ALLOWED="false"
     if [[ ${#SQUAD_PATTERNS[@]} -gt 0 ]]; then
       for sp in "${SQUAD_PATTERNS[@]}"; do
@@ -218,7 +230,6 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
         fi
       done
     fi
-    # Unchanneled active: allow squad dirs that don't match any channel pattern
     if [[ "$HAS_UNCHANNELED_ACTIVE" == "true" ]] && [[ "$SQUAD_TAG" != squad_ch[0-9]* ]]; then
       SQUAD_ALLOWED="true"
     fi
@@ -303,12 +314,17 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   NOW=$(date +%s) || exit 0
   STALE_FILES=""
   for tf in "${ACTIVE_FILES[@]}"; do
+    FNAME="$(basename "$tf")"
+    # Channeled sessions own their channel CT — skip shared CT staleness check
+    # to avoid forcing shared CT writes that bloat the shared index.
+    if [[ -n "$HOOK_CHANNEL" ]] && [[ "$FNAME" == "CURRENT_TASK.md" ]]; then
+      continue
+    fi
     FILE_MTIME=$(stat -c %Y "$tf" 2>/dev/null || stat -f %m "$tf" 2>/dev/null) || continue
     FILE_MTIME=$(echo "$FILE_MTIME" | tr -d '\r')
     DIFF=$((NOW - FILE_MTIME)) || continue
     if [[ "$DIFF" -ge 120 ]]; then
       CH=$(get_channel "$tf")
-      FNAME="$(basename "$tf")"
       if [[ -n "$CH" ]]; then
         STALE_FILES="${STALE_FILES} ${FNAME} (ch${CH}, ${DIFF}s)"
       else
@@ -325,7 +341,11 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   # session can always stop on its second attempt.
 
   if [[ -n "$STALE_FILES" ]]; then
-    REASON="Active CT file(s) not updated in the last 2 minutes:${STALE_FILES}. Before stopping: update your Completed Steps with what you did, and update Status if the task is done. Do NOT clear or rewrite — only add progress. Then stop again."
+    if [[ -n "$HOOK_CHANNEL" ]]; then
+      REASON="Active CT file(s) not updated in the last 2 minutes:${STALE_FILES}. Before stopping: append a brief status line to your channel CT (what you completed, what's next). Do NOT clear, rewrite, or remove completed steps — history stays intact. Then stop again."
+    else
+      REASON="Active CT file(s) not updated in the last 2 minutes:${STALE_FILES}. Before stopping: add a brief status line (what you completed, current status). Do NOT clear or rewrite from scratch. Then stop again."
+    fi
     REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
     echo "  -> BLOCK (stale:${STALE_FILES})" >> "$LOGFILE" 2>/dev/null
     echo "{\"decision\": \"block\", \"reason\": ${REASON_JSON}}"

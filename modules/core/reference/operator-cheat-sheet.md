@@ -14,13 +14,13 @@ Quick reference for running CC sessions with cc-sentinel governance.
 | Quality | `/perfect` | `/4` | Evaluate → simplify or rewrite → grill → verify → prove correctness |
 | Finalize | `/finalize` | `/5` | Review, prove, close out, reset |
 
-## Utility Skills
+## Utility Commands
 
 | Command | What it does |
 |---------|-------------|
 | `/opus N` | Set channel for multi-Opus parallel sessions |
 | `/grill` | Adversarial self-check (4 questions, verify each) |
-| `/verify [scope]` | up to 5-agent verification (default/full/last N/since/on) |
+| `/verify [scope]` | multi-model verification squad (default/full/last N/since/on) |
 | `/cold` | Prepare CURRENT_TASK.md for cold start |
 | `/sonnet` | Verification listener (duo mode only — run in Sonnet terminal) |
 | `/rewrite` | Ground-up rewrite of a subsystem |
@@ -29,7 +29,6 @@ Quick reference for running CC sessions with cc-sentinel governance.
 | `/status` | Phase, progress, blockers, context usage |
 | `/cleanup` | End-of-session housekeeping |
 | `/self-test` | Verify installation integrity |
-| `/spawn` | Launch parallel sessions (opus/sonnet/duo) |
 
 ---
 
@@ -80,7 +79,8 @@ Each channel pair is isolated: Opus N dispatches to `_pending_sonnet/chN/`, Sonn
 |------|---------|
 | `CURRENT_TASK.md` | Session state — read first after every compaction |
 | `CLAUDE.md` + `.claude/rules/` | Always-loaded rules |
-| `.claude/skills/*/SKILL.md` | Slash commands and model-callable skills (YAML frontmatter: `name`, `description`) |
+| `.claude/skills/*/SKILL.md` | Model-callable skills (require YAML frontmatter: `name`, `description`) |
+| `.claude/commands/` | User-invocable slash commands (no YAML frontmatter needed) |
 | `.claude/agents/` | Agent definitions (no YAML frontmatter) |
 | `.claude/reference/` | On-demand docs |
 | `verification_findings/` | Ephemeral squad/agent output (gitignored) |
@@ -91,15 +91,15 @@ Each channel pair is isolated: Opus N dispatches to `_pending_sonnet/chN/`, Sonn
 
 | Term | Meaning |
 |------|---------|
-| **TaskCreate** | Claude Code's built-in task tracking tool. Skills use "TaskCreate every step" to mean: create a checklist of tasks and mark them in_progress → completed as you go. |
+| **TaskCreate** | Claude Code's built-in task tracking tool. Commands use "TaskCreate every step" to mean: create a checklist of tasks and mark them in_progress → completed as you go. |
 | **CT** | CURRENT_TASK.md — the session state file. |
-| **Squad** | The verification squad — up to 5 agents (mechanical, adversarial, completeness, dependency, cold reader). Performance checks integrated into mechanical. Invoked via `/verify`. |
+| **Squad** | The verification squad — 5 Sonnet agents (baseline) + 5 Codex agents (interleaved when Codex available) + 5 Opus agents (closure). Invoked via `/verify`. |
 
 ---
 
 ## Governance Edits
 
-Protected files: CLAUDE.md, skills, agents, rules.
+Protected files: CLAUDE.md, slash commands, agents, rules.
 
 1. Add `GOVERNANCE-EDIT-AUTHORIZED` as standalone line in `CURRENT_TASK.md`
 2. Edit the protected file
@@ -111,11 +111,11 @@ Protected files: CLAUDE.md, skills, agents, rules.
 
 ```bash
 # Normal (verification + tests)
-bash scripts/channel_commit.sh --files "file1 file2" -m "message"
+bash ~/.claude/scripts/channel_commit.sh --files "file1 file2" -m "message"
 
 # Skip squad (WIP/intermediate commits)
-bash scripts/channel_commit.sh --files "file1 file2" -m "message" --skip-squad
+bash ~/.claude/scripts/channel_commit.sh --files "file1 file2" -m "message" --skip-squad
 
 # Channel-specific
-bash scripts/channel_commit.sh --channel N --files "file1 file2" -m "message"
+bash ~/.claude/scripts/channel_commit.sh --channel N --files "file1 file2" -m "message"
 ```

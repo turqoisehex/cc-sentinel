@@ -31,7 +31,7 @@ Your channel is determined by **session context**, not a file:
 4. **YAML output_path:** Write channeled paths into `agents[].output_path` in prompt frontmatter.
 5. **Script invocations:**
    ```bash
-   bash scripts/channel_commit.sh --channel N --files "f1 f2" -m "message"
+   bash ~/.claude/scripts/channel_commit.sh --channel N --files "f1 f2" -m "message"
    ```
 6. **wait_for_results.sh (duo mode):** Pass channeled file paths as arguments.
 
@@ -56,7 +56,7 @@ Resolve before running. Unchanneled: omit bracketed portion.
 Public commit API for all sessions.
 
 ```bash
-bash scripts/channel_commit.sh --channel N --files "f1 f2" -m "message" [--skip-squad] [--skip-tests] [--local-verify] [--governance]
+bash ~/.claude/scripts/channel_commit.sh --channel N --files "f1 f2" -m "message" [--skip-squad] [--skip-tests] [--local-verify] [--governance]
 ```
 
 Handles: staging lock, diff capture, Sonnet dispatch, validation, retry, tests, safe-commit.
@@ -66,7 +66,7 @@ Handles: staging lock, diff capture, Sonnet dispatch, validation, retry, tests, 
 | Work | Type | Executed by |
 |------|------|-------------|
 | Check staged diff before commit | `commit-verification` | Parallel agents (read-only) |
-| Verify work product (up to 5-agent squad) | `squad` | Parallel agents (read-only) |
+| Verify work product (verification squad — 5 Sonnet minimum + Codex interleaved) | `squad` | Parallel agents (read-only) |
 | Edit code, create files, run tests | `implementation` | One agent per task (full access) |
 
 ## Git Conflict Resolution
@@ -84,5 +84,5 @@ When channel work conflicts with main or another channel:
 
 - **Self-dispatch deadlock:** Sonnet cannot consume prompts it writes.
 - **CT race condition:** `.commit_active` prevents concurrent file modifications.
-- **Heartbeat:** `wait_for_work.sh` spawns a background heartbeat process (writes `.heartbeat` every 3s, PID in `.heartbeat_pid`). Background process survives after work is found and self-terminates when the listener session exits (PPID polling). Stale >300s (5 min) = warning; >900s (15 min) = switch to local verification.
+- **Heartbeat:** `wait_for_work.sh` spawns a background heartbeat process (writes `.heartbeat` every 3s, PID in `.heartbeat_pid`). Background process survives after work is found and self-terminates when the listener session exits (PPID polling). Stale >30s = warning.
 - **Cross-channel squad leak:** Squad directories from one channel could theoretically satisfy another channel's completion gate if both are active simultaneously. The stop hook scopes checks to active CT files to mitigate this.

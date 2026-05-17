@@ -4,24 +4,26 @@
 
 ### The Five Agents
 
-Launch all applicable agents in parallel (`run_in_background: true`). Write to `squad_opus/` or `squad_sonnet/` (per session-bound dirs rule below). Smart filtering may reduce the set — see `/verify` SKILL.md for filtering rules.
+Launch all applicable agents in parallel (`run_in_background: true`). Write to `squad_opus/` or `squad_sonnet/` (per session-bound dirs rule below).
 
 | Agent | File | What It Catches |
 |---|---|---|
-| Mechanical Auditor | `mechanical.md` | Wrong file paths, constants, enum values, counts, **API signatures**, **O(n²)+, N+1 queries, unbounded memory** — anything greppable or measurable against disk |
+| Mechanical Auditor | `mechanical.md` | Wrong file paths, constants, enum values, counts, **API signatures**, **O(n²)+, N+1 queries, unbounded memory**, **seam mismatches** (caller passes value callee doesn't handle) — anything greppable or measurable against disk |
 | Adversarial Reader | `adversarial.md` | **Spec sanity (hallucinated content)**, contradictions, rule violations, impossible instructions, charity bias |
-| Completeness Scanner | `completeness.md` | Missing requirements, unassigned items, spec gaps. **Sequential batches of 7 for >20 items.** |
+| Completeness Scanner | `completeness.md` | Missing requirements, unassigned items, spec gaps, **empty-output silent failures** (compose/select returns empty, no handler). **Sequential batches of 7 for >20 items.** |
 | Dependency Tracer | `dependency.md` | **Missing migrations, silent default changes, untraced call sites** — every change traced one level out |
-| Cold Reader | `cold_reader.md` | **Semantic errors invisible to the author** — nonsense, broken/dead instructions, orphaned context, stale language. Reads with zero intent knowledge. |
+| Cold Reader | `cold_reader.md` | **Semantic errors invisible to the author** — nonsense, broken/dead instructions, orphaned context, stale language, **end-to-end path breaks** (data contract mismatches across function boundaries). Reads with zero intent knowledge. |
 
 Each agent MUST end with `VERDICT: PASS`, `VERDICT: WARN` + issue count, or `VERDICT: FAIL` + issue count. WARN indicates issues found but none severe enough to block — the commit gate treats WARN as passing.
+
+Codex-adapted versions of each role prompt: `~/.claude/reference/codex-verification-prompts.md`
 
 ### Rules
 
 1. **All agents must PASS or WARN** before claiming completion. Any FAIL → fix issues → re-run only the failed agent(s).
 2. **After fixing ANY agent FAIL, re-read ALL agent output files** before declaring the round resolved. Fixing one agent's issues does not resolve others — a different agent may have caught a separate problem in the same round. Never assume one fix covers all agents.
 3. **Missing VERDICT = FAIL.** If any agent output file lacks a `VERDICT:` line, treat it as FAIL. Re-read the full content and action all findings. Malformed output masks real issues.
-4. **Max 3 rounds.** Initial run + 2 re-runs. If any agent still FAILs after round 3: stop fixing. Delete the squad directory. Write remaining issues to CURRENT_TASK.md with `VERIFICATION_BLOCKED` marker and present to user with the list of unresolved issues and recommended actions. Do not attempt further autonomous fixes — remaining issues likely require design judgment.
+4. **Max 5 Sonnet rounds (interleaved with Codex when available) + 1 Opus closure round.** If any agent still FAILs after the cap: stop fixing. Write VERIFICATION_BLOCKED + remaining issues to CT and surface to user (per SKILL.md). Do not attempt further autonomous fixes — remaining issues likely require design judgment.
 5. **After all launched agents PASS or WARN:** Write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md. Note: this is documentation only — hooks do NOT accept it as enforcement evidence. Only actual squad files satisfy the commit gate.
 6. **Squad files are ephemeral.** Gitignored. The commit hook cleans only COMPLETED squad directories (all expected files with VERDICT: PASS or WARN) after successful commit. In-progress or failed directories from other sessions are left untouched.
 7. **Replaces ad-hoc verification.** No extra agents unless Squad flags areas needing deeper investigation.
@@ -51,6 +53,38 @@ Everything else → Squad required. The commit hook hard-blocks non-exempt files
 - **SCOPE_SUMMARY**: One sentence
 - **SQUAD_DIR**: `squad_opus/` or `squad_sonnet/`. Channeled: `squad_chN_opus/` or `squad_chN_sonnet/`. Replace in all prompts below. The commit hook cleans on all-PASS/WARN commit.
 
+## Severity Calibration (applies to all agents)
+
+When deciding FAIL / WARN / INFO, optimize for implementer cost:
+
+- **FAIL** = would cause wrong code to ship, or renders a task unimplementable.
+- **WARN** = implementer would have to guess or re-verify before acting.
+- **INFO** = cosmetic, narrative, or redundantly-verifiable discrepancies.
+
+Line-number citations are **INFO** (not WARN) when ANY of these hold:
+1. A nearby identifier or string-literal grep anchor lets the reader re-locate the target by name.
+2. The citation is marked approximate (`~L9737`, "around line X", "pre-insertion").
+3. The citation is informational (navigation breadcrumb, not an AC grep target).
+
+Line numbers ARE **WARN/FAIL** when:
+1. They appear inside an acceptance-criteria grep command (stale line breaks the AC).
+2. They are the ONLY navigation breadcrumb and the file is large enough that readers cannot scan.
+3. The drift is >100 lines (implementer will be in the wrong function, not the wrong spot).
+
+When in doubt between WARN and INFO → INFO. WARN triggers another verification round; only raise WARN when the implementer would genuinely struggle without the fix.
+
+### Durable-artifact citations — the drift treadmill
+
+When a verifier finding points at a stale line reference *inside a durable artifact* (spec, extraction doc, fidelity audit, field-consumption audit, SC, CIP, CT cold-start), DO NOT propose a new line number as the fix. A new line number will rot the same way on the next code edit, and the next verification round will re-flag it.
+
+Instead:
+- Fix instruction = replace `file:L\d+` with a symbolic address per `.claude/reference/audit-pointer-rules.md`.
+- Severity = WARN (real drift to fix) on the citation-format class; each re-flag at a different line number is the SAME finding, not a new one.
+
+Rule of thumb: if two consecutive verification rounds flag line-ref staleness in the same artifact, the next fix must strip line numbers from that artifact, not update them. See `audit-pointer-rules.md` for the forbidden surfaces, symbolic-address formats, and rationale.
+
+Verifier agents themselves may still cite lines as **evidence in their own verdict files** (squad verdict files are ephemeral — read once, replaced next round). The prohibition is on emitting line refs into durable artifacts.
+
 ---
 
 ## Agent 1: Mechanical Auditor
@@ -75,7 +109,7 @@ SCOPE: [paste one-sentence scope]
    - File paths: Glob. If not found, search for actual location.
    - Names/constants: Grep `src/` or `lib/` for exact string.
    - Counts: actually count (grep + wc, or read and count).
-   - Line refs: Read file at that line.
+   - Line refs: INFO by default. Promote to WARN only if (a) the line is inside an AC grep command, (b) it is the sole navigation breadcrumb in a large file, OR (c) the drift is >100 lines (reader lands in the wrong function). When raising above INFO, cite the grep anchor the reader would actually use instead of the line number.
    - **Method/API calls: find the DEFINITION** (not usage). Verify parameters (names, types, count), return type. External libs: context7 MCP or grep `.pub-cache/`.
    - **Enum/constant values: verify actual value**, not just name exists. Count members. Read definitions.
 
@@ -118,7 +152,7 @@ Claimed, found, searched
 - Verify every instance updated — not just the ones the work product mentions
 - Check implementation matches surrounding code style (naming, structure, error handling)
 
-**Pre-commit diff scan:**
+**Step 10 — Pre-commit diff scan (step numbers reference `.claude/reference/spec-verification.md`):**
 - Review staged changes for out-of-scope file modifications
 - Flag any file changed that is not mentioned in the work product or task scope
 
@@ -133,9 +167,23 @@ Claimed, found, searched
 - Mark: `[P]` PERFORMANCE_ISSUE (CRITICAL/HIGH only), `[OK]` CHECKED_CLEAN.
 - Only CRITICAL (O(n²)+, unbounded memory, N+1, sync blocking async) and HIGH (missing batching, lock contention, hot-path allocations, redundant I/O) are reported.
 
+**Seam checking — cross-seam string verification (cross-boundary integration):**
+
+This check catches the highest-value bug class: a string literal passed as a tag, filter, key, or enum argument that has NO matching entry in the receiving system. These bugs compile, pass unit tests, and silently produce empty results or dead branches at runtime.
+
+**Step 1 — Enumerate cross-seam strings:** For every function call in the work product that passes a string constant, set literal, or enum value as an argument to another module, build a table: `(caller_file, argument_name, string_value, callee_function)`.
+
+**Step 2 — Verify against code branches:** For each string in the table, grep the callee for switch/case/if branches, map keys, or filter predicates that match the exact string. A string with zero matches in callee code is a candidate SEAM_MISMATCH.
+
+**Step 3 — Verify against data sources:** If the callee is data-driven (queries a database, seeder, config, or registry rather than using hard-coded branches), grep the DATA SOURCE for entries matching the string. A callee that filters `tags['position'] == requiredPosition` is only as good as the data — if no seeder entry has `position: 'any'` but the caller passes `'any'`, the filter matches nothing. This step is what catches bugs invisible to callee-code-only checking.
+
+**Step 4 — Verify map/dict key access:** For every `map[key]` or `tags['field']` access, verify the key exists in the data structure being populated. Check for name mismatches (e.g., `goodForTags` populated but `tags['goodFor']` read).
+
+Mark: `[S]` SEAM_VERIFIED, `[X]` SEAM_MISMATCH (cite caller:line → callee/data:line, expected vs actual value, zero-match evidence).
+
 **Two-layer verification:** After finding issues, challenge each one. Is this a real violation or a false positive? Discard false positives before reporting. Only genuine issues count toward VERDICT.
 
-VERDICT is PASS only if Issues = 0 AND no CRITICAL performance issues. `[X]` (unverified) = FAIL. `[~]` (approximate) = FAIL if the difference is material (wrong count, wrong type); PASS if cosmetic. `[P]` CRITICAL = FAIL. `[P]` HIGH = WARN. State reasoning for each `[~]`.
+VERDICT is PASS only if Issues = 0 AND no CRITICAL performance issues. `[X]` (unverified) = FAIL. `[~]` (approximate) = FAIL if the difference is material (wrong count, wrong type); PASS if cosmetic. `[P]` CRITICAL = FAIL. `[P]` HIGH = WARN. `[X]` SEAM_MISMATCH = FAIL. State reasoning for each `[~]`.
 ```
 
 ---
@@ -269,7 +317,13 @@ SCOPE: [paste one-sentence scope]
 
 6. Reverse check: work product items NOT in spec → `[U]` UNSPECIFIED (flag, don't FAIL).
 
-7. Write via atomic protocol: `.tmp` then `mv -f` to final path.
+7. **Empty-output / silent-failure check:**
+   - For every `recommend()`, `compose()`, `select()`, `filter()`, `query()`, or similar call that returns a list/collection: trace what happens when it returns EMPTY. Is the empty case handled, or does it silently produce a session/screen/widget with missing slots?
+   - For every slot-filling loop (e.g., "fill 5 slots from candidates"): what happens when candidates < slots? Does it degrade gracefully, throw, or silently produce a partial result?
+   - Mark: `[E]` EMPTY_HANDLED (cite guard), `[E!]` EMPTY_UNHANDLED (describe silent failure path).
+   - `[E!]` = GAP (counts toward FAIL).
+
+8. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
 VERDICT: PASS | WARN (N issues) | FAIL (N issues)
@@ -395,7 +449,7 @@ Output: `verification_findings/SQUAD_DIR/cold_reader.md`
 ```
 CONSTRAINT: You are READ-ONLY. Use only Read, Glob, Grep, and Bash (read-only commands only — no write, delete, or modify operations). Do not use Write, Edit, or MultiEdit. Your job is to find problems, not fix them.
 
-Read the work product AS IF YOU HAVE NEVER SEEN IT BEFORE with ZERO KNOWLEDGE of intent. You are the most important agent — the only one that reads cold. The other four verify with knowledge of intent.
+Read the work product AS IF YOU HAVE NEVER SEEN IT BEFORE with ZERO KNOWLEDGE of intent. You are the most important agent — the only one that reads cold. The other agents verify with knowledge of intent.
 
 WORK PRODUCT: [paste path(s)]
 SCOPE: [paste one-sentence scope]
@@ -424,24 +478,69 @@ SCOPE: [paste one-sentence scope]
 
 4. For CODE files: What does each function ACTUALLY do (not what comments say)? Flag comment-code mismatches. Check: default values sensible without caller context? Error messages accurate?
 
-   **TRACE DISCIPLINE (mandatory for any scope involving runtime behavior, timing, pacing, effects, or parameter-driven code):**
+5. **End-to-end path trace (for code changes):**
+   - Pick ONE user-visible path that the work product touches (e.g., "user taps Surprise Me → session plays"). Trace it from UI tap to final screen.
+   - Name every function called and every data value passed at each boundary.
+   - At each handoff, verify: does the caller's output type/shape/field names match the callee's expected input? Flag any point where the data contract between caller and callee doesn't match (field name mismatch, value set mismatch, type mismatch, missing null check).
+   - Mark: `[PATH_OK]` traced clean, `[PATH_BREAK]` contract mismatch at boundary (cite caller → callee, expected vs actual).
+   - This catches "seam bugs" — code that compiles and passes unit tests but fails when functions are actually composed, because the caller and callee disagree about field names, value sets, or data shapes.
 
-   "Params match spec" is NOT coverage. Design intent in comments, names, or surrounding prose is NOT coverage. The only thing that counts is: **what does the consumer actually do with these inputs at runtime?**
+6. **UX Journey Trace (MANDATORY when work product includes presentation/domain/engine code)**
 
-   For each parameter the work product declares, and for each parameter the consumer reads:
-   - List both sets as flat lists.
-   - Any parameter the consumer reads that the work product does NOT declare → identify the silent fallback value, then trace the runtime behavior that fallback produces, and compare against the source/spec requirement. A parameter set that is spec-faithful but routes into an unintended fallback branch is a FAIL, not a PASS.
-   - Any parameter the work product declares that the consumer does NOT read → orphan declaration, flag as DEAD.
+   When the work product includes ANY file under `lib/presentation/`, `lib/domain/`, or files that implement user-facing behavior (engines, state machines, providers that drive UI), walk the user journey step by step:
 
-   For design intent expressed as "this is X-type, therefore Y doesn't apply" (e.g., "this is rate-based, no per-cycle timing applies") — verify the consumer actually implements that classification. If the consumer has one code path that reads Y and falls back when absent, the classification is aspirational, not implemented. FAIL.
+   **6a. Identify the entry point.** How does the user arrive at this feature? What screen, what tap, what navigation path?
 
-   Do NOT write "matches source" or "MATCH" as a verdict for a fidelity/timing/pacing scope without having read the consumer's code and traced the numeric runtime behavior. "Source says 1s/breath, code declares 1s/breath" is a text match, not a trace. The trace question is: "given these parameter values, what numbers does the state machine / engine / renderer produce at runtime?" Answer that question with code citations, or the finding is UNVERIFIED and the verdict is FAIL.
+   **6b. Walk each interaction step in user time.** At each step:
+   - What is on screen right now? Read the widget tree.
+   - What can the user tap? Trace each button's handler. Connected or dead?
+   - What audio is playing?
+   - What happens when this step ends? Trace the completion condition.
 
-   If a spec or source specifies a numeric value (seconds, breaths/min, pixels, bytes, etc.) and you cannot produce the corresponding runtime number by tracing the code, that is a gap — FAIL. "The engine handles it correctly" is an assumption, not a finding.
+   **6c. Walk the seams:**
+   - Exercise → exercise: advancement trigger, cleanup, next load
+   - Round → round: counter increment, UI reset
+   - Pause → resume: state preservation, timer restart vs continue
+   - Session completion: final screen, navigation, session recording
+   - Background → foreground (only if work product handles lifecycle)
 
-5. **ONLY AFTER steps 1-4:** Read spec (if provided). Flag every gap between "what it says" and "what it should say."
+   **6d. Hunt for silent nothing:**
+   - Provider/stream not listened to (state advances, screen doesn't update)
+   - Conditional that never fires (wrong enum, null check on non-null)
+   - Timer created but never started
+   - Event emitted to wrong stream
+   - Disposed before use
 
-6. Write via atomic protocol: `.tmp` then `mv -f` to final path.
+   **6e. Check the numbers:**
+   - Initial value, final value, direction, update rate, behavior at zero/max
+
+   **Severity calibration:**
+   | Pattern | Severity | Rationale |
+   |---------|----------|-----------|
+   | Button visible but handler disconnected/null | FAIL | User sees affordance, taps it, nothing happens. Broken trust. |
+   | Timer/counter never starts or never completes | FAIL | Feature hangs indefinitely with no user escape. |
+   | State machine advances but UI doesn't update | FAIL | Silent nothing — user stares at stale screen. |
+   | Exercise ends but next doesn't load | FAIL | Session dead-ends. User must force-quit. |
+   | Audio continues after feature ends | WARN | Confusing but feature still completes. |
+   | Counter counts wrong direction | WARN | Disorienting but user can still finish. |
+   | Pause/resume loses partial progress | WARN | Frustrating but recoverable by restarting. |
+   | Missing completion screen | LOW | Feature works; polish gap only. |
+
+   **Output format (append after ## Detail):**
+   ## UX Journey Trace
+   ### Feature: [name]
+   **Entry:** [how user arrives]
+   **Step N:** [interaction]
+   - Screen state / Available actions / Completion trigger / Audio
+   - [V] / [X] / [~] evidence
+   **Seam: [name]** — [V] / [X] / [~]
+   **Silent-nothing scan:** — per category [V] / [X]
+
+   For spec-only work products (no code): replace with "UX trace: N/A — spec-only work product."
+
+7. **ONLY AFTER steps 1-6:** Read spec (if provided). Flag every gap between "what it says" and "what it should say."
+
+8. Write via atomic protocol: `.tmp` then `mv -f` to final path.
 
 ```
 VERDICT: PASS | WARN (N issues) | FAIL (N issues)
@@ -470,15 +569,15 @@ What it literally says, why wrong/broken/stale, evidence
 
 **False positive management:** After finding issues, challenge each one. Re-read in full context. Discard only if the context WITHIN THE DOCUMENT (not your background knowledge) resolves the ambiguity. If resolution requires knowing the author's intent, it stays as a finding.
 
-VERDICT is PASS only if Total issues = 0.
+VERDICT is PASS only if Total issues = 0 AND no `[PATH_BREAK]` findings. A `[PATH_BREAK]` is always FAIL — seam bugs are invisible to unit tests and only surface in production.
 ```
 
 ---
 
 ## After All Launched Agents Complete
 
-1. Read **every** launched agent output file (may be fewer than 5 if smart filtering was applied)
+1. Read **every** launched agent output file
 2. For each file: confirm it contains a `VERDICT:` line. Missing VERDICT → treat as FAIL, re-read full content, action all findings.
 3. If ALL PASS or WARN: write `VERIFICATION_PASSED` + one-line summary to CURRENT_TASK.md (documentation only — hooks do NOT accept this as enforcement evidence; only the actual squad files satisfy the commit gate)
 4. If ANY FAIL: fix the issues, **then re-read ALL agent outputs** (not just the failed agent's), then re-run ONLY the failed agent(s). A fix for one agent's finding does not resolve findings from other agents.
-5. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`, `squad_chN_opus/`) are cleaned up automatically by the commit hook after a successful commit
+5. Squad files (e.g., `squad_opus/`, `squad_sonnet/`, `squad_chN_sonnet/`) are cleaned up automatically by the commit hook after a successful commit

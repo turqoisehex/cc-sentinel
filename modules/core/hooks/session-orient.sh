@@ -20,17 +20,19 @@ done
 
 [[ -z "$PROJECT_DIR" ]] && exit 0
 
-# Clean stale prompt files from _pending_sonnet/ and _pending_opus/ (older than 1 hour)
-# Also clean stale .active files (older than 30 minutes — crashed session)
+# Clean stale .active files from both pending dirs (>30 min = crashed session).
+# Clean stale .md prompt files from _pending_sonnet/ only (>1 hour = listener crashed).
+# NEVER clean .md files from _pending_opus/ — those are cross-session dispatches
+# that persist until the target Opus session consumes them. Manual cleanup via /cleanup.
 for pending_base in "_pending_sonnet" "_pending_opus"; do
   PENDING_PATH="$PROJECT_DIR/verification_findings/$pending_base"
   if [[ -d "$PENDING_PATH" ]]; then
-    find "$PENDING_PATH/" -name "*.md" -mmin +60 -delete 2>/dev/null
+    [[ "$pending_base" == "_pending_sonnet" ]] && find "$PENDING_PATH/" -name "*.md" -mmin +60 -delete 2>/dev/null
     find "$PENDING_PATH/" -name ".active" -mmin +30 -delete 2>/dev/null
   fi
   for chdir in "$PENDING_PATH"/ch*/; do
     if [[ -d "$chdir" ]]; then
-      find "$chdir" -name "*.md" -mmin +60 -delete 2>/dev/null
+      [[ "$pending_base" == "_pending_sonnet" ]] && find "$chdir" -name "*.md" -mmin +60 -delete 2>/dev/null
       find "$chdir" -name ".active" -mmin +30 -delete 2>/dev/null
     fi
   done
@@ -66,7 +68,7 @@ if [[ -n "$ACTIVE_CHANNELS" ]] || [[ "$SHARED_ACTIVE" == "true" ]]; then
   if [[ "$SHARED_ACTIVE" == "true" ]]; then
     MSG="${MSG} Shared CURRENT_TASK.md also has active unchanneled work."
   fi
-  MSG="${MSG} Resume from where the previous session left off."
+  MSG="${MSG}Resume from where the previous session left off."
   # Escape for JSON
   MSG_ESCAPED=$(printf '%b' "$MSG" | jq -Rs '.' | tr -d '\r')
   echo "{\"additionalContext\": ${MSG_ESCAPED}}"

@@ -192,7 +192,13 @@ else
   if [[ -f "pubspec.yaml" ]]; then
     echo "Running Flutter tests..." >&2
     TEST_RAN="true"
-    flutter test > "$TEST_LOG" 2>&1 || { echo "TESTS FAILED:" >&2; tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
+    # INTENTIONAL DIVERGENCE from cc-sentinel canonical: Wakeful excludes
+    # slow/property/pairwise tags at commit time per project testing rule
+    # (see project CLAUDE.md and `.claude/rules/testing.md`). cc-sentinel's
+    # general-purpose `safe-commit.sh` runs the whole suite. A reinstall
+    # of cc-sentinel will regress this line — re-apply the `--exclude-tags`
+    # after any reinstall.
+    flutter test --exclude-tags property,pairwise,slow > "$TEST_LOG" 2>&1 || { echo "TESTS FAILED:" >&2; tail -20 "$TEST_LOG" >&2; rm -f "$TEST_LOG"; exit 1; }
   elif [[ -f "package.json" ]]; then
     echo "Running npm tests..." >&2
     TEST_RAN="true"

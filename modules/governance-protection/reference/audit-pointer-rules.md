@@ -11,7 +11,7 @@ Fix: durable artifacts reference code by **symbolic address only**. Ephemeral su
 These files are re-read across multiple verification rounds and sprints. Line numbers written into them rot between reads:
 
 - `specs/**`
-- `docs/**` — especially fidelity, traceability, and extraction subdirectories
+- `docs/**_fidelity/**` (extraction docs, traceability matrices)
 - `verification_findings/fidelity_audit*.md`
 - `verification_findings/field_consumption_audit*.md`
 - `SPRINT_CHECKLIST.md` task items
@@ -35,15 +35,15 @@ Prefer the most specific form that resolves uniquely.
 
 | Target | Format | Example |
 |---|---|---|
-| Top-level symbol | `file.ext :: symbolName` | `routine_engine.dart :: isBreathingModule` |
-| Class member | `file.ext :: ClassName.memberName` | `engine.dart :: Engine._advance` |
-| Keyed list entry | `file.ext :: ModelName(id: 'x').field` | `exercises.dart :: ExerciseDefinition(id: 'breathing_sitali').parameters.inhaleSeconds` |
-| Seeder/registry entry | `file.ext :: _addContent('id')` | `seeder.dart :: _addContent('breathing_bhramari')` |
-| Code branch within function | `file :: function :: branch description` | `engine.dart :: _handleTick :: isBreathingModule check` |
-| Spec section | `spec.md § N.N Heading` | `api_spec.md § 3.2 Request Format` |
-| CT section | `CURRENT_TASK_chN.md § Heading` | `CURRENT_TASK_ch2.md § /1 FOLLOW-UP` |
-| SC item | `SPRINT_CHECKLIST.md § Sprint Heading` | `SPRINT_CHECKLIST.md § Sprint 14 Fixes` |
-| Comment | `file :: NOTE above symbol` | `engine.dart :: NOTE above _advance` |
+| Top-level symbol | `file.dart :: symbolName` | `routine_engine.dart :: isBreathingModule` |
+| Dart class member | `file.dart :: ClassName.memberName` | `multi_phase_sequence_engine.dart :: Engine._advance` |
+| Keyed list entry | `file.dart :: ExerciseDefinition(id: 'x').field` | `breathwork_exercises.dart :: ExerciseDefinition(id: 'breathing_sitali').parameters.inhaleSeconds` |
+| Seeder entry | `file.dart :: _addContent('id')` | `content_tags_seeder.dart :: _addContent('breathing_bhramari')` |
+| Code branch within function | `file :: function :: branch description` | `routine_engine.dart :: _handleTick :: isBreathingModule check` |
+| Spec section | `spec.md § N.N Heading` | `breathwork_spec.md § P1.1 Surface Filter` |
+| CT section | `CURRENT_TASK_chN.md § Heading` | `CURRENT_TASK_ch3.md § /1 FOLLOW-UP` |
+| SC item | `SPRINT_CHECKLIST.md § Sprint Heading` | `SPRINT_CHECKLIST.md § Breathing Engine Fidelity Sprint` |
+| Comment | `file :: NOTE above symbol` | `breathwork_exercises.dart :: NOTE above breathing_power` |
 
 Do not include line numbers as "redundant belt-and-suspenders" alongside symbolic addresses — the line number will still rot and create drift. Pick one form, use it alone.
 
@@ -84,4 +84,4 @@ None load-bearing. If a situation seems to require a line number, check:
 
 ## Rationale — why this matters
 
-Observed across long-running projects: 25+ WARN findings across 4 verification rounds were 100% line-drift. Each fix-pass corrected cited line numbers, which moved on the next code edit, which triggered the next verification round to re-flag the same class of issue at different numbers. Rule of thumb: if your R(N+1) squad reports the same finding class at different line numbers than R(N), you are on a drift treadmill. Switching the citation format breaks the cycle structurally.
+Observed in Wakeful project: 25+ WARN findings across 4 verification rounds were 100% line-drift. Each fix-pass corrected cited line numbers, which moved on the next code edit, which triggered the next verification round to re-flag the same class of issue at different numbers. Rule of thumb: if your R(N+1) squad reports the same finding class at different line numbers than R(N), you are on a drift treadmill. Switching the citation format breaks the cycle structurally.
