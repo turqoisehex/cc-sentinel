@@ -148,7 +148,7 @@ Options: **Yes** / **No, Sonnet-only**
    - Result handling:
      - `STATUS: AUTH_OK` → "Codex verified and working." Proceed to Step 5.
      - `STATUS: NOT_FOUND` → Codex binary not visible (stale PATH after install). Bail: "Codex installed but not visible in current session. Restart Claude Code, then re-run installer to complete setup." Skip to Step 5.
-     - `STATUS: AUTH_FAILED` → tell user: "Codex needs authentication. Type this:" and show the `CMD:` line prefixed with `! ` (e.g., `! codex login`). Explain: "This opens a browser for OAuth. Once you see 'Successfully logged in,' type anything (even just a period) and I'll verify the connection." After user's next message (regardless of content), re-run `--verify-auth`. Do NOT say "press Enter when done" — on an empty prompt, Enter may do nothing or confuse the user.
+     - `STATUS: AUTH_FAILED` → tell user: "Codex needs authentication. Type this:" and show the `CMD:` line prefixed with `! ` (e.g., `! codex login`). Explain: "This opens a browser for OAuth. Let me know and I'll verify the connection." After user's next message (regardless of content), re-run `--verify-auth`. Do NOT say "press Enter when done" — on an empty prompt, Enter may do nothing or confuse the user.
      - Second auth failure → "Codex auth didn't complete. You can finish setup later with `codex login`. Continuing with Sonnet-only verification." Skip to Step 5.
 
 **Design notes:**
