@@ -1,26 +1,41 @@
-# Protected Files
-# List files that require GOVERNANCE-EDIT-AUTHORIZED marker to modify.
-# One filename per line. Matched against basename of edited file.
-# Lines starting with # are comments.
-
-# Core governance
+# Governance files protected from accidental edits during normal tasks.
+# One filename per line. Lines starting with # are comments.
+# Edit this list to add/remove protected files for your project.
+#
+# To edit these files: add "GOVERNANCE-EDIT-AUTHORIZED" as its own line
+# in CURRENT_TASK.md (not appended to another line — must be a standalone line).
+# The file-protection hook checks for this marker before allowing edits.
 CLAUDE.md
-settings.json
-
+# Rules files
+design-invariants.md
+terminology.md
+spec-verification.md
+plugin-auto-invoke.md
+testing.md
+exercise-exceptions.md
+verification-squad.md
 # Skill definitions (matches basename only — protects every SKILL.md globally; unlock via GOVERNANCE-EDIT-AUTHORIZED marker)
 SKILL.md
-
-# Slash commands (add your project-specific commands below)
-# verify.md
-# grill.md
-# mistake.md
-
+# Slash commands
+0.md
+1.md
+2.md
+3.md
+4.md
+5.md
+mistake.md
+grill.md
+prune-rules.md
+rewrite.md
+status.md
+extract.md
+verify.md
+sonnet.md
+perfect.md
+cold.md
+finalize.md
 # Agent definitions
-# commit-adversarial.md
-# commit-cold-reader.md
-
-# Rules and reference (uncomment as needed for your project)
-# design-invariants.md
-# terminology.md
-# verification-squad.md
-# channel-routing.md
+code-simplifier.md
+commit-adversarial.md
+commit-cold-reader.md
+terminology-auditor.md

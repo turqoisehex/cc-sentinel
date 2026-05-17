@@ -26,8 +26,34 @@ Set this session's channel identity. Adapts to project infrastructure.
    h. **Mode detection:** Run `echo $CC_DUO_MODE` to check environment. If `1`, follow duo mode. If empty/unset, follow default (native dispatch) mode.
 
    i. **Listener startup:**
-      - **Duo mode** (`CC_DUO_MODE=1`): Start Opus listener: `bash ~/.claude/scripts/wait_for_work.sh --model opus --channel N` (run_in_background: true). On prompt arrival: read, delete, execute, re-spawn.
-      - **Default mode** (no `CC_DUO_MODE`): Start Opus listener (same as duo). The Opus listener is needed in ALL multi-session configurations — `/spawn opus N` dispatches work to other Opus sessions via `_pending_opus/`. Only Sonnet listener startup is skipped in default mode (Sonnet work uses native `Agent(model: "sonnet")` dispatch instead).
+      - **Both modes**: Start Opus listener: `bash ~/.claude/scripts/wait_for_work.sh --model opus --channel N` (run_in_background: true). The listener is needed in ALL multi-session configurations — `/spawn opus N` dispatches work to other Opus sessions via `_pending_opus/`. Only Sonnet listener startup is skipped in default mode.
+      - **When the background task completes (exit 0): work has arrived.** The script's stdout (in the task output file) contains the path to the prompt file. Read the task output to get the path, then follow the **Prompt Execution Protocol** below.
+
+   i.1. **Prompt Execution Protocol (MANDATORY):**
+
+      When a prompt file is found (whether the listener fires immediately during setup or later):
+
+      1. **Read** the prompt file in full.
+      2. **Delete** the prompt file (it has been received; deletion prevents re-execution).
+      3. **Execute the work described in the prompt file immediately — WITHOUT asking the user for confirmation.** Dispatched work is pre-approved by the session that placed it. The user does not need to be consulted. "Shall I proceed?" / "Ready to begin?" / "Want me to start?" are all WRONG. Just do the work.
+      4. When execution completes (or context runs low), re-spawn the listener.
+
+      **If the listener fires immediately during setup** (file was pre-placed before this session started): this is the session's PRIMARY work. Complete any remaining setup steps quickly, then execute the prompt. Do not announce setup completion and wait — the prompt IS your instruction.
+
+      **Prompt file format** (what to expect):
+      ```
+      # EXECUTE: [task title]
+      ## WORK_PRODUCT: [file(s) being modified]
+      ## SCOPE: [what's covered]
+      ---
+      ## INSTRUCTION
+      [concrete steps to execute — treat as direct orders]
+      ---
+      ## KEY CONTEXT
+      [background the executor needs]
+      ```
+
+      The `# EXECUTE:` header signals this is a task to perform, not context to consider. The INSTRUCTION section contains the steps. Follow them literally.
 
    j. **Sonnet availability:**
       - **Default mode**: Sonnet subagents spawned natively via `Agent(model: "sonnet")`. No listener needed. No heartbeat watcher.

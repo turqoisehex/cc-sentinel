@@ -51,9 +51,18 @@ Only proceed to Step 5 when both audits exist, both verdicts are PASS (or PASS (
 
 Review all issues found this sprint. For each: search CLAUDE.md for existing rule -> strengthen/update. Not found -> add as "Never X. Always Y." with rationale. Never duplicate.
 
-### 6. Reconcile SC and CIP
+### 6. Reconcile SC and CIP (MANDATORY — not skippable even for doc-only sprints)
 
-Read `SPRINT_CHECKLIST.md` and `COMPREHENSIVE_IMPLEMENTATION_PLAN.md`. For each item completed this sprint: check it off with commit hash. For incomplete items discovered during verification (MISS/PARTIAL/blocked): add as unchecked items under the current or next sprint section. Never leave completed work untracked or incomplete work unmarked.
+Read `SPRINT_CHECKLIST.md` and `COMPREHENSIVE_IMPLEMENTATION_PLAN.md`. This step is the canonical moment when sprint progress reaches the project's two durable tracking surfaces.
+
+For each item completed this sprint:
+- SC: check off (`- [x]`) with commit hash and date. One-line summary of what shipped.
+- CIP: add a status blockquote at the top of the relevant section with date, commits, verdict, and what blocks next.
+- If the sprint had a recording-week catalog entry or cross-reference in SC, check that off too.
+
+For incomplete/blocked items: add as unchecked items under the current or next sprint section with blocking reason.
+
+Gate: do not proceed to Step 7 until BOTH files have been updated AND the changes are staged for the /5 commit. Unstaged SC/CIP updates are invisible to future sessions.
 
 ### 7. Update manual test queue
 

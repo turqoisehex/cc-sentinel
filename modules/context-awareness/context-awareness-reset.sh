@@ -29,5 +29,3 @@ fi
 # Remove stale flag files for this session
 rm -f "${FLAG_DIR}/.cc-ctx-trigger-${SESSION_ID}"
 rm -f "${FLAG_DIR}/.cc-ctx-fired-${SESSION_ID}"
-
-exit 0

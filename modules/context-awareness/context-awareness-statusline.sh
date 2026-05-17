@@ -35,40 +35,37 @@ if [[ -n "$CONFIG_FILE" ]]; then
     CONFIG_VALUES+=("$line")
   done < <(jq -r '
     (.flag_dir // "/tmp"),
-    (if .statusline.enabled == false then "false" else "true" end),
     (.statusline.bar_width // 20 | tostring),
     (.statusline.bar_filled // "█"),
     (.statusline.bar_empty // "░"),
     (.statusline.format // "context {bar} {percentage}%"),
     (.statusline.color_normal // "37"),
-    (.statusline.color_warning // "33"),
+    (.statusline.color_warning // "31"),
     (.statusline.warning_indicator // ""),
     (.statusline.bar_style // "auto"),
     (.repeat_mode // "once_per_tier_reset_on_compaction"),
     ((.thresholds // []) | @json)
   ' "$CONFIG_FILE" | tr -d '\r')
   FLAG_DIR="${CONFIG_VALUES[0]}"
-  STATUSLINE_ENABLED="${CONFIG_VALUES[1]}"
-  BAR_WIDTH="${CONFIG_VALUES[2]}"
-  BAR_FILLED="${CONFIG_VALUES[3]}"
-  BAR_EMPTY="${CONFIG_VALUES[4]}"
-  FORMAT="${CONFIG_VALUES[5]}"
-  COLOR_NORMAL="${CONFIG_VALUES[6]}"
-  COLOR_WARNING="${CONFIG_VALUES[7]}"
-  WARNING_INDICATOR="${CONFIG_VALUES[8]}"
-  BAR_STYLE="${CONFIG_VALUES[9]}"
-  REPEAT_MODE="${CONFIG_VALUES[10]}"
-  THRESHOLDS_JSON="${CONFIG_VALUES[11]}"
+  BAR_WIDTH="${CONFIG_VALUES[1]}"
+  BAR_FILLED="${CONFIG_VALUES[2]}"
+  BAR_EMPTY="${CONFIG_VALUES[3]}"
+  FORMAT="${CONFIG_VALUES[4]}"
+  COLOR_NORMAL="${CONFIG_VALUES[5]}"
+  COLOR_WARNING="${CONFIG_VALUES[6]}"
+  WARNING_INDICATOR="${CONFIG_VALUES[7]}"
+  BAR_STYLE="${CONFIG_VALUES[8]}"
+  REPEAT_MODE="${CONFIG_VALUES[9]}"
+  THRESHOLDS_JSON="${CONFIG_VALUES[10]}"
 else
   # Defaults if no config file
   FLAG_DIR="/tmp"
-  STATUSLINE_ENABLED="true"
   BAR_WIDTH=20
   BAR_FILLED="█"
   BAR_EMPTY="░"
   FORMAT="context {bar} {percentage}%"
   COLOR_NORMAL="37"
-  COLOR_WARNING="33"
+  COLOR_WARNING="31"
   WARNING_INDICATOR=""
   BAR_STYLE="auto"
   REPEAT_MODE="once_per_tier_reset_on_compaction"
@@ -80,11 +77,8 @@ if [[ "$BAR_STYLE" == "ascii" ]]; then
   BAR_FILLED="#"
   BAR_EMPTY="-"
 elif [[ "$BAR_STYLE" == "auto" ]]; then
-  # Test if terminal can render Unicode by checking locale vars + Windows Terminal
-  if [[ "${LANG:-}"    == *[Uu][Tt][Ff]* || \
-        "${LC_ALL:-}"  == *[Uu][Tt][Ff]* || \
-        "${LC_CTYPE:-}" == *[Uu][Tt][Ff]* || \
-        -n "${WT_SESSION:-}" ]]; then
+  # Test if terminal can render Unicode by checking locale
+  if [[ "${LANG:-}" == *UTF* || "${LANG:-}" == *utf* || "${LC_ALL:-}" == *UTF* || "${LC_ALL:-}" == *utf* ]]; then
     : # Keep Unicode defaults
   else
     BAR_FILLED="#"
@@ -158,9 +152,6 @@ fi
 
 # Persist fired-tiers tracking
 echo "$NEW_FIRED" > "$FIRED_FILE"
-
-# Exit before rendering if statusline is disabled (thresholds still fire above)
-[[ "$STATUSLINE_ENABLED" != "true" ]] && exit 0
 
 # Render status bar efficiently (no loops)
 FILLED_COUNT=$(( USED_PCT * BAR_WIDTH / 100 ))

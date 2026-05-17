@@ -48,13 +48,30 @@ PUNT="$PUNT|TODO.*(later|future|someday|eventually)"
 PUNT="$PUNT|revisit in a future|we can revisit"
 PUNT="$PUNT|next session|next conversation|separate session"
 PUNT="$PUNT|note.*(for|it).*(next|later)|note this for|flag.*(for|it).*(next|later)"
+# Tier 1b: Design-doc deferral phrasing — spec/plan-specific patterns
+# These slipped past the original Tier 1 because they appear in formal
+# Non-Goals / Out-of-Scope sections where "defer until X" sounds reasoned.
+# Rule 0 still applies: no deferral without explicit developer approval.
+PUNT="$PUNT|defer until|deferred until"
+PUNT="$PUNT|follow-up sprint|follow.up sprint"
+PUNT="$PUNT|follow-up task|follow.up task"
+PUNT="$PUNT|unchecked (follow.up )?task"
+PUNT="$PUNT|at sprint close|on sprint close|when (the )?sprint closes"
+PUNT="$PUNT|deferred to a (future|follow.up|later|subsequent)"
+PUNT="$PUNT|will be added to.*SPRINT_CHECKLIST"
+PUNT="$PUNT|added to.*SPRINT_CHECKLIST.*as (an )?unchecked"
+PUNT="$PUNT|retrofit(ted|ting)? deferred|retrofit (is )?deferred"
+PUNT="$PUNT|generaliz(e|ation) deferred|generaliz(e|ation) (is )?deferred"
+# Section-header sniff — Non-Goals and Out-of-Scope are the usual hiding spots.
+# These fire on the header itself so a design doc writing one triggers review.
+PUNT="$PUNT|^## (Non.Goals|Out.of.Scope|Follow.ups|Out.of.Scope / Follow.ups)"
+PUNT="$PUNT|^### (Non.Goals|Out.of.Scope|Follow.ups)"
 
 # Tier 1c: Phase-handoff deferral — labeling unfinished work as "gaps"
-# and pushing it across a sprint phase boundary (e.g., build → quality →
-# finalize). The recap idiom "Known gaps for /4:" is the canonical
-# offender — it sounds like reasoned status but is unauthorized deferral
-# by another name. Each phase must leave no work behind for the next
-# phase to inherit.
+# and pushing it across the /1-/5 sprint boundary. Build (/3) must not
+# leave work for quality (/4) or finalize (/5) to inherit. The recap
+# idiom "Known gaps for /4:" is the canonical offender — it sounds
+# like reasoned status but is unauthorized deferral by another name.
 PUNT="$PUNT|(known|remaining|outstanding|pending|carry.over) gaps?( for|:|\b)"
 PUNT="$PUNT|gaps? for /[0-9]"
 PUNT="$PUNT|gaps? for /(perfect|finalize|build|design|audit|grill|verify)"
@@ -100,8 +117,10 @@ DEFLECT="$DEFLECT|was (like this|this way) before"
 
 DEFERRAL_PATTERNS="$PUNT|$HEDGE|$DEFLECT"
 
-if echo "$CONTENT" | grep -qiE "$DEFERRAL_PATTERNS"; then
-  echo '{"additionalContext": "RULE VIOLATION — FIX IT NOW: The content you are writing contains deferral or responsibility-deflection language. Rules: (1) Never label a known problem as deferred, blocked, pre-existing, or not-my-problem without EXPLICIT developer confirmation. (2) If you found it, you own it — fix it or ask to defer. (3) \"Fix it\" means do the actual work, not relabel status text. If the developer has already approved the deferral, ignore this warning."}'
+if echo "$CONTENT" | grep -qiE "$DEFLECT"; then
+  echo '{"additionalContext": "RULE VIOLATION — RESPONSIBILITY DEFLECTION: The content you are writing reclassifies a found issue as pre-existing, known, legacy, or not-your-problem. Rules: (1) If you found it — in a verification squad, /grill, /4, /verify, code review, or any other inspection — you own it. Fix it now, in this body of work, with the same verification treatment as everything else. (2) \"Pre-existing\" is not an exemption. The squad found it because it matters. Roll it into the current fix loop. (3) Do NOT present found issues to the user as \"pre-existing items\" or \"things that could be fixed later.\" Determine what needs to happen and do it. (4) The ONLY valid escape: the developer has typed the word \"defer\" alongside the specific item name in this conversation. Self-authorization does not count."}'
+elif echo "$CONTENT" | grep -qiE "$PUNT|$HEDGE"; then
+  echo '{"additionalContext": "RULE VIOLATION — FIX IT NOW: The content you are writing contains deferral language. Rules: (1) Never label a known problem as deferred, blocked, or not-urgent without EXPLICIT developer confirmation in this conversation. (2) If you found it, you own it — fix it now, in this body of work. (3) \"Fix it\" means do the actual work, not relabel status text or present options. (4) The ONLY valid escape: the developer has typed the word \"defer\" alongside the specific item name in this conversation. Self-authorization does not count."}'
 fi
 
 exit 0

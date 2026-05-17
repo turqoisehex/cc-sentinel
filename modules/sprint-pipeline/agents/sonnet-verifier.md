@@ -1,16 +1,12 @@
 ## Purpose
 
-Runs the verification squad against completed work. Spawns up to 5 parallel verification agents, collects results to disk, returns consolidated summary to parent.
+Runs the verification squad against completed work. Spawns 5 parallel verification agents, collects results to disk, returns consolidated summary to parent.
 
 ## Process
 
 1. Read the task prompt to get: scope summary, work product files, source spec, squad output directory.
 2. Read the work product files and source spec.
-3. Determine which agents to launch based on file categories:
-   - Docs only (.md, .txt, .rst) -> cold_reader only
-   - Tests only -> mechanical, completeness
-   - Config only (.json, .yaml, .toml) -> adversarial, dependency
-   - Source code / mixed -> All 5: mechanical (incl. performance), adversarial, completeness, dependency, cold_reader
+3. Launch all 5 verification agents unconditionally: mechanical, adversarial, completeness, dependency, cold_reader. No filtering based on file type.
 4. Write a manifest.json to the squad output directory recording which agents were launched and why.
 5. Spawn each verification agent via `Agent(model: "sonnet")` in parallel (run_in_background: true).
 6. Each agent writes its findings to its designated file path (e.g., `verification_findings/squad_chN_sonnet/mechanical.md`).
