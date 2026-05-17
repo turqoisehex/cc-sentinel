@@ -689,37 +689,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "malformed CT = no active task detected = allow"
 teardown_temp
 
-# --- Test 24: WAKEFUL_CHANNEL fallback (SENTINEL_CHANNEL unset) -> scopes correctly ---
+# --- Test 24: Two squad dirs — first incomplete blocks even if second passes ---
 echo ""
-echo "Test 24: WAKEFUL_CHANNEL fallback -> checks own channel"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "COMPLETE"  # shared not active
-create_channel_ct "$PROJECT" "4" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK_ch4.md" 300  # stale
-# Use WAKEFUL_CHANNEL instead of SENTINEL_CHANNEL
-WAKEFUL_CHANNEL=4 run_hook "$(build_input "$PROJECT" "Continuing work.")"
-assert_exit 0 "exit 0"
-assert_stdout_contains "ch4" "WAKEFUL_CHANNEL fallback scopes to ch4"
-teardown_temp
-
-# --- Test 25: WAKEFUL_LISTENER fallback -> unconditional ALLOW ---
-echo ""
-echo "Test 25: WAKEFUL_LISTENER=true -> ALLOW (fallback env var)"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
-INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
-# SENTINEL_LISTENER unset; WAKEFUL_LISTENER should be accepted as fallback
-WAKEFUL_LISTENER=true run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_empty "no block (WAKEFUL_LISTENER fallback bypass)"
-teardown_temp
-
-# --- Test 26: Two squad dirs — first incomplete blocks even if second passes ---
-echo ""
-echo "Test 26: Two squad dirs — first incomplete blocks despite second passing"
+echo "Test 24: Two squad dirs — first incomplete blocks despite second passing"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -735,9 +707,9 @@ assert_stdout_contains '"decision".*"block"' "first incomplete squad blocks"
 assert_stdout_contains "squad_a_old" "identifies the blocking squad dir"
 teardown_temp
 
-# --- Test 27: Squad with missing agent files vs failed verdicts -> distinct error messages ---
+# --- Test 25: Squad with missing agent files vs failed verdicts -> distinct error messages ---
 echo ""
-echo "Test 27a: Squad with missing agent files -> reports 'Missing'"
+echo "Test 25a: Squad with missing agent files -> reports 'Missing'"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -757,7 +729,7 @@ assert_stdout_contains "3/5" "shows 3 of 5 passed"
 teardown_temp
 
 echo ""
-echo "Test 27b: Squad with failed verdicts -> reports 'Failed'"
+echo "Test 25b: Squad with failed verdicts -> reports 'Failed'"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -862,9 +834,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (no manifest uses default 5)"
 teardown_temp
 
-# --- Test 30: Non-standard Status (e.g. AWAITING) counts as active ---
+# --- Test 26: Non-standard Status (e.g. AWAITING) counts as active ---
 echo ""
-echo "Test 30: AWAITING USER APPROVAL status -> active (stale blocks)"
+echo "Test 26: AWAITING USER APPROVAL status -> active (stale blocks)"
 setup_temp
 mkdir -p "$PROJECT"
 cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
@@ -880,9 +852,9 @@ assert_stdout_contains '"decision".*"block"' "AWAITING status treated as active"
 assert_stdout_contains "CURRENT_TASK.md" "identifies the stale file"
 teardown_temp
 
-# --- Test 31: Deferral language in assistant message -> BLOCK ---
+# --- Test 27: Deferral language in assistant message -> BLOCK ---
 echo ""
-echo "Test 31: Deferral language -> BLOCK"
+echo "Test 27: Deferral language -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -895,10 +867,10 @@ assert_stdout_contains '"decision".*"block"' "deferral language blocked"
 assert_stdout_contains "DEFERRAL" "reason identifies deferral"
 teardown_temp
 
-# --- Test 32: Deferral with "future sprint" (IN PROGRESS, no completion language) -> R7 BLOCK ---
+# --- Test 28: Deferral with "future sprint" (IN PROGRESS, no completion language) -> R7 BLOCK ---
 # Uses IN PROGRESS status and NO completion language so R1 is not reached — pure R7 test.
 echo ""
-echo "Test 32: 'future sprint' deferral (R7 path) -> BLOCK"
+echo "Test 28: 'future sprint' deferral (R7 path) -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -909,9 +881,9 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "DEFERRAL" "future sprint triggers R7 deferral gate"
 teardown_temp
 
-# --- Test 33: No deferral language -> ALLOW ---
+# --- Test 29: No deferral language -> ALLOW ---
 echo ""
-echo "Test 33: No deferral language -> ALLOW"
+echo "Test 29: No deferral language -> ALLOW"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "COMPLETE"
@@ -922,9 +894,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no deferral = no block"
 teardown_temp
 
-# --- Test 34: Positive channel path (SENTINEL_CHANNEL + matching squad_chN_) ---
+# --- Test 30: Positive channel path (SENTINEL_CHANNEL + matching squad_chN_) ---
 echo ""
-echo "Test 34: SENTINEL_CHANNEL=2 + squad_ch2_sonnet (all PASS) -> ALLOW"
+echo "Test 30: SENTINEL_CHANNEL=2 + squad_ch2_sonnet (all PASS) -> ALLOW"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -939,9 +911,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "channel-scoped squad satisfies gate"
 teardown_temp
 
-# --- Test 35: Cross-channel VERIFICATION_BLOCKED isolation ---
+# --- Test 31: Cross-channel VERIFICATION_BLOCKED isolation ---
 echo ""
-echo "Test 35: VERIFICATION_BLOCKED in ch3 CT does not satisfy ch2 gate"
+echo "Test 31: VERIFICATION_BLOCKED in ch3 CT does not satisfy ch2 gate"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -961,9 +933,9 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "ch3 BLOCKED doesn't help ch2"
 teardown_temp
 
-# --- Test 36: Invalid JSON stdin -> fail-open ---
+# --- Test 32: Invalid JSON stdin -> fail-open ---
 echo ""
-echo "Test 36: Invalid JSON input -> exit 0 (fail-open)"
+echo "Test 32: Invalid JSON input -> exit 0 (fail-open)"
 setup_temp
 mkdir -p "$PROJECT"
 INPUT="this is not json at all {{{}"
@@ -974,7 +946,7 @@ teardown_temp
 
 # --- Tests 37-42: R7 deferral sub-pattern coverage ---
 echo ""
-echo "Test 37: 'later sprint' -> BLOCK"
+echo "Test 33: 'later sprint' -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -986,7 +958,7 @@ assert_stdout_contains "DEFERRAL" "later sprint triggers R7"
 teardown_temp
 
 echo ""
-echo "Test 38: 'next sprint' -> BLOCK"
+echo "Test 34: 'next sprint' -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -998,7 +970,7 @@ assert_stdout_contains "DEFERRAL" "next sprint triggers R7"
 teardown_temp
 
 echo ""
-echo "Test 39: 'handle this later' -> BLOCK"
+echo "Test 35: 'handle this later' -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"

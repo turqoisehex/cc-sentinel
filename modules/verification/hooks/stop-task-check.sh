@@ -12,10 +12,10 @@
 #       request progress update before stopping.
 #   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
 #       loops) must never be blocked. Detection: SENTINEL_LISTENER or
-#       WAKEFUL_LISTENER env var (primary, set by spawn.py) or "Watching _pending_(sonnet|opus)/"
+#       SENTINEL_LISTENER env var (primary, set by spawn.py) or "Watching _pending_(sonnet|opus)/"
 #       / "Waiting for work on ch[0-9]+" message patterns (fallback).
 #   R4. Channel scoping — each session only checks its own CT files.
-#       SENTINEL_CHANNEL=N or WAKEFUL_CHANNEL=N → shared CT + ch{N} CT.
+#       SENTINEL_CHANNEL=N → shared CT + ch{N} CT.
 #       Unset → shared CT only. Squad evidence scoped to active channels.
 #   R5. Anti-loop — CC sets stop_hook_active=true after first block.
 #       Second stop attempt always allowed.
@@ -70,10 +70,9 @@ fi
 # --- BYPASS: Listener sessions (environment variable) ---
 # Set by spawn.py for listener sessions at launch time. Unconditional bypass —
 # listeners are stateless service loops that must not touch CT files.
-# Accepts both SENTINEL_LISTENER (cc-sentinel) and WAKEFUL_LISTENER (Wakeful).
 # Value must be the string literal "true" (set by spawn.py at launch time).
 # The message pattern check below is a fallback for manual launches.
-HOOK_LISTENER="${SENTINEL_LISTENER:-${WAKEFUL_LISTENER:-}}"
+HOOK_LISTENER="${SENTINEL_LISTENER:-}"
 if [[ "$HOOK_LISTENER" == "true" ]]; then
   echo "  -> ALLOW (listener env var)" >> "$LOGFILE" 2>/dev/null
   exit 0
@@ -98,8 +97,7 @@ fi
 # check shared CT — channel CTs belong to other sessions and checking them
 # causes cross-channel noise (stale alerts for files this session doesn't own,
 # which can lead to models deleting or overwriting other sessions' state).
-# Accepts both SENTINEL_CHANNEL (cc-sentinel) and WAKEFUL_CHANNEL (Wakeful).
-HOOK_CHANNEL="${SENTINEL_CHANNEL:-${WAKEFUL_CHANNEL:-}}"
+HOOK_CHANNEL="${SENTINEL_CHANNEL:-}"
 TASK_FILES=()
 if [[ -n "$HOOK_CHANNEL" ]]; then
   # Channeled session: own channel + shared index
