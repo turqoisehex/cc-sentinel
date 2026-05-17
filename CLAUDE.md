@@ -87,13 +87,13 @@ Options: **Yes** / **No, Sonnet-only**
 
 1. **Probe:** Run the platform-appropriate setup script:
    - **macOS/Linux:** `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --probe-only`
-   - **Windows:** `powershell -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode ProbeOnly`
+   - **Windows:** `powershell -ExecutionPolicy Bypass -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode ProbeOnly`
 
 2. **Handle probe result:**
    - `STATUS: FOUND` → proceed to auth verification (step 3)
    - `STATUS: NOT_FOUND` → attempt install:
      - **macOS/Linux:** `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --install`
-     - **Windows:** `powershell -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode Install`
+     - **Windows:** `powershell -ExecutionPolicy Bypass -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode Install`
    - Result handling:
      - `STATUS: FOUND` or `STATUS: INSTALLED` → proceed to auth verification (step 3)
      - `STATUS: INSTALL_NEED_SUDO` → tell user: "Codex needs elevated permissions to install globally. Run this in a separate terminal (not here — sudo needs a password prompt that Claude Code can't provide):" and show the `CMD:` line verbatim (e.g., `sudo npm install -g @openai/codex`). Do NOT prefix with `!` — sudo requires a real TTY for password entry. Wait for user to confirm they've run it, then re-run `--probe-only` on the same platform script. If FOUND → proceed to auth verification (step 3). If still NOT_FOUND → bail: "Codex installation didn't complete. You can finish later with `npm install -g @openai/codex && codex login`." Skip to Step 4d.
@@ -102,7 +102,7 @@ Options: **Yes** / **No, Sonnet-only**
 
 3. **Verify auth:**
    - **macOS/Linux:** `bash "<this-repo-path>/modules/verification/scripts/setup-codex.sh" --verify-auth`
-   - **Windows:** `powershell -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode VerifyAuth`
+   - **Windows:** `powershell -ExecutionPolicy Bypass -File "<this-repo-path>/modules/verification/scripts/setup-codex.ps1" -Mode VerifyAuth`
    - Result handling:
      - `STATUS: AUTH_OK` → "Codex verified and working." Proceed to Step 4d.
      - `STATUS: NOT_FOUND` → Codex binary not visible (stale PATH after install). Bail: "Codex installed but not visible in current session. Restart Claude Code, then re-run installer to complete setup." Skip to Step 4d.
@@ -161,7 +161,7 @@ Determine the correct installer command based on OS. Use the full path to the in
 
 **Windows:**
 ```powershell
-powershell -File "<this-repo-path>/install.ps1" -Modules "<selected>" -Target "<target>"
+powershell -ExecutionPolicy Bypass -File "<this-repo-path>/install.ps1" -Modules "<selected>" -Target "<target>"
 ```
 
 **macOS/Linux:**
@@ -299,7 +299,7 @@ bash "<this-repo-path>/uninstall.sh" --target "<target>"
 
 **Windows:**
 ```powershell
-powershell -File "<this-repo-path>/uninstall.ps1" -Target "<target>"
+powershell -ExecutionPolicy Bypass -File "<this-repo-path>/uninstall.ps1" -Target "<target>"
 ```
 
 Replace `<this-repo-path>` with the cloned repo location (typically `~/.claude/cc-sentinel` or `/tmp/cc-sentinel`). If the repo was already deleted, clone it first:
