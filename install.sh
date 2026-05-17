@@ -463,12 +463,21 @@ if target == "global":
         "Bash(python3 ~/.claude/tools/*)",
         "Bash(python ~/.claude/tools/*)",
         "Bash(python *.claude?tools?*)",
+        "Bash(git *)",
         'Bash(powershell *setup-codex*)',
         'Bash(powershell -File *setup-codex*)',
         "Bash(mkdir -p verification_findings/*)",
         "Bash(mkdir -p verification_findings/*/*)",
         "Bash(ls verification_findings/*)",
         "Bash(ls verification_findings/*/*)",
+        "PowerShell(git *)",
+        "PowerShell(python *.claude?tools?*)",
+        "PowerShell(python ~/.claude/tools/*)",
+        "PowerShell(python3 ~/.claude/tools/*)",
+        "PowerShell(*setup-codex*)",
+        "PowerShell(*flash.ps1*)",
+        "PowerShell(mkdir *verification_findings*)",
+        "PowerShell(*verification_findings*)",
     ]
 else:
     rules = [
@@ -478,12 +487,21 @@ else:
         "Bash(python3 ~/.claude/tools/*)",
         "Bash(python ~/.claude/tools/*)",
         "Bash(python *.claude?tools?*)",
+        "Bash(git *)",
         'Bash(powershell *setup-codex*)',
         'Bash(powershell -File *setup-codex*)',
         "Bash(mkdir -p verification_findings/*)",
         "Bash(mkdir -p verification_findings/*/*)",
         "Bash(ls verification_findings/*)",
         "Bash(ls verification_findings/*/*)",
+        "PowerShell(git *)",
+        "PowerShell(python *.claude?tools?*)",
+        "PowerShell(python ~/.claude/tools/*)",
+        "PowerShell(python3 ~/.claude/tools/*)",
+        "PowerShell(*setup-codex*)",
+        "PowerShell(*flash.ps1*)",
+        "PowerShell(mkdir *verification_findings*)",
+        "PowerShell(*verification_findings*)",
     ]
 
 added = []
