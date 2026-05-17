@@ -14,7 +14,7 @@ Claude Code is powerful out of the box. But long, autonomous sessions surface re
 |---|---|---|---|
 | **Context loss** | After compaction, Claude forgets what it was doing, repeats work, or contradicts earlier decisions | Hours of wasted compute, inconsistent output | Pre-compact hook saves state; post-compact hook restores it. Sessions survive compaction. |
 | **Work deferral** | Claude writes "TODO: implement later" or "will add in next step" and never returns | Incomplete features shipped as "done" | Anti-deferral hook detects deferral language in every file write and warns immediately. |
-| **False completion** | Claude claims a task is done without verifying | Bugs discovered in production, not development | Stop hook blocks completion claims without verification squad evidence on disk. |
+| **False completion** | Claude claims a task is done without verifying | Bugs discovered in production, not development | Stop hook blocks completion claims without verification squad evidence on disk. Multi-model interleaved verification (Sonnet + Codex) catches bugs no single model finds alone. |
 | **Governance drift** | Claude edits its own rules, CLAUDE.md, or config files mid-session | Guardrails silently disabled | File-protection hook blocks writes to protected files. Override requires explicit authorization marker. |
 | **Silent compaction** | Context window fills with no warning; state is lost before it can be saved | Unrecoverable mid-task failure | Visual status bar + 5 graduated warnings at 50/65/75/85/92%. |
 | **Commit quality** | Large diffs committed without review; tests skipped; formatting inconsistent | Technical debt accumulates per-session | Code commits gated: two adversarial agents review the diff, tests auto-run, formatter auto-runs. Doc-only and config changes pass through lightweight checks. |
@@ -31,7 +31,7 @@ Claude Code: I see this is a Python/Django project with pytest. Here's what I re
 
   [x] Core (required) -- context loss prevention, anti-deferral, state management
   [x] Context Awareness -- visual context meter in your status bar
-  [ ] Verification -- up to 5-agent verification squad before completion claims
+  [ ] Verification -- multi-model verification squad (up to 15 agents with Codex)
   [x] Commit Enforcement -- test gating, auto-format, diff review
   [ ] Sprint Pipeline -- structured /1 through /5 workflow
   [x] Governance Protection -- protect CLAUDE.md and config from mid-session edits
@@ -52,7 +52,7 @@ If Claude Code can do it, cc-sentinel can govern it.
 
 ## Installation
 
-**Prerequisites:** Node.js, Git, jq, and Python 3. See [Platform Setup](#platform-setup) for one-command install per platform.
+**Prerequisites:** Node.js, Git, jq, and Python 3. Optional: [OpenAI Codex CLI](https://github.com/openai/codex) for interleaved multi-model verification (requires OpenAI Plus, Pro, Team, or API key). See [Platform Setup](#platform-setup) for one-command install per platform.
 
 **In any Claude Code session:**
 
@@ -133,7 +133,10 @@ Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the lo
 
 ### Verification
 
-Up to 5-agent verification squad that independently audits work before any completion claim. Each agent has a different adversarial perspective:
+Multi-model verification squad that independently audits work before any completion claim. Supports two architectures:
+
+- **Sonnet-only (5 agents):** Default when Codex CLI is not installed. Five Claude Sonnet agents with different adversarial perspectives run in parallel.
+- **Interleaved (up to 15 agents):** When OpenAI Codex CLI is available, runs 5 Sonnet + 5 Codex + conditional re-validation rounds. Architecturally diverse models find different classes of bugs, compressing typical 5-10 round verification cycles to ~2 rounds.
 
 | Agent | What It Catches |
 |---|---|
@@ -142,6 +145,18 @@ Up to 5-agent verification squad that independently audits work before any compl
 | **Completeness Scanner** | Missing requirements, unassigned items, spec gaps |
 | **Dependency Tracer** | Missing migrations, untraced call sites, silent default changes |
 | **Cold Reader** | Semantic errors invisible to the author -- reads with zero context |
+
+**Interleaved procedure (when Codex is available):**
+
+```
+R1: 5 Sonnet agents (baseline sweep)
+R2: 5 Codex agents (cross-architecture sweep on post-fix content)
+R3: Sonnet re-validation (flagged roles only)
+R4: Codex escalation (failing roles only, higher reasoning effort)
+Gate: All PASS → Opus closure
+```
+
+The `setup-codex.sh` / `setup-codex.ps1` scripts handle Codex CLI probe, install, and auth verification during installation. Codex is optional -- the system degrades gracefully to Sonnet-only when unavailable.
 
 The `stop-task-check.sh` hook fires when Claude tries to stop, requiring verification evidence before allowing completion claims through. Self-attestation ("I verified this") is explicitly rejected -- the hook checks for actual squad output files on disk. The `comment-replacement.sh` hook silently strips stale inline comments (TODO, FIXME, HACK) from edited files.
 
@@ -286,7 +301,7 @@ cc-sentinel/
   modules/
     core/                # Required -- hooks, templates, /cold, /cleanup, /status
     context-awareness/   # Status bar meter, graduated warnings
-    verification/        # up to 5-agent squad, /verify, /grill
+    verification/        # Multi-model squad (5 Sonnet or 15 interleaved), /verify, /grill
     commit-enforcement/  # safe-commit, auto-format, channel routing
     sprint-pipeline/     # /1-/5 workflow, /spawn multi-session
     governance-protection/ # file-protection, /mistake, /prune-rules
@@ -315,7 +330,7 @@ Claude's self-assessment of its own work is structurally unreliable. Cherny's wo
 
 > "Say 'Grill me on these changes and don't make a PR until I pass your test.'" -- Cherny
 
-**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Up to five independent verification agents (mechanical, adversarial, completeness, dependency, cold-reader) audit in parallel. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
+**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Up to fifteen independent verification agents across two model architectures (Sonnet + Codex) audit in interleaved rounds -- architecturally diverse models find different bug classes, compressing verification cycles from 5-10 rounds to ~2. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
 
 ### Context is infrastructure, not conversation
 
@@ -363,7 +378,7 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 | Governance protection | Not mentioned | Protected files list + authorization marker protocol |
 | Cold-start protocol | CLAUDE.md as ground truth | CURRENT_TASK as complete cold-start survival document |
 | Multi-channel coordination | Parallel sessions (independent) | File-signal coordination between orchestrator + executor |
-| Verification depth | 2-layer review (check + challenge) | Up to 5 independent agents + per-commit agents + stop hook gate |
+| Verification depth | 2-layer review (check + challenge) | Up to 15 interleaved agents (Sonnet + Codex) + per-commit agents + stop hook gate |
 | Plan enforcement | Plan mode discipline (manual) | /design forces brainstorm, spec, adversarial review, user gate |
 | Completion loops | ralph-loop plugin (re-feed until done) | Stop hook + verification evidence gate + anti-deferral hook (three independent mechanisms) |
 | Permission model | Pre-approved allow list (manual) | Same + file-protection hook for governance files + authorization marker protocol |
