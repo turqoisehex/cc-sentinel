@@ -64,10 +64,25 @@ For each incomplete item: ensure CT has enough context for zero-context executio
 
 ## Step 6: Update or Clear Channel
 
-- **Task in progress:** Edit CT — update status with last commit hash (`git log --oneline -1`). Add Resume Instructions: what to read, which step to resume, expected agents/listeners, pending decisions, FLAG items.
-- **Task complete (channel done):** Clear the channel: `git rm CURRENT_TASK_chN.md`. Update Active Channels table in shared `CURRENT_TASK.md` — strikethrough the row. No state to preserve.
+**Shared CT frontmatter:** Reset frontmatter fields (`goal`, `now`, `next`, `done_this_session`, `decisions`) to empty strings ONLY if this session wrote them. If another session populated the frontmatter, leave it intact — it belongs to that session's context. Check `git log --oneline -1 -- CURRENT_TASK.md` or conversation history to determine authorship. The principle: stale *own* session context is harmful, but another session's live context is not yours to clear.
 
-## Step 7: Final Commit and Report
+- **Task in progress:** Edit your CT — update status with last commit hash (`git log --oneline -1`). Add Resume Instructions: what to read, which step to resume, expected agents/listeners, pending decisions, FLAG items.
+- **Task complete:** **Remove your row from the Active Channels table entirely** (do NOT strikethrough; closed work leaves no residue). Remove your section content from shared `CURRENT_TASK.md`. Leave other rows and other sessions' section content untouched. Channeled: also delete the channel CT (`git rm CURRENT_TASK_chN.md`) — this is the only place channel CTs get deleted (`/5` marks complete but preserves the CT until `/cleanup` runs). Unchanneled: also reset shared CT frontmatter if this session wrote it (per the principle above).
+
+## Step 7: CT Completeness Gate
+
+Read EVERY CT file that belongs to this session — shared `CURRENT_TASK.md` (your sections only) and your channel CT (`CURRENT_TASK_chN.md`) if channeled. Scan for ANY unchecked task (`- [ ]`), unchecked sub-bullet, open TODO/FIXME, unresolved follow-up, or item without a completion marker or explicit deferral. Items belonging to OTHER channels are out of scope — skip them.
+
+For each item found, determine:
+1. **Actually done?** Verify against git log, file state, or grep. If done, check it off now.
+2. **Tracked elsewhere?** If it's already in SC.md or CIP.md as an open item, it's accounted for — not a blocker.
+3. **Orphaned?** If it's not done AND not tracked in SC/CIP — this is a FAIL.
+
+**Any orphaned incomplete item = CLEANUP BLOCKED.** Do not proceed to Step 8. For each orphan: either finish the work (if trivial), add it to SC.md/CIP.md with enough context for cold-start pickup, or get explicit user permission to drop it. Re-run this step after resolution.
+
+Only proceed when: zero unchecked items remain in your CT scope, or every unchecked item has a matching SC/CIP entry.
+
+## Step 8: Final Commit and Report
 
 If files changed. With channel_commit.sh:
 ```bash

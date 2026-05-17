@@ -113,7 +113,7 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Bash(ls verification_findings/*/*)"
 ```
 
-Do this silently — no user prompt needed. The installer will also add these rules mechanically as a safety net.
+Announce briefly: "Configuring permissions so cc-sentinel scripts run without manual approval..." then write the rules. No user prompt or confirmation needed — just the one-line announcement so it doesn't look like improvisation. The installer will also add these rules mechanically as a safety net.
 
 ### Step 4d: Dual-Architecture Verification (if Verification module selected)
 
@@ -139,7 +139,7 @@ Options: **Yes** / **No, Sonnet-only**
    - Result handling:
      - `STATUS: FOUND` or `STATUS: INSTALLED` → proceed to auth verification (step 3)
      - `STATUS: INSTALL_NEED_SUDO` → tell user: "Codex needs elevated permissions to install globally. Run this in a separate terminal (not here — sudo needs a password prompt that Claude Code can't provide):" and show the `CMD:` line verbatim (e.g., `sudo npm install -g @openai/codex`). Do NOT prefix with `!` — sudo requires a real TTY for password entry. Wait for user to confirm they've run it, then re-run `--probe-only` on the same platform script. If FOUND → proceed to auth verification (step 3). If still NOT_FOUND → bail: "Codex installation didn't complete. You can finish later with `npm install -g @openai/codex && codex login`." Skip to Step 5.
-     - `STATUS: INSTALL_NO_NODE` → tell user: "Codex requires Node.js. Run this, then press Enter:" and show the `CMD:` line from output. After confirmation: re-run `--install`. If still `INSTALL_NO_NODE` → bail: "Node.js isn't visible in the current session. Restart Claude Code after installing Node, then re-run the installer." Skip to Step 5.
+     - `STATUS: INSTALL_NO_NODE` → tell user: "Codex requires Node.js. Run this in a separate terminal:" and show the `CMD:` line from output. "Once installed, type anything here and I'll retry." After user's next message: re-run `--install`. If still `INSTALL_NO_NODE` → bail: "Node.js isn't visible in the current session. Restart Claude Code after installing Node, then re-run the installer." Skip to Step 5.
      - `STATUS: INSTALL_FAILED` → tell user: "Codex installation didn't complete. You can set this up later by running `npm install -g @openai/codex && codex login`. Continuing without dual-architecture verification." Skip to Step 5.
 
 3. **Verify auth:**
@@ -148,7 +148,7 @@ Options: **Yes** / **No, Sonnet-only**
    - Result handling:
      - `STATUS: AUTH_OK` → "Codex verified and working." Proceed to Step 5.
      - `STATUS: NOT_FOUND` → Codex binary not visible (stale PATH after install). Bail: "Codex installed but not visible in current session. Restart Claude Code, then re-run installer to complete setup." Skip to Step 5.
-     - `STATUS: AUTH_FAILED` → tell user: "Codex needs authentication. Run this, then press Enter:" and show the `CMD:` line prefixed with `! ` (e.g., `! codex login`). This runs in the user's terminal via CC's `!` escape, which opens a browser for OAuth or prompts for an API key. After user confirms, re-run `--verify-auth`.
+     - `STATUS: AUTH_FAILED` → tell user: "Codex needs authentication. Type this:" and show the `CMD:` line prefixed with `! ` (e.g., `! codex login`). Explain: "This opens a browser for OAuth. Once you see 'Successfully logged in,' type anything (even just a period) and I'll verify the connection." After user's next message (regardless of content), re-run `--verify-auth`. Do NOT say "press Enter when done" — on an empty prompt, Enter may do nothing or confuse the user.
      - Second auth failure → "Codex auth didn't complete. You can finish setup later with `codex login`. Continuing with Sonnet-only verification." Skip to Step 5.
 
 **Design notes:**
