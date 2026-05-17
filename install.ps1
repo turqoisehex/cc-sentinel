@@ -24,6 +24,13 @@ param(
 $ErrorActionPreference = "Stop"
 $SentinelRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# PS 5.1 Join-Path only accepts 2 positional args; this handles N segments.
+function Join-Paths([string[]]$Segments) {
+    $result = $Segments[0]
+    for ($i = 1; $i -lt $Segments.Count; $i++) { $result = Join-Path $result $Segments[$i] }
+    return $result
+}
+
 # --- Verify prerequisites ---
 $jqPath = Get-Command jq -ErrorAction SilentlyContinue
 if (-not $jqPath) {
@@ -58,7 +65,7 @@ if ($Target -eq "global") {
 }
 
 if ($Target -eq "global") {
-    $ScriptsDir = Join-Path $env:USERPROFILE ".claude" "scripts"
+    $ScriptsDir = Join-Paths @($env:USERPROFILE, ".claude", "scripts")
 } else {
     $ScriptsDir = "scripts"
 }
@@ -89,7 +96,7 @@ function Copy-FileChecked($src, $dst) {
 }
 
 function Install-Module($moduleName) {
-    $moduleDir = Join-Path $SentinelRoot "modules" $moduleName
+    $moduleDir = Join-Paths @($SentinelRoot, "modules", $moduleName)
 
     if (-not (Test-Path $moduleDir)) {
         Write-Warning "Module directory not found: $moduleDir"
@@ -102,7 +109,7 @@ function Install-Module($moduleName) {
     $hooksDir = Join-Path $moduleDir "hooks"
     if (Test-Path $hooksDir) {
         Get-ChildItem $hooksDir -File | ForEach-Object {
-            Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "hooks" $_.Name)
+            Copy-FileChecked $_.FullName (Join-Paths @($ClaudeDir, "hooks", $_.Name))
         }
     }
 
@@ -110,7 +117,7 @@ function Install-Module($moduleName) {
     $refDir = Join-Path $moduleDir "reference"
     if (Test-Path $refDir) {
         Get-ChildItem $refDir -Filter "*.md" | ForEach-Object {
-            Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "reference" $_.Name)
+            Copy-FileChecked $_.FullName (Join-Paths @($ClaudeDir, "reference", $_.Name))
         }
     }
 
@@ -118,7 +125,7 @@ function Install-Module($moduleName) {
     $agentsDir = Join-Path $moduleDir "agents"
     if (Test-Path $agentsDir) {
         Get-ChildItem $agentsDir -Filter "*.md" | ForEach-Object {
-            Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "agents" $_.Name)
+            Copy-FileChecked $_.FullName (Join-Paths @($ClaudeDir, "agents", $_.Name))
         }
     }
 
@@ -133,7 +140,7 @@ function Install-Module($moduleName) {
     # Tools (go to ~/.claude/tools/)
     $toolsDir = Join-Path $moduleDir "tools"
     if (Test-Path $toolsDir) {
-        $toolsDest = Join-Path $env:USERPROFILE ".claude" "tools"
+        $toolsDest = Join-Paths @($env:USERPROFILE, ".claude", "tools")
         Get-ChildItem $toolsDir -File | ForEach-Object {
             Copy-FileChecked $_.FullName (Join-Path $toolsDest $_.Name)
         }
@@ -145,7 +152,7 @@ function Install-Module($moduleName) {
         Get-ChildItem $skillsDir -Directory | ForEach-Object {
             $skillName = $_.Name
             Get-ChildItem $_.FullName -File | ForEach-Object {
-                Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "skills" $skillName $_.Name)
+                Copy-FileChecked $_.FullName (Join-Paths @($ClaudeDir, "skills", $skillName, $_.Name))
             }
         }
     }
@@ -156,7 +163,7 @@ function Install-Module($moduleName) {
         $rulesTemplates = @("design-invariants.md", "terminology.md", "plugin-auto-invoke.md")
         Get-ChildItem $templatesDir -Filter "*.md" | ForEach-Object {
             if ($rulesTemplates -contains $_.Name) {
-                $dest = Join-Path $ClaudeDir "rules" $_.Name
+                $dest = Join-Paths @($ClaudeDir, "rules", $_.Name)
                 if (-not (Test-Path $dest)) {
                     Copy-FileChecked $_.FullName $dest
                 } else {
@@ -165,7 +172,7 @@ function Install-Module($moduleName) {
             } else {
                 # Non-rules templates: project root for project installs, ~/.claude/templates/ for global
                 if ($Target -eq "global") {
-                    Copy-FileChecked $_.FullName (Join-Path $env:USERPROFILE ".claude" "templates" $_.Name)
+                    Copy-FileChecked $_.FullName (Join-Paths @($env:USERPROFILE, ".claude", "templates", $_.Name))
                 } else {
                     Copy-FileChecked $_.FullName $_.Name
                 }
@@ -191,7 +198,7 @@ function Install-Module($moduleName) {
 }
 
 function Install-ContextAwareness {
-    $moduleDir = Join-Path $SentinelRoot "modules" "context-awareness"
+    $moduleDir = Join-Paths @($SentinelRoot, "modules", "context-awareness")
 
     # Windows always uses bundled (only known working Windows version)
     Log "Installing bundled context-awareness (Windows)..."
@@ -220,14 +227,14 @@ function Install-ContextAwareness {
         Get-ChildItem $skillsDir -Directory | ForEach-Object {
             $skillName = $_.Name
             Get-ChildItem $_.FullName -File | ForEach-Object {
-                Copy-FileChecked $_.FullName (Join-Path $ClaudeDir "skills" $skillName $_.Name)
+                Copy-FileChecked $_.FullName (Join-Paths @($ClaudeDir, "skills", $skillName, $_.Name))
             }
         }
     }
 }
 
 function Install-Notification {
-    $moduleDir = Join-Path $SentinelRoot "modules" "notification"
+    $moduleDir = Join-Paths @($SentinelRoot, "modules", "notification")
 
     # Conflict detection: warn if settings.json already has notification/flash/alert hooks
     if (Test-Path $SettingsFile) {
@@ -264,7 +271,7 @@ function Install-Notification {
     # Windows uses flash.ps1
     $src = Join-Path $moduleDir "flash.ps1"
     if (Test-Path $src) {
-        Copy-FileChecked $src (Join-Path $ClaudeDir "hooks" "flash.ps1")
+        Copy-FileChecked $src (Join-Paths @($ClaudeDir, "hooks", "flash.ps1"))
         Log "  Windows notification: flash.ps1"
     }
 }
@@ -501,11 +508,11 @@ function New-Claudeignore {
     elseif ((Test-Path "setup.py") -or (Test-Path "pyproject.toml")) { $template = "python" }
 
     $content = ""
-    $generalPath = Join-Path $SentinelRoot "templates" "claudeignore" "general.claudeignore"
+    $generalPath = Join-Paths @($SentinelRoot, "templates", "claudeignore", "general.claudeignore")
     if (Test-Path $generalPath) { $content = Get-Content $generalPath -Raw }
 
     if ($template) {
-        $specificPath = Join-Path $SentinelRoot "templates" "claudeignore" "$template.claudeignore"
+        $specificPath = Join-Paths @($SentinelRoot, "templates", "claudeignore", "$template.claudeignore")
         if (Test-Path $specificPath) {
             $content += "`n`n# $template-specific`n"
             $content += Get-Content $specificPath -Raw
@@ -636,7 +643,7 @@ if ($Modules -match "verification" -and -not $DryRun) {
 
 # Auto-configure spawn (if sprint-pipeline installed)
 if ($Modules -match "sprint-pipeline") {
-    $spawnPath = Join-Path $env:USERPROFILE ".claude" "tools" "spawn.py"
+    $spawnPath = Join-Paths @($env:USERPROFILE, ".claude", "tools", "spawn.py")
     if (Test-Path $spawnPath) {
         if ($DryRun) {
             Log "  WOULD RUN: spawn.py --setup"
@@ -665,7 +672,7 @@ Log "$skillCount skills installed"
 # Write the install marker. See install.sh for rationale.
 if (-not $DryRun) {
     $markerPath = Join-Path $ClaudeDir ".cc-sentinel-installed"
-    (Get-Date -AsUTC -Format "yyyy-MM-ddTHH:mm:ssZ") | Out-File -FilePath $markerPath -Encoding utf8 -NoNewline
+    ((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")) | Out-File -FilePath $markerPath -Encoding utf8 -NoNewline
 }
 
 Write-Host ""
