@@ -175,7 +175,7 @@ powershell -ExecutionPolicy Bypass -File "<this-repo-path>/install.ps1" -Modules
 bash "<this-repo-path>/install.sh" --modules "<selected>" --target "<target>"
 ```
 
-Replace `<this-repo-path>` with the absolute path to this cloned repository.
+Replace `<this-repo-path>` with the absolute path to this cloned repository. Pass ONLY these arguments — no other flags or parameters exist. The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
 
 ### Step 5b: Configure Spawn (if Sprint Pipeline selected)
 
