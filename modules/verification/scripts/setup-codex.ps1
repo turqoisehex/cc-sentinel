@@ -66,7 +66,7 @@ function Invoke-Install {
 
     # On Windows, npm global goes to %AppData% — no elevation needed
     try {
-        & npm install -g @openai/codex 2>&1 | Out-Null
+        $npmOutput = & npm install -g @openai/codex 2>&1
         $bin = Find-Codex
         if ($bin) {
             try {
@@ -79,10 +79,12 @@ function Invoke-Install {
         } else {
             Write-Output "STATUS: INSTALL_FAILED"
             Write-Output "CMD: npm install -g @openai/codex"
+            if ($npmOutput) { Write-Output "DETAIL: $($npmOutput | Select-Object -Last 3 | Out-String)" }
         }
     } catch {
         Write-Output "STATUS: INSTALL_FAILED"
         Write-Output "CMD: npm install -g @openai/codex"
+        Write-Output "DETAIL: $($_.Exception.Message)"
     }
 }
 
