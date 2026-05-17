@@ -1,3 +1,6 @@
+# Drain stdin to prevent hook from hanging when Claude pipes data
+if (-not [Console]::IsInputRedirected) {} else { [void][Console]::In.ReadToEnd() }
+
 # R2D2-style sounds (simplified)
 
 function Boop { [console]::beep((Get-Random -Min 400 -Max 800), (Get-Random -Min 80 -Max 150)) }

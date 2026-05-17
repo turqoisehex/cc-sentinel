@@ -57,7 +57,7 @@ for CHECK_DIR in "$PROJECT_DIR" "${CLAUDE_PROJECT_DIR:-}"; do
   [[ -z "$CHECK_DIR" ]] && continue
   # Check shared index
   if [[ -f "${CHECK_DIR}/CURRENT_TASK.md" ]]; then
-    if tr -d '\r' < "${CHECK_DIR}/CURRENT_TASK.md" | grep -q "GOVERNANCE-EDIT-AUTHORIZED" 2>/dev/null; then
+    if tr -d '\r' < "${CHECK_DIR}/CURRENT_TASK.md" | grep -q "^GOVERNANCE-EDIT-AUTHORIZED$" 2>/dev/null; then
       GOVERNANCE_AUTHORIZED="true"
       break
     fi
@@ -65,7 +65,7 @@ for CHECK_DIR in "$PROJECT_DIR" "${CLAUDE_PROJECT_DIR:-}"; do
   # Check per-channel files
   for CT_FILE in "${CHECK_DIR}"/CURRENT_TASK_ch*.md; do
     [[ ! -f "$CT_FILE" ]] && continue
-    if tr -d '\r' < "$CT_FILE" | grep -q "GOVERNANCE-EDIT-AUTHORIZED" 2>/dev/null; then
+    if tr -d '\r' < "$CT_FILE" | grep -q "^GOVERNANCE-EDIT-AUTHORIZED$" 2>/dev/null; then
       GOVERNANCE_AUTHORIZED="true"
       break 2
     fi

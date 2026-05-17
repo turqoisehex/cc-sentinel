@@ -605,9 +605,9 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "VERIFICATION_BLOCKED in channel CT counts as evidence"
 teardown_temp
 
-# --- Test 19: Multi-channel — one stale, one fresh -> reports stale only ---
+# --- Test 19: Channeled session skips shared CT staleness (owns channel CT only) ---
 echo ""
-echo "Test 19: Channeled session, shared stale + own channel fresh -> blocks for shared"
+echo "Test 19: Channeled session, shared stale + own channel fresh -> allows (shared skipped)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -617,7 +617,7 @@ touch_now "$PROJECT/CURRENT_TASK_ch5.md"    # own channel fresh
 INPUT=$(build_input "$PROJECT" "Continuing work.")
 SENTINEL_CHANNEL=5 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_contains "CURRENT_TASK.md" "reports stale shared CT"
+assert_stdout_empty "channeled session skips shared CT staleness"
 teardown_temp
 
 # --- Test 20: CWD fallback — empty CWD, pwd finds project ---

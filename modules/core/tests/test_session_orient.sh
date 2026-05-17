@@ -324,9 +324,9 @@ else
 fi
 teardown_temp
 
-# --- Test 10d: Stale .md cleanup in _pending_opus ---
+# --- Test 10d: Stale .md in _pending_opus preserved (cross-session dispatches) ---
 echo ""
-echo "Test 10d: Stale .md in _pending_opus/ch1 -> deleted"
+echo "Test 10d: Stale .md in _pending_opus/ch1 -> preserved (intentional)"
 setup_temp
 create_ct "$PROJECT" "IN PROGRESS"
 mkdir -p "$PROJECT/verification_findings/_pending_opus/ch1"
@@ -340,11 +340,11 @@ INPUT=$(build_input "$PROJECT")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 TOTAL=$((TOTAL + 1))
-if [[ ! -f "$STALE_MD_OPUS" ]]; then
-  echo -e "  ${GREEN}PASS${NC}: stale .md in _pending_opus/ch1 was cleaned up"
+if [[ -f "$STALE_MD_OPUS" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: stale .md in _pending_opus/ch1 preserved (cross-session dispatch)"
   PASS=$((PASS + 1))
 else
-  echo -e "  ${RED}FAIL${NC}: stale .md in _pending_opus/ch1 still exists"
+  echo -e "  ${RED}FAIL${NC}: stale .md in _pending_opus/ch1 was incorrectly deleted"
   FAIL=$((FAIL + 1))
 fi
 teardown_temp
