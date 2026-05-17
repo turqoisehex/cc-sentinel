@@ -19,7 +19,8 @@
           "cleanup",
           "cold",
           "self-test",
-          "status"
+          "status",
+          "sync-sentinel"
         ],
         "templates": [
           "current-task-template.md",
