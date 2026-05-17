@@ -161,9 +161,10 @@ function Invoke-VerifyAuth {
 
     $stdoutFile = [System.IO.Path]::GetTempFileName()
     $stderrFile = [System.IO.Path]::GetTempFileName()
+    $stdinFile = [System.IO.Path]::GetTempFileName()
     try {
         $codexArgs = @("`"$codexJs`"", "exec", "-m", "gpt-4.1-mini", "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "`"Reply with exactly one word: SENTINEL`"")
-        $proc = Start-Process -FilePath $nodeExe -ArgumentList $codexArgs -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile -NoNewWindow -PassThru
+        $proc = Start-Process -FilePath $nodeExe -ArgumentList $codexArgs -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile -RedirectStandardInput $stdinFile -NoNewWindow -PassThru
         $exited = $proc.WaitForExit(30000)
         if (-not $exited) {
             $proc.Kill()
@@ -199,6 +200,7 @@ function Invoke-VerifyAuth {
     } finally {
         Remove-Item $stdoutFile -Force -ErrorAction SilentlyContinue
         Remove-Item $stderrFile -Force -ErrorAction SilentlyContinue
+        Remove-Item $stdinFile -Force -ErrorAction SilentlyContinue
     }
 }
 

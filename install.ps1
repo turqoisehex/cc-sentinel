@@ -12,7 +12,7 @@ param(
     [ValidateSet("project", "global")]
     [string]$Target,
 
-    [string]$BarStyle = "auto",
+    [string]$BarStyle = "unicode",
 
     [switch]$DryRun,
 
@@ -227,10 +227,12 @@ function Install-ContextAwareness {
         Copy-FileChecked $_.FullName (Join-Path $caTarget $_.Name)
     }
 
-    # Update bar_style
+    # Update bar_style — only on fresh install (not when local config preserved)
     if (-not $DryRun) {
         $configPath = Join-Path $caTarget "config.json"
-        if (Test-Path $configPath) {
+        $marker = Join-Path $ClaudeDir ".cc-sentinel-installed"
+        $isReinstall = Test-Path $marker
+        if ((Test-Path $configPath) -and (-not $isReinstall -or $ForceOverwrite)) {
             $config = Get-Content $configPath | ConvertFrom-Json
             if (-not $config.statusline) {
                 $config | Add-Member -NotePropertyName "statusline" -NotePropertyValue @{} -Force
