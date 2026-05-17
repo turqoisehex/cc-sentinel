@@ -167,7 +167,7 @@ if (Test-Path $SettingsFile) {
             }
         }
 
-        $allowPatterns = @("hooks/","hooks\","scripts/","scripts\","cc-context-awareness/","cc-context-awareness\","tools/","tools\","mkdir -p verification_findings","ls verification_findings","setup-codex","flash.ps1")
+        $allowPatterns = @("hooks/","hooks\","scripts/","scripts\","cc-context-awareness/","cc-context-awareness\","tools/","tools\",".claude?tools?","verification_findings","setup-codex","flash.ps1","(git *)")
         if ($settings.permissions -and $settings.permissions.allow) {
             $settings.permissions.allow = @($settings.permissions.allow | Where-Object {
                 $rule = $_; -not ($allowPatterns | Where-Object { $rule -like "*$_*" })

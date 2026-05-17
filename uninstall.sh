@@ -231,8 +231,8 @@ if "hooks" in settings:
 # Remove sentinel allow rules
 sentinel_allow_patterns = [
     "hooks/", "scripts/", "cc-context-awareness/", "tools/",
-    "mkdir -p verification_findings", "ls verification_findings",
-    "setup-codex", "flash.ps1",
+    ".claude?tools?", "verification_findings",
+    "setup-codex", "flash.ps1", "(git *)",
 ]
 
 if "permissions" in settings:
