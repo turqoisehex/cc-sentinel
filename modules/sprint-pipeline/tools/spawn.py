@@ -1020,7 +1020,22 @@ class Spawner:
             print("[dry-run] Would sleep %.1fs (tab init)" % tab_delay, file=file)
             print('[dry-run] Would activate window "%s"' % window, file=file)
             print("[dry-run] Would sleep 0.5s (post-activate)", file=file)
-            print("[dry-run] Would type: claude --model %s" % model, file=file)
+            if sys.platform == "win32":
+                env_parts = ["$env:SENTINEL_CHANNEL='%d'" % idx]
+                if model == "sonnet":
+                    env_parts.insert(0, "$env:SENTINEL_LISTENER='true'")
+                if mode == "duo":
+                    env_parts.insert(0, "$env:CC_DUO_MODE='1'")
+                cmd = "; ".join(env_parts) + "; claude --model %s" % model
+            else:
+                env = ""
+                if mode == "duo":
+                    env = "CC_DUO_MODE=1 "
+                if model == "sonnet":
+                    env += "SENTINEL_LISTENER=true "
+                env += "SENTINEL_CHANNEL=%d " % idx
+                cmd = "%sclaude --model %s" % (env, model)
+            print("[dry-run] Would type: %s" % cmd, file=file)
             print("[dry-run] Would sleep %.1fs (startup delay)" % startup_delay, file=file)
             if needs_trust:
                 print("[dry-run] Would type: <Enter> (dismiss trust prompt)", file=file)
@@ -1035,23 +1050,32 @@ class Spawner:
 
     @staticmethod
     def print_wayland_commands(mode, count, file=None):
-        """Print commands for manual entry on Wayland."""
+        """Print commands for manual entry when automation unavailable."""
         if file is None:
             file = sys.stdout
         plan = Spawner.build_plan(mode, count)
-        print("\nWayland detected. Type these commands in each tab:\n", file=file)
+        print("\nType these commands in each tab:\n", file=file)
         for session in plan:
             model = session["model"]
             idx = session["index"]
             model_cap = model.capitalize()
             print("  Tab %s %s:" % (session["window"].capitalize(), idx), file=file)
-            env = ""
-            if mode == "duo":
-                env = "CC_DUO_MODE=1 "
-            if model == "sonnet":
-                env += "SENTINEL_LISTENER=true "
-            env += "SENTINEL_CHANNEL=%d " % idx
-            print("    %sclaude --model %s" % (env, model), file=file)
+            if sys.platform == "win32":
+                env_parts = ["$env:SENTINEL_CHANNEL='%d'" % idx]
+                if model == "sonnet":
+                    env_parts.insert(0, "$env:SENTINEL_LISTENER='true'")
+                if mode == "duo":
+                    env_parts.insert(0, "$env:CC_DUO_MODE='1'")
+                cmd = "; ".join(env_parts) + "; claude --model %s" % model
+            else:
+                env = ""
+                if mode == "duo":
+                    env = "CC_DUO_MODE=1 "
+                if model == "sonnet":
+                    env += "SENTINEL_LISTENER=true "
+                env += "SENTINEL_CHANNEL=%d " % idx
+                cmd = "%sclaude --model %s" % (env, model)
+            print("    %s" % cmd, file=file)
             print("    /rename %s %s" % (model_cap, idx), file=file)
             print("    /%s %s" % (model, idx), file=file)
             print(file=file)
@@ -1250,12 +1274,21 @@ class Spawner:
                 # - SENTINEL_LISTENER: unconditional stop hook bypass for Sonnet
                 #   listeners (stateless service loops that must not touch CT)
                 tip("%s %d: launching claude..." % (model_cap, idx))
-                env_prefix = "SENTINEL_CHANNEL=%d" % idx
-                if model == "sonnet":
-                    env_prefix = "SENTINEL_LISTENER=true " + env_prefix
-                if mode == "duo":
-                    env_prefix = "CC_DUO_MODE=1 " + env_prefix
-                key_sender.type_line("%s claude --model %s" % (env_prefix, model))
+                if sys.platform == "win32":
+                    env_parts = ["$env:SENTINEL_CHANNEL='%d'" % idx]
+                    if model == "sonnet":
+                        env_parts.insert(0, "$env:SENTINEL_LISTENER='true'")
+                    if mode == "duo":
+                        env_parts.insert(0, "$env:CC_DUO_MODE='1'")
+                    env_line = "; ".join(env_parts) + "; claude --model %s" % model
+                else:
+                    env_prefix = "SENTINEL_CHANNEL=%d" % idx
+                    if model == "sonnet":
+                        env_prefix = "SENTINEL_LISTENER=true " + env_prefix
+                    if mode == "duo":
+                        env_prefix = "CC_DUO_MODE=1 " + env_prefix
+                    env_line = "%s claude --model %s" % (env_prefix, model)
+                key_sender.type_line(env_line)
 
                 # Step 6: Sleep startup_delay
                 tip("%s %d: waiting for Claude to start..." % (model_cap, idx))
