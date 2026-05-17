@@ -814,5 +814,5 @@ if (-not $DryRun) {
 }
 
 Write-Host ""
-Log "Installation complete! No further verification needed — summary above is authoritative."
-Log "Start a new session and run /self-test for ongoing validation."
+Log "Installation complete."
+Log "Run /self-test in your next session to verify everything is working."
