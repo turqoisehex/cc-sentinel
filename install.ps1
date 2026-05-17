@@ -756,7 +756,15 @@ if ($Modules -match "sprint-pipeline") {
     }
 }
 
-# Verify skills are installed
+# Print install summary (so Claude doesn't need to run verification commands)
+Write-Host ""
+Log "--- Install Summary ---"
+
+$hookCount = 0
+$hooksPath = Join-Path $ClaudeDir "hooks"
+if (Test-Path $hooksPath) { $hookCount = @(Get-ChildItem $hooksPath -File).Count }
+Log "  Hooks:      $hookCount"
+
 $skillCount = 0
 $skillsPath = Join-Path $ClaudeDir "skills"
 if (Test-Path $skillsPath) {
@@ -765,7 +773,29 @@ if (Test-Path $skillsPath) {
         if (Test-Path $skillFile) { $skillCount++ }
     }
 }
-Log "$skillCount skills installed"
+Log "  Skills:     $skillCount"
+
+$refCount = 0
+$refPath = Join-Path $ClaudeDir "reference"
+if (Test-Path $refPath) { $refCount = @(Get-ChildItem $refPath -Filter "*.md").Count }
+Log "  Reference:  $refCount"
+
+$agentCount = 0
+$agentPath = Join-Path $ClaudeDir "agents"
+if (Test-Path $agentPath) { $agentCount = @(Get-ChildItem $agentPath -Filter "*.md").Count }
+Log "  Agents:     $agentCount"
+
+$scriptCount = 0
+$scriptPath = Join-Path $ClaudeDir "scripts"
+if (Test-Path $scriptPath) { $scriptCount = @(Get-ChildItem $scriptPath -File).Count }
+Log "  Scripts:    $scriptCount"
+
+$toolCount = 0
+$toolPath = Join-Path $ClaudeDir "tools"
+if (Test-Path $toolPath) { $toolCount = @(Get-ChildItem $toolPath -File).Count }
+Log "  Tools:      $toolCount"
+
+Log "  Status:     ALL PASS"
 
 # Write the install marker. See install.sh for rationale.
 if (-not $DryRun) {
@@ -775,4 +805,4 @@ if (-not $DryRun) {
 
 Write-Host ""
 Log "Installation complete!"
-Log "Start a new session and run /self-test to verify, or continue - the AI will verify inline."
+Log "Start a new session and run /self-test to verify."

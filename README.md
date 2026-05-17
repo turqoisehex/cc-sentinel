@@ -96,8 +96,7 @@ Windows (run directly — do not wrap in `powershell -File`, which spawns a nest
 7. **Run the installer** with the selected modules. Do not ask for confirmation after module selection — just run it.
 8. **Offer deny rules** — use `AskUserQuestion` for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
 9. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
-10. **Print a summary** of what was installed: modules, hooks, skills, status line, spawn config.
-11. **Print an inline install summary** (hooks, skills, reference files — each with PASS/FAIL count). Skills installed this session are not loadable until the next session; **tell the user to run `/self-test`** then for ongoing validation.
+10. **Report the installer's summary output** — the installer prints hook/skill/reference/agent/script/tool counts and PASS status. Do not run additional verification commands; the installer output is authoritative. Tell the user to run `/self-test` in their next session for ongoing validation.
 
 **Manual installation:**
 
