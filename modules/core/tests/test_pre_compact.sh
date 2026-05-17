@@ -187,14 +187,14 @@ setup_temp
 create_ct "$PROJECT" "# Shared task
 Phase: /3 Implementation"
 create_channel_ct "$PROJECT" "5" "# Channel 5
-Working on meditation engine"
+Working on payment engine"
 INPUT=$(build_precompact_input "auto")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "CURRENT_TASK.md" "shared CT mentioned"
 assert_stdout_contains "CURRENT_TASK_ch5.md" "channel 5 CT mentioned"
 assert_stdout_contains "Implementation" "shared content present"
-assert_stdout_contains "meditation engine" "channel content present"
+assert_stdout_contains "payment engine" "channel content present"
 teardown_temp
 
 # --- Test 5: CLAUDE_PROJECT_DIR env var -> resolves correctly ---
