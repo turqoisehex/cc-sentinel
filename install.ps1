@@ -91,6 +91,10 @@ $script:NotificationSkipped = $false
 
 function Log($msg) { Write-Host "[cc-sentinel] $msg" }
 
+function Write-Utf8NoBom($path, $text) {
+    [System.IO.File]::WriteAllText($path, $text, [System.Text.UTF8Encoding]::new($false))
+}
+
 function Copy-FileChecked($src, $dst) {
     if ($DryRun) {
         Log "  WOULD COPY: $src -> $dst"
@@ -238,7 +242,7 @@ function Install-ContextAwareness {
                 $config | Add-Member -NotePropertyName "statusline" -NotePropertyValue @{} -Force
             }
             $config.statusline | Add-Member -NotePropertyName "bar_style" -NotePropertyValue $BarStyle -Force
-            $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
+            Write-Utf8NoBom $configPath ($config | ConvertTo-Json -Depth 10)
         }
     }
 
@@ -434,6 +438,7 @@ function Configure-Permissions {
             "Bash(powershell *setup-codex*)",
             "Bash(powershell -File *setup-codex*)",
             "Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
+            "Bash(powershell -ExecutionPolicy Bypass -File *flash.ps1*)",
             "Bash(mkdir -p verification_findings/*)",
             "Bash(mkdir -p verification_findings/*/*)",
             "Bash(ls verification_findings/*)",
@@ -449,6 +454,7 @@ function Configure-Permissions {
             "Bash(powershell *setup-codex*)",
             "Bash(powershell -File *setup-codex*)",
             "Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
+            "Bash(powershell -ExecutionPolicy Bypass -File *flash.ps1*)",
             "Bash(mkdir -p verification_findings/*)",
             "Bash(mkdir -p verification_findings/*/*)",
             "Bash(ls verification_findings/*)",
@@ -565,7 +571,7 @@ function New-Claudeignore {
                 Log "  .claudeignore already has all cc-sentinel patterns"
             }
         } else {
-            "# Added by cc-sentinel`n$content" | Set-Content ".claudeignore" -Encoding UTF8
+            Write-Utf8NoBom ".claudeignore" "# Added by cc-sentinel`n$content"
             Log "  Created .claudeignore"
         }
     }
@@ -652,7 +658,7 @@ if ($Target -eq "global" -and -not $DryRun) {
             $content = Get-Content $_.FullName -Raw
             if ($content -match "(?m)^bash scripts/|``bash scripts/") {
                 $content = $content -replace "(?m)(?<=^|``)bash scripts/", "bash ~/.claude/scripts/"
-                $content | Set-Content $_.FullName -NoNewline -Encoding UTF8
+                Write-Utf8NoBom $_.FullName $content
                 Log "  Updated paths in: $($_.Name)"
             }
         }
@@ -666,7 +672,7 @@ if ($Target -eq "global" -and -not $DryRun) {
                 $content = Get-Content $skillFile -Raw
                 if ($content -match "(?m)^bash scripts/|``bash scripts/") {
                     $content = $content -replace "(?m)(?<=^|``)bash scripts/", "bash ~/.claude/scripts/"
-                    $content | Set-Content $skillFile -NoNewline -Encoding UTF8
+                    Write-Utf8NoBom $skillFile $content
                     Log "  Updated paths in: skills/$($_.Name)/SKILL.md"
                 }
             }
@@ -680,7 +686,7 @@ Write-Host ""
 if (-not $DryRun) {
     $settingsDir = Split-Path -Parent $SettingsFile
     if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
-    if (-not (Test-Path $SettingsFile)) { '{}' | Set-Content $SettingsFile -Encoding UTF8 }
+    if (-not (Test-Path $SettingsFile)) { Write-Utf8NoBom $SettingsFile '{}' }
 
     try {
         $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
@@ -697,7 +703,7 @@ if (-not $DryRun) {
 
     # Write to temp then move (mitigates partial-write corruption)
     $tmpFile = "$SettingsFile.tmp"
-    $settings | ConvertTo-Json -Depth 10 | Set-Content $tmpFile -Encoding UTF8
+    Write-Utf8NoBom $tmpFile ($settings | ConvertTo-Json -Depth 10)
     try {
         Move-Item -Path $tmpFile -Destination $SettingsFile -Force
     } catch {
