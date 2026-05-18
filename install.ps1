@@ -344,13 +344,13 @@ function Merge-Settings {
                             $cmd = $cmd -replace "\.claude/", "~/.claude/"
                         }
                         # Handle notification placeholder
-                        # Use & operator to run script in-process (avoids nested-process warning)
+                        # CC runs hooks through bash (even on Windows), so use powershell.exe invocation
                         if ($cmd -eq "__NOTIFICATION_SCRIPT__") {
                             if ($Target -eq "global") {
-                                $resolvedHookPath = Join-Path $env:USERPROFILE ".claude\hooks\flash.ps1"
-                                $cmd = "& `"$resolvedHookPath`""
+                                $resolvedHookPath = (Join-Path $env:USERPROFILE ".claude/hooks/flash.ps1").Replace('\', '/')
+                                $cmd = "powershell.exe -ExecutionPolicy Bypass -File `"$resolvedHookPath`""
                             } else {
-                                $cmd = "& `"$HookPrefix/hooks/flash.ps1`""
+                                $cmd = "powershell.exe -ExecutionPolicy Bypass -File `"$HookPrefix/hooks/flash.ps1`""
                             }
                         }
 

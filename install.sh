@@ -353,7 +353,7 @@ cmd_prefix = "~/.claude" if target == "global" else hook_prefix
 if os_name == "Linux" or os_name == "Darwin":
     notif_cmd = f"bash {cmd_prefix}/hooks/flash-notification.sh"
 elif os_name == "Windows":
-    notif_cmd = f'& "{cmd_prefix}/hooks/flash.ps1"'
+    notif_cmd = f'powershell.exe -ExecutionPolicy Bypass -File "{cmd_prefix}/hooks/flash.ps1"'
 else:
     notif_cmd = None
 
