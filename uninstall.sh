@@ -232,7 +232,7 @@ if "hooks" in settings:
 sentinel_allow_patterns = [
     "hooks/", "scripts/", "cc-context-awareness/", "tools/",
     ".claude?tools?", "verification_findings",
-    "setup-codex", "flash.ps1", "(git *)",
+    "setup-codex", "flash.ps1", "install.ps1", "uninstall.ps1", "(git *)",
 ]
 
 if "permissions" in settings:

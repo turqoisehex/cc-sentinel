@@ -231,15 +231,16 @@ install_context_awareness() {
   if [[ "$DRY_RUN" != "true" ]]; then
     local config_target="${CLAUDE_DIR}/cc-context-awareness/config.json"
     if [[ -f "$config_target" ]]; then
-      _SENTINEL_BAR_STYLE="$BAR_STYLE" "$PYTHON" -c "
+      _SENTINEL_BAR_STYLE="$BAR_STYLE" _SENTINEL_CONFIG_TARGET="$config_target" "$PYTHON" -c "
 import json, os, sys
+config_target = os.environ['_SENTINEL_CONFIG_TARGET']
 try:
-    with open('$config_target') as f: c = json.load(f)
+    with open(config_target) as f: c = json.load(f)
 except json.JSONDecodeError:
-    print('WARNING: $config_target contains invalid JSON -- skipping bar_style update.', file=sys.stderr)
+    print('WARNING: config.json contains invalid JSON -- skipping bar_style update.', file=sys.stderr)
     sys.exit(0)
 c.setdefault('statusline', {})['bar_style'] = os.environ.get('_SENTINEL_BAR_STYLE', 'auto')
-with open('$config_target', 'w') as f: json.dump(c, f, indent=2)
+with open(config_target, 'w') as f: json.dump(c, f, indent=2)
 " 2>/dev/null || true
     fi
   fi
@@ -466,6 +467,7 @@ if target == "global":
         "Bash(git *)",
         'Bash(powershell *setup-codex*)',
         'Bash(powershell -File *setup-codex*)',
+        'Bash(powershell -ExecutionPolicy Bypass *setup-codex*)',
         "Bash(mkdir -p verification_findings/*)",
         "Bash(mkdir -p verification_findings/*/*)",
         "Bash(ls verification_findings/*)",
@@ -476,6 +478,8 @@ if target == "global":
         "PowerShell(python3 ~/.claude/tools/*)",
         "PowerShell(*setup-codex*)",
         "PowerShell(*flash.ps1*)",
+        "PowerShell(*install.ps1*)",
+        "PowerShell(*uninstall.ps1*)",
         "PowerShell(mkdir *verification_findings*)",
         "PowerShell(*verification_findings*)",
     ]
@@ -490,6 +494,7 @@ else:
         "Bash(git *)",
         'Bash(powershell *setup-codex*)',
         'Bash(powershell -File *setup-codex*)',
+        'Bash(powershell -ExecutionPolicy Bypass *setup-codex*)',
         "Bash(mkdir -p verification_findings/*)",
         "Bash(mkdir -p verification_findings/*/*)",
         "Bash(ls verification_findings/*)",
@@ -500,6 +505,8 @@ else:
         "PowerShell(python3 ~/.claude/tools/*)",
         "PowerShell(*setup-codex*)",
         "PowerShell(*flash.ps1*)",
+        "PowerShell(*install.ps1*)",
+        "PowerShell(*uninstall.ps1*)",
         "PowerShell(mkdir *verification_findings*)",
         "PowerShell(*verification_findings*)",
     ]
@@ -811,7 +818,7 @@ if echo "$MODULES" | grep -q "sprint-pipeline"; then
       log "Configuring spawn (auto-detect terminal + key sender)..."
       "$PYTHON" "${HOME}/.claude/tools/spawn.py" --setup 2>/dev/null || log "  spawn.py --setup failed — run manually: python3 ~/.claude/tools/spawn.py --setup"
       # Write default startup_delay to spawn.json
-      local spawn_json="${HOME}/.claude/tools/spawn.json"
+      spawn_json="${HOME}/.claude/tools/spawn.json"
       if [[ ! -f "$spawn_json" ]] || ! "$PYTHON" -c "import json; d=json.load(open('$spawn_json')); assert 'startup_delay' in d" 2>/dev/null; then
         "$PYTHON" -c "
 import json, pathlib

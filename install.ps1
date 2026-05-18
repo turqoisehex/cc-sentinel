@@ -12,7 +12,7 @@ param(
     [ValidateSet("project", "global")]
     [string]$Target,
 
-    [string]$BarStyle = "unicode",
+    [string]$BarStyle = "auto",
 
     [switch]$DryRun,
 
@@ -450,6 +450,8 @@ function Configure-Permissions {
             "PowerShell(python3 ~/.claude/tools/*)",
             "PowerShell(*setup-codex*)",
             "PowerShell(*flash.ps1*)",
+            "PowerShell(*install.ps1*)",
+            "PowerShell(*uninstall.ps1*)",
             "PowerShell(mkdir *verification_findings*)",
             "PowerShell(*verification_findings*)"
         )
@@ -475,6 +477,8 @@ function Configure-Permissions {
             "PowerShell(python3 ~/.claude/tools/*)",
             "PowerShell(*setup-codex*)",
             "PowerShell(*flash.ps1*)",
+            "PowerShell(*install.ps1*)",
+            "PowerShell(*uninstall.ps1*)",
             "PowerShell(mkdir *verification_findings*)",
             "PowerShell(*verification_findings*)"
         )

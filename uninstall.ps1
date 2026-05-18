@@ -167,7 +167,7 @@ if (Test-Path $SettingsFile) {
             }
         }
 
-        $allowPatterns = @("hooks/","hooks\","scripts/","scripts\","cc-context-awareness/","cc-context-awareness\","tools/","tools\",".claude?tools?","verification_findings","setup-codex","flash.ps1","(git *)")
+        $allowPatterns = @("hooks/","hooks\","scripts/","scripts\","cc-context-awareness/","cc-context-awareness\","tools/","tools\",".claude?tools?","verification_findings","setup-codex","flash.ps1","install.ps1","uninstall.ps1","(git *)")
         if ($settings.permissions -and $settings.permissions.allow) {
             $settings.permissions.allow = @($settings.permissions.allow | Where-Object {
                 $rule = $_; -not ($allowPatterns | Where-Object { $rule -like "*$_*" })
@@ -229,11 +229,16 @@ if (Test-Path $ClaudeMd) {
 }
 
 # --- Phase 4: Remove cloned repo ---
-$CloneDir = Join-Path $env:USERPROFILE ".claude" "cc-sentinel"
+$CloneDir = Join-Path (Join-Path $env:USERPROFILE ".claude") "cc-sentinel"
 if (Test-Path $CloneDir) {
     Log ""
     Log "Removing cloned cc-sentinel repo..."
     Remove-SentinelItem $CloneDir
+}
+
+$TempCloneDir = Join-Path $env:TEMP "cc-sentinel"
+if (Test-Path $TempCloneDir) {
+    Remove-SentinelItem $TempCloneDir
 }
 
 # --- Done ---
