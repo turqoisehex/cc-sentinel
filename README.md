@@ -207,8 +207,8 @@ Prevents Claude from editing its own rules mid-session.
 
 Desktop alerts when Claude Code completes a task or needs your input. Platform-native:
 
-- **macOS** -- osascript notification + terminal bell
-- **Linux** -- notify-send (libnotify) + terminal bell
+- **macOS** -- system alert sound + terminal bell (persistent dock bounce when unfocused)
+- **Linux** -- terminal bell + wmctrl demands_attention (persistent taskbar highlight when unfocused)
 - **Windows** -- FlashWindowEx taskbar flash + console beeps (uses .NET, pre-installed on Windows 10+; targets Windows Terminal)
 
 ## Self-Test
@@ -386,10 +386,10 @@ Fresh Mac -- install Homebrew first, then everything else:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install node jq && npm install -g @anthropic-ai/claude-code
+brew install node jq python-tk@3.12 && npm install -g @anthropic-ai/claude-code
 ```
 
-macOS includes Git and bash; Python 3 is available via Xcode Command Line Tools or Homebrew. Only Node.js and jq need to be installed via Homebrew.
+macOS includes Git and bash; Python 3 is available via Xcode Command Line Tools or Homebrew. `python-tk@3.12` provides tkinter (needed for Spawn's Cancel dialog). If using a different Python version, adjust accordingly (e.g., `python-tk@3.13`). Only Node.js, jq, and python-tk need to be installed via Homebrew.
 
 If you already have Homebrew, skip the first line. Check what you have: `brew --version && node -v && jq --version`.
 

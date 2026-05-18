@@ -239,7 +239,7 @@ function Install-ContextAwareness {
         if ((Test-Path $configPath) -and (-not $isReinstall -or $ForceOverwrite)) {
             $config = Get-Content $configPath | ConvertFrom-Json
             if (-not $config.statusline) {
-                $config | Add-Member -NotePropertyName "statusline" -NotePropertyValue @{} -Force
+                $config | Add-Member -NotePropertyName "statusline" -NotePropertyValue ([PSCustomObject]@{}) -Force
             }
             $config.statusline | Add-Member -NotePropertyName "bar_style" -NotePropertyValue $BarStyle -Force
             Write-Utf8NoBom $configPath ($config | ConvertTo-Json -Depth 10)
@@ -315,7 +315,7 @@ function Merge-Settings {
     $manifest = Get-Content (Join-Path $SentinelRoot "modules.json") -Raw | ConvertFrom-Json
 
     if (-not $settings.hooks) {
-        $settings | Add-Member -NotePropertyName "hooks" -NotePropertyValue @{} -Force
+        $settings | Add-Member -NotePropertyName "hooks" -NotePropertyValue ([PSCustomObject]@{}) -Force
     }
 
     $modList = $Modules -split "," | ForEach-Object { $_.Trim() }
@@ -422,7 +422,7 @@ function Configure-Permissions {
     }
 
     if (-not $settings.permissions) {
-        $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue @{} -Force
+        $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue ([PSCustomObject]@{}) -Force
     }
     if (-not $settings.permissions.allow) {
         $settings.permissions | Add-Member -NotePropertyName "allow" -NotePropertyValue @() -Force
@@ -523,7 +523,7 @@ function Configure-DenyRules {
     }
 
     if (-not $settings.permissions) {
-        $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue @{} -Force
+        $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue ([PSCustomObject]@{}) -Force
     }
     if (-not $settings.permissions.deny) {
         $settings.permissions | Add-Member -NotePropertyName "deny" -NotePropertyValue @() -Force
@@ -773,7 +773,7 @@ if ($Modules -match "sprint-pipeline") {
                 Log "  spawn.py --setup failed - run manually: python ~/.claude/tools/spawn.py --setup"
             }
             # Write default startup_delay to spawn.json
-            $spawnJson = @{}
+            $spawnJson = [PSCustomObject]@{}
             if (Test-Path $spawnJsonPath) {
                 $spawnJson = Get-Content $spawnJsonPath -Raw | ConvertFrom-Json
             }
