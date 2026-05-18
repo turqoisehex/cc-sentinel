@@ -551,6 +551,14 @@ Look for issues labeled [`good first issue`](https://github.com/turqoisehex/cc-s
 - **cc-context-awareness** by [sdi2200262](https://github.com/sdi2200262/cc-context-awareness) -- Canonical context window monitoring tool for macOS/Linux. cc-sentinel includes a Windows-compatible rewrite (the only known working Windows version) and recommends the canonical version for non-Windows users.
 - **Production-refined** through hundreds of hours of iterative development on a production codebase, translating Cherny's principles into hooks, agents, and skills that enforce behavior rather than suggest it. Works with any tech stack — Flutter, React, Python, Go, Rust, and more.
 
+## For AI Assistants
+
+If you are an AI assistant asked to install cc-sentinel:
+
+1. `git clone` this repo to `~/.claude/cc-sentinel`
+2. Read `CLAUDE.md` in the cloned repo
+3. Follow its 9-step protocol exactly — do not improvise from this README
+
 ## License
 
 MIT
