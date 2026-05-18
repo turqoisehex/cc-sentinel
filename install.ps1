@@ -826,8 +826,10 @@ $rulesInjected = $false
 if (Test-Path $claudeMdPath) {
     $rulesInjected = (Get-Content $claudeMdPath -Raw) -match "cc-sentinel rules start"
 }
-Log "  CLAUDE.md:  $(if ($rulesInjected) { 'rules injected' } else { 'pending (inject via Step 5 or --inject-rules)' })"
-Log "  Status:     ALL PASS"
+Log "  CLAUDE.md:  $(if ($rulesInjected) { 'rules injected' } else { 'pending (inject via conversation Step 5)' })"
+Log "  Status:     $(if ($rulesInjected) { 'ALL PASS' } else { 'PASS (CLAUDE.md rules pending)' })"
+
+$reportPath = Join-Path $ClaudeDir "install-report.md"
 
 # Write the install marker and report file
 if (-not $DryRun) {
@@ -856,9 +858,8 @@ $(if (Test-Path $refPath) { (Get-ChildItem $refPath -Filter "*.md" | ForEach-Obj
 Rules injected: $rulesInjected
 
 ## Status
-ALL PASS
+$(if ($rulesInjected) { 'ALL PASS' } else { 'PASS (CLAUDE.md rules pending — inject via conversation Step 5)' })
 "@
-    $reportPath = Join-Path $ClaudeDir "install-report.md"
     Write-Utf8NoBom $reportPath $report
 }
 

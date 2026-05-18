@@ -51,10 +51,12 @@ if [[ "$TARGET" == "global" ]]; then
   CLAUDE_DIR="$HOME/.claude"
   SETTINGS_FILE="$HOME/.claude/settings.json"
   HOOK_PREFIX="$HOME/.claude"
+  CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 else
   CLAUDE_DIR=".claude"
   SETTINGS_FILE=".claude/settings.json"
   HOOK_PREFIX=".claude"
+  CLAUDE_MD="CLAUDE.md"
 fi
 
 if [[ "$TARGET" == "global" ]]; then
@@ -416,16 +418,23 @@ for mod_key in modules:
             else:
                 settings["hooks"][event_type].append(new_entry)
 
-    # Handle statusLine
-    if "statusLine" in merge:
+    # Handle statusLine (only add if absent — preserve existing user statusLine)
+    if "statusLine" in merge and "statusLine" not in settings:
         sl = dict(merge["statusLine"])
         if target == "global":
             sl["command"] = sl["command"].replace(".claude/", "~/.claude/")
         settings["statusLine"] = sl
 
-# Write back
-with open(settings_file, "w") as f:
-    json.dump(settings, f, indent=2)
+# Write back (atomic: temp file + rename)
+import tempfile
+tmp_fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(settings_file) or ".", suffix=".tmp")
+try:
+    with os.fdopen(tmp_fd, "w") as f:
+        json.dump(settings, f, indent=2)
+    os.replace(tmp_path, settings_file)
+except:
+    os.unlink(tmp_path)
+    raise
 
 print(f"Settings merged successfully: {settings_file}")
 PYEOF
@@ -710,7 +719,12 @@ resolve_deps() {
   local manifest="$SENTINEL_ROOT/modules.json"
   local resolved="$MODULES"
   local changed="true"
+  local iterations=0
   while [[ "$changed" == "true" ]]; do
+    ((iterations++)) || true
+    if [[ $iterations -gt 100 ]]; then
+      echo "ERROR: Circular dependency detected in modules.json" >&2; exit 1
+    fi
     changed="false"
     IFS=',' read -ra check_array <<< "$resolved"
     for mod in "${check_array[@]}"; do
@@ -790,8 +804,10 @@ if [[ "$DENY_RULES" == "true" ]]; then
   configure_deny_rules
 fi
 
-# Generate .claudeignore
-generate_claudeignore
+# Generate .claudeignore (project installs only — global uses deny rules)
+if [[ "$TARGET" != "global" ]]; then
+  generate_claudeignore
+fi
 
 # Inject CLAUDE.md rules (if requested)
 if [[ "$INJECT_RULES" == "true" ]]; then
@@ -849,11 +865,12 @@ log "  $SKILL_COUNT skills installed"
 # marker to gate local-preservation: files present and modified are kept as-is
 # (pass --force-overwrite to replace). Fresh installs never see the marker so
 # they always install canonical content.
+REPORT_PATH="${CLAUDE_DIR}/install-report.md"
+
 if [[ "$DRY_RUN" != "true" ]]; then
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${CLAUDE_DIR}/.cc-sentinel-installed"
 
   # Write install report (Claude can Read this file without shell commands)
-  REPORT_PATH="${CLAUDE_DIR}/install-report.md"
   REF_LIST="none"
   if [[ -d "${CLAUDE_DIR}/reference" ]]; then
     REF_LIST=$(ls "${CLAUDE_DIR}/reference/"*.md 2>/dev/null | while read -r f; do echo "- $(basename "$f")"; done)
@@ -872,11 +889,11 @@ Skills: $SKILL_COUNT
 $REF_LIST
 
 ## Status
-ALL PASS
+$(if grep -q "cc-sentinel rules start" "$CLAUDE_MD" 2>/dev/null; then echo "ALL PASS"; else echo "PASS (CLAUDE.md rules pending — inject via conversation Step 5 or --inject-rules)"; fi)
 REPORT
 fi
 
 echo ""
 log "Installation complete!"
-log "Install details: ~/.claude/install-report.md"
+log "Install details: $REPORT_PATH"
 log "Start a new Claude Code session, then run /self-test to verify your installation."

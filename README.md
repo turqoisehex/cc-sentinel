@@ -52,7 +52,7 @@ If Claude Code can do it, cc-sentinel can govern it.
 
 ## Installation
 
-**Prerequisites:** Node.js, Git, jq, and Python 3. Optional: [OpenAI Codex CLI](https://github.com/openai/codex) for interleaved multi-model verification (requires OpenAI Plus, Pro, Team, or API key). See [Platform Setup](#platform-setup) for one-command install per platform.
+**Prerequisites:** Node.js, Git, jq, and Python 3 (Unix/macOS always; Windows only if using Sprint Pipeline's `/spawn` command). Optional: [OpenAI Codex CLI](https://github.com/openai/codex) for interleaved multi-model verification (requires OpenAI Plus, Pro, Team, or API key). See [Platform Setup](#platform-setup) for one-command install per platform.
 
 **In any Claude Code session:**
 
@@ -74,29 +74,31 @@ Windows:
 git clone https://github.com/turqoisehex/cc-sentinel.git "$env:USERPROFILE\.claude\cc-sentinel"
 ```
 
-**Step 2 — Run the installer** (starts the interactive flow):
+**Step 2 — Claude Code runs the installer** (with args discovered during the conversation):
+
+The commands below are run by Claude Code automatically after gathering your preferences in the interactive flow. You do not need to run them manually — for manual installation, see the "Manual installation" section below.
 
 ```bash
-bash ~/.claude/cc-sentinel/install.sh
+bash ~/.claude/cc-sentinel/install.sh --modules "..." --target global|project
 ```
 
 Windows (run directly — do not wrap in `powershell -File`, which spawns a nested process):
 
 ```powershell
-& "$env:USERPROFILE\.claude\cc-sentinel\install.ps1"
+& "$env:USERPROFILE\.claude\cc-sentinel\install.ps1" -Modules "..." -Target global|project
 ```
 
-**Interactive flow (after installer starts):**
+**Interactive flow (after CLAUDE.md is loaded):**
 
 1. **Detect** your OS, shell, terminal, and project type. Report findings.
-3. **Ask your use case** — use `AskUserQuestion` to ask what you use Claude Code for (development, research, writing, etc.).
-4. **Present a problem→solution table** showing each failure mode and the module that solves it.
-5. **Recommend modules** — use `AskUserQuestion` with module options. Always offer "All modules" as the first option. Include one-line descriptions of what each module prevents.
-6. **Ask about global vs project install** — use `AskUserQuestion`. Recommend global for most users.
-7. **Run the installer** with the selected modules. Do not ask for confirmation after module selection — just run it.
-8. **Offer deny rules** — use `AskUserQuestion` for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
-9. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
-10. **Report results** — the installer prints counts and writes `~/.claude/install-report.md`. Use the `Read` tool on that file for details (no shell commands needed). Tell the user to run `/self-test` in their next session for ongoing validation.
+2. **Ask your use case** — use `AskUserQuestion` to ask what you use Claude Code for (development, research, writing, etc.).
+3. **Present a problem→solution table** showing each failure mode and the module that solves it.
+4. **Recommend modules** — use `AskUserQuestion` with module options. Always offer "All modules" as the first option. Include one-line descriptions of what each module prevents.
+5. **Ask about global vs project install** — use `AskUserQuestion`. Recommend global for most users.
+6. **Run the installer** with the selected modules. Do not ask for confirmation after module selection — just run it.
+7. **Offer deny rules** — use `AskUserQuestion` for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
+8. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
+9. **Report results** — the installer prints counts and writes an install report. Use the `Read` tool on that file for details (no shell commands needed). Tell the user to run `/self-test` in their next session for ongoing validation.
 
 **Manual installation:**
 
@@ -127,7 +129,7 @@ Prevents the three most common failure modes: context loss, work deferral, and a
 | `pre-compact-state-save.sh` | PreCompact | Last-chance hook before context compaction. Reminds Claude to write all in-progress state to CURRENT_TASK.md. |
 | `post-compact-reorient.sh` | SessionStart (compact) | After compaction, re-injects task state so Claude can resume without re-reading files. |
 | `agent-file-reminder.sh` | PreToolUse | Reminds agents to write results to files, not just return them in memory (which is lost after the agent exits). |
-| `auto-checkpoint.sh` | Stop, PreCompact | Auto-commits work-in-progress when a session ends or context compacts, preventing silent work loss. |
+| `auto-checkpoint.sh` | Stop, PreCompact | Saves work-in-progress as git stash snapshots when a session ends or context compacts, preventing silent work loss. |
 
 Also includes:
 - **CURRENT_TASK.md template** -- structured state file that survives compaction
@@ -154,7 +156,7 @@ This benefits **Claude Code itself** as much as the user. Without context awaren
 
 Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the locale does not indicate UTF-8.
 
-**Windows support:** cc-sentinel includes the only known Windows-compatible version of cc-context-awareness. On macOS/Linux, you can choose between the bundled version or the [canonical repository](https://github.com/sdi2200262/cc-context-awareness).
+**Windows support:** cc-sentinel includes the only known Windows-compatible version of cc-context-awareness. On macOS/Linux, the [canonical repository](https://github.com/sdi2200262/cc-context-awareness) is an alternative if you prefer to install context-awareness separately.
 
 ### Verification
 
@@ -469,7 +471,7 @@ sudo pacman -S nodejs npm jq python git && npm install -g @anthropic-ai/claude-c
 
 ### Verify Prerequisites
 
-The cc-sentinel installer checks for `jq`, `python3`, and `bash` before proceeding and exits with specific install instructions if anything is missing. After installing cc-sentinel, run `/self-test` to validate everything is wired up.
+The Unix installer checks for `jq`, `python3`, and `bash` before proceeding and exits with specific install instructions if anything is missing. The Windows installer (PowerShell) checks for `jq` and `bash` (Python is not needed — settings merge uses native PowerShell JSON). After installing cc-sentinel, run `/self-test` to validate everything is wired up.
 
 ### Tested On
 

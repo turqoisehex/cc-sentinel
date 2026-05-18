@@ -35,7 +35,7 @@ Present ALL of these problems as a table. Do NOT filter or select a subset. Show
 
 | # | Problem | Solution |
 |---|---------|----------|
-| 1 | "It said it was done, but it wasn't." | Verification — up to 5-agent squad audits before completion |
+| 1 | "It said it was done, but it wasn't." | Verification — multi-agent squad audits before completion (up to 15 agents with Codex) |
 | 2 | "It slammed into auto-compact and lost its work." | Context Awareness — visual status bar with 5 graduated warnings |
 | 3 | "It deferred instead of fixing." | Core — anti-deferral hook scans every write |
 | 4 | "After compaction, it forgot everything." | Core — CURRENT_TASK.md state survives compaction |
@@ -149,7 +149,7 @@ If the Verification module was selected (directly or via dependency), ask:
 
 Options: **Yes** / **No, Sonnet-only**
 
-**If No:** Skip to Step 5. Codex is not installed; verification runs Sonnet-only.
+**If No:** Skip to Step 5. Codex is not configured for cc-sentinel; verification runs Sonnet-only.
 
 **If Yes:** Run the setup script immediately (no further configuration questions — but the flow may pause for user action like running `codex login`). The script probes, installs if needed, and tests auth:
 
@@ -205,7 +205,7 @@ Read `modules/core/claude-md-rules.md` from this repository and inject its conte
 
 ### Step 6: Run Installer
 
-Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, skills, or settings (on reinstall, locally-modified files are preserved; use `-ForceOverwrite` to replace them with canonical versions). It also auto-configures permissions so cc-sentinel scripts run without manual approval."
+Reassure the user: "The installer merges additively — it will not overwrite or remove your existing hooks, skills, or settings (on reinstall, locally-modified files are preserved; use `--force-overwrite` (Unix) or `-ForceOverwrite` (Windows) to replace them with canonical versions). It also auto-configures permissions so cc-sentinel scripts run without manual approval."
 
 **Permissions are already configured.** Step 4c wrote all necessary allow rules (both `Bash(...)` and `PowerShell(...)` patterns). Do NOT add any additional bare rules here — rules without a `Tool(pattern)` wrapper (like `"codex *"` or `"*cc-sentinel*"`) are invalid and trigger CC settings warnings. The installer also writes these same rules as a safety net, so permissions are double-covered.
 
@@ -245,7 +245,7 @@ print('Spawn config written: startup_delay =', cfg['startup_delay'])
 $env:SPAWN_DELAY = "N"; python -c "import json, pathlib, os; p = pathlib.Path.home() / '.claude' / 'tools' / 'spawn.json'; p.parent.mkdir(parents=True, exist_ok=True); cfg = json.loads(p.read_text()) if p.exists() else {}; cfg['startup_delay'] = int(os.environ['SPAWN_DELAY']); p.write_text(json.dumps(cfg, indent=2)); print('Spawn config written: startup_delay =', cfg['startup_delay'])"
 ```
 
-Then run the setup command to auto-detect terminal and key sender:
+Then run the setup command to auto-detect terminal and key sender (the installer runs this automatically, but re-running is safe and recommended if you changed the delay):
 - **macOS/Linux:** `python3 ~/.claude/tools/spawn.py --setup`
 - **Windows:** `python ~/.claude/tools/spawn.py --setup`
 
@@ -354,4 +354,4 @@ git clone https://github.com/turqoisehex/cc-sentinel /tmp/cc-sentinel
 bash /tmp/cc-sentinel/uninstall.sh --target global
 ```
 
-Add `--dry-run` to preview what would be removed without removing it.
+Add `--dry-run` (Unix) or `-DryRun` (Windows PowerShell) to preview what would be removed without removing it.

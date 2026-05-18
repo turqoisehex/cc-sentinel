@@ -90,7 +90,7 @@ PROMPT_BODY=$(echo "$PROMPT_BODY" | sed \
   -e "s|{{SOURCE_SPEC}}|${SOURCE_SPEC}|g" \
   -e "s|{{SCOPE_SUMMARY}}|${SCOPE_SUMMARY}|g")
 
-# Step 3: Invoke codex exec (with reasoning-flag fallback)
+# Step 3: Invoke codex exec (with reasoning-flag fallback per design-spec section 4.2)
 CODEX_ARGS=(-m "$MODEL" -s read-only --skip-git-repo-check --ephemeral)
 USED_REASONING=""
 if [[ -n "$REASONING" ]]; then
@@ -113,17 +113,22 @@ if [[ $CODEX_EXIT -ne 0 && -n "$USED_REASONING" ]]; then
   fi
 fi
 
-# Non-zero exit handler
+# Non-zero exit handler — check raw output first (codex may exit 1 but still produce valid findings)
 if [[ $CODEX_EXIT -ne 0 ]]; then
-  STDERR_FIRST=$(head -1 "$STDERR_TMP" 2>/dev/null || echo "unknown error")
-  if grep -qiE 'usage.limit|rate.limit|429|too many requests|quota' "$STDERR_TMP" 2>/dev/null; then
-    echo "VERDICT: TRANSIENT — rate limit" > "$TMP_FILE"
+  if [[ -s "$RAW_FILE" ]] && grep -q '^VERDICT: \(PASS\|WARN\|FAIL\)' "$RAW_FILE" 2>/dev/null; then
+    # Raw output has a valid verdict despite non-zero exit — use it
+    :
   else
-    echo "VERDICT: TRANSIENT — exit $CODEX_EXIT $STDERR_FIRST" > "$TMP_FILE"
+    STDERR_FIRST=$(head -1 "$STDERR_TMP" 2>/dev/null || echo "unknown error")
+    if grep -qiE 'usage.limit|rate.limit|429|too many requests|quota' "$STDERR_TMP" 2>/dev/null; then
+      echo "VERDICT: TRANSIENT — rate limit" > "$TMP_FILE"
+    else
+      echo "VERDICT: TRANSIENT — exit $CODEX_EXIT $STDERR_FIRST" > "$TMP_FILE"
+    fi
+    mv -f "$TMP_FILE" "$OUTPUT_PATH"
+    rm -f "$STDERR_TMP"
+    exit 0
   fi
-  mv -f "$TMP_FILE" "$OUTPUT_PATH"
-  rm -f "$STDERR_TMP"
-  exit 0
 fi
 
 # Step 4: Extract structured output (last valid VERDICT to EOF)
