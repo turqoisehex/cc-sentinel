@@ -177,9 +177,14 @@ if (Test-Path $SettingsFile) {
             }
         }
         if ($settings.permissions -and $settings.permissions.deny) {
-            $sentinelDenyPatterns = @("*.mp3","*.mp4","*.wav","*.avi","*.zip","*.tar")
+            $sentinelDenyRules = @(
+                "Read(*.mp3)", "Read(*.mp4)", "Read(*.avi)", "Read(*.mkv)", "Read(*.mov)",
+                "Read(*.wav)", "Read(*.flac)", "Read(*.aac)", "Read(*.ogg)",
+                "Read(*.zip)", "Read(*.tar.gz)", "Read(*.tar.bz2)", "Read(*.rar)", "Read(*.7z)",
+                "Read(*.exe)", "Read(*.dll)", "Read(*.so)", "Read(*.dylib)"
+            )
             $settings.permissions.deny = @($settings.permissions.deny | Where-Object {
-                $rule = $_; -not ($sentinelDenyPatterns -contains $rule)
+                $sentinelDenyRules -notcontains $_
             })
             if ($settings.permissions.deny.Count -eq 0) {
                 $settings.permissions.PSObject.Properties.Remove("deny")

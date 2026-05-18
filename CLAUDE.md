@@ -9,7 +9,7 @@ When the user installs this package (by saying "Install" followed by this repo's
 ### Step 1: Detect Environment
 
 Before asking any questions, silently detect. Use built-in tools (Glob, Read) instead of Bash wherever possible — Bash triggers permission prompts, built-in tools do not:
-- **OS:** Claude Code already knows the platform from session metadata (`win32`, `darwin`, `linux`). Confirm with one Bash call if needed: `uname -s` on Unix or check `$env:OS` on Windows. This is the only Bash call needed for detection (later steps require Bash for installer and setup script execution).
+- **OS:** Claude Code already knows the platform from session metadata (`win32`, `darwin`, `linux`). No shell call needed — read the platform from your system context.
 - **Existing .claude/:** Use Glob for `.claude/settings.json` and `~/.claude/settings.json`.
 - **Git:** Use Glob for `.git/` in the current directory.
 - **Project type:** Use Glob for `pubspec.yaml`, `package.json`, `Cargo.toml`, `go.mod`, `setup.py`, `pyproject.toml`, `Makefile`.
@@ -95,7 +95,6 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Bash(powershell *setup-codex*)",
 "Bash(powershell -File *setup-codex*)",
 "Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
-"Bash(powershell -ExecutionPolicy Bypass -File *flash.ps1*)",
 "Bash(mkdir -p verification_findings/*)",
 "Bash(mkdir -p verification_findings/*/*)",
 "Bash(ls verification_findings/*)",
@@ -106,6 +105,8 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "PowerShell(python3 ~/.claude/tools/*)",
 "PowerShell(*setup-codex*)",
 "PowerShell(*flash.ps1*)",
+"PowerShell(*install.ps1*)",
+"PowerShell(*uninstall.ps1*)",
 "PowerShell(mkdir *verification_findings*)",
 "PowerShell(*verification_findings*)"
 ```
@@ -122,7 +123,6 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Bash(powershell *setup-codex*)",
 "Bash(powershell -File *setup-codex*)",
 "Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
-"Bash(powershell -ExecutionPolicy Bypass -File *flash.ps1*)",
 "Bash(mkdir -p verification_findings/*)",
 "Bash(mkdir -p verification_findings/*/*)",
 "Bash(ls verification_findings/*)",
@@ -133,6 +133,8 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "PowerShell(python3 ~/.claude/tools/*)",
 "PowerShell(*setup-codex*)",
 "PowerShell(*flash.ps1*)",
+"PowerShell(*install.ps1*)",
+"PowerShell(*uninstall.ps1*)",
 "PowerShell(mkdir *verification_findings*)",
 "PowerShell(*verification_findings*)"
 ```

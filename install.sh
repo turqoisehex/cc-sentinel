@@ -350,7 +350,7 @@ cmd_prefix = "~/.claude" if target == "global" else hook_prefix
 if os_name == "Linux" or os_name == "Darwin":
     notif_cmd = f"bash {cmd_prefix}/hooks/flash-notification.sh"
 elif os_name == "Windows":
-    notif_cmd = f"powershell -ExecutionPolicy Bypass -File {cmd_prefix}/hooks/flash.ps1"
+    notif_cmd = f'& "{cmd_prefix}/hooks/flash.ps1"'
 else:
     notif_cmd = None
 
@@ -844,8 +844,32 @@ log "  $SKILL_COUNT skills installed"
 # they always install canonical content.
 if [[ "$DRY_RUN" != "true" ]]; then
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${CLAUDE_DIR}/.cc-sentinel-installed"
+
+  # Write install report (Claude can Read this file without shell commands)
+  REPORT_PATH="${CLAUDE_DIR}/install-report.md"
+  REF_LIST="none"
+  if [[ -d "${CLAUDE_DIR}/reference" ]]; then
+    REF_LIST=$(ls "${CLAUDE_DIR}/reference/"*.md 2>/dev/null | while read -r f; do echo "- $(basename "$f")"; done)
+    [[ -z "$REF_LIST" ]] && REF_LIST="none"
+  fi
+  cat > "$REPORT_PATH" <<REPORT
+# cc-sentinel install report
+Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Target: $TARGET
+Modules: $MODULES
+
+## Counts
+Skills: $SKILL_COUNT
+
+## Reference files
+$REF_LIST
+
+## Status
+ALL PASS
+REPORT
 fi
 
 echo ""
 log "Installation complete!"
+log "Install details: ~/.claude/install-report.md"
 log "Start a new Claude Code session, then run /self-test to verify your installation."

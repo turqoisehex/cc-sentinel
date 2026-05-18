@@ -248,9 +248,13 @@ if "permissions" in settings:
             del settings["permissions"]["allow"]
     if "deny" in settings["permissions"]:
         original_deny = settings["permissions"]["deny"]
-        sentinel_deny_patterns = ["*.mp3", "*.mp4", "*.wav", "*.avi", "*.zip", "*.tar"]
-        filtered_deny = [r for r in original_deny
-                         if not any(r.endswith(p.lstrip("*")) for p in sentinel_deny_patterns)]
+        sentinel_deny_rules = [
+            "Read(*.mp3)", "Read(*.mp4)", "Read(*.avi)", "Read(*.mkv)", "Read(*.mov)",
+            "Read(*.wav)", "Read(*.flac)", "Read(*.aac)", "Read(*.ogg)",
+            "Read(*.zip)", "Read(*.tar.gz)", "Read(*.tar.bz2)", "Read(*.rar)", "Read(*.7z)",
+            "Read(*.exe)", "Read(*.dll)", "Read(*.so)", "Read(*.dylib)",
+        ]
+        filtered_deny = [r for r in original_deny if r not in sentinel_deny_rules]
         removed_deny = [r for r in original_deny if r not in filtered_deny]
         for r in removed_deny:
             changes.append(f"  Removed deny rule: {r}")

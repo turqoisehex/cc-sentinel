@@ -2,7 +2,7 @@
 # Called by CLAUDE.md conversation script with discovered parameters.
 #
 # Usage:
-#   powershell -File install.ps1 -Modules "core,verification,..." -Target project|global [-BarStyle unicode|ascii|auto] [-DryRun]
+#   & install.ps1 -Modules "core,verification,..." -Target project|global [-BarStyle unicode|ascii|auto] [-DryRun]
 
 param(
     [Parameter(Mandatory=$true)]
@@ -344,13 +344,13 @@ function Merge-Settings {
                             $cmd = $cmd -replace "\.claude/", "~/.claude/"
                         }
                         # Handle notification placeholder
-                        # PowerShell -File does NOT expand ~, so global installs use resolved path
+                        # Use & operator to run script in-process (avoids nested-process warning)
                         if ($cmd -eq "__NOTIFICATION_SCRIPT__") {
                             if ($Target -eq "global") {
                                 $resolvedHookPath = Join-Path $env:USERPROFILE ".claude\hooks\flash.ps1"
-                                $cmd = "powershell -ExecutionPolicy Bypass -File `"$resolvedHookPath`""
+                                $cmd = "& `"$resolvedHookPath`""
                             } else {
-                                $cmd = "powershell -ExecutionPolicy Bypass -File `"$HookPrefix/hooks/flash.ps1`""
+                                $cmd = "& `"$HookPrefix/hooks/flash.ps1`""
                             }
                         }
 
@@ -440,7 +440,6 @@ function Configure-Permissions {
             "Bash(powershell *setup-codex*)",
             "Bash(powershell -File *setup-codex*)",
             "Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
-            "Bash(powershell -ExecutionPolicy Bypass -File *flash.ps1*)",
             "Bash(mkdir -p verification_findings/*)",
             "Bash(mkdir -p verification_findings/*/*)",
             "Bash(ls verification_findings/*)",
@@ -466,7 +465,6 @@ function Configure-Permissions {
             "Bash(powershell *setup-codex*)",
             "Bash(powershell -File *setup-codex*)",
             "Bash(powershell -ExecutionPolicy Bypass *setup-codex*)",
-            "Bash(powershell -ExecutionPolicy Bypass -File *flash.ps1*)",
             "Bash(mkdir -p verification_findings/*)",
             "Bash(mkdir -p verification_findings/*/*)",
             "Bash(ls verification_findings/*)",
@@ -863,4 +861,4 @@ ALL PASS
 Write-Host ""
 Log "Installation complete."
 Log "Run /self-test in your next session to verify everything is working."
-Log "Install details: ~/.claude/install-report.md"
+Log "Install details: $reportPath"
