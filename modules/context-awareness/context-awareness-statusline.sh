@@ -77,10 +77,17 @@ if [[ "$BAR_STYLE" == "ascii" ]]; then
   BAR_FILLED="#"
   BAR_EMPTY="-"
 elif [[ "$BAR_STYLE" == "auto" ]]; then
-  # Test if terminal can render Unicode by checking locale
-  if [[ "${LANG:-}" == *UTF* || "${LANG:-}" == *utf* || "${LC_ALL:-}" == *UTF* || "${LC_ALL:-}" == *utf* ]]; then
-    : # Keep Unicode defaults
-  else
+  # Default: Unicode. Fall back to ASCII only with positive evidence of non-Unicode.
+  # Git Bash on Windows never sets LANG/LC_ALL but supports Unicode fine.
+  _use_ascii=false
+  if [[ -z "${MSYSTEM:-}" && -z "${WT_SESSION:-}" ]]; then
+    # Not Windows — check locale
+    _locale="${LANG:-}${LC_ALL:-}"
+    if [[ -n "$_locale" && "$_locale" != *UTF* && "$_locale" != *utf* ]]; then
+      _use_ascii=true
+    fi
+  fi
+  if [[ "$_use_ascii" == "true" ]]; then
     BAR_FILLED="#"
     BAR_EMPTY="-"
   fi

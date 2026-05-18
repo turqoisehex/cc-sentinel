@@ -447,36 +447,69 @@ class WTDriver(TerminalDriver):
 
 
 class GnomeTermDriver(TerminalDriver):
-    """gnome-terminal driver. Uses title-based activation (D-Bus architecture
-    means Popen PID is useless for window identification)."""
+    """gnome-terminal driver.
+
+    Uses wmctrl -lx for top-level window enumeration (xdotool search returns
+    child VTE widget XIDs that break focus routing). Uses xdotool windowfocus
+    --sync for focus (bypasses Cinnamon/GNOME focus-stealing prevention).
+    Ctrl+Shift+T via XTest for new tabs (VTE rejects XSendEvent/--window).
+    """
+
+    def __init__(self):
+        self._wid_dec = None  # top-level XID as decimal string (for xdotool)
+
+    @staticmethod
+    def _enum_windows():
+        """Return set of hex XID strings for gnome-terminal top-level windows."""
+        if not shutil.which("wmctrl"):
+            return set()
+        result = subprocess.run(
+            ["wmctrl", "-lx"], capture_output=True, text=True,
+        )
+        xids = set()
+        for line in result.stdout.strip().splitlines():
+            parts = line.split()
+            if len(parts) >= 3 and "gnome-terminal" in parts[2].lower():
+                xids.add(parts[0])
+        return xids
 
     def open_window(self, window_name, project_dir):
+        before = self._enum_windows()
         subprocess.Popen([
             "gnome-terminal",
-            "--title=" + window_name,
             "--working-directory=" + str(project_dir),
         ])
+        for _ in range(50):
+            time.sleep(0.1)
+            after = self._enum_windows()
+            new = after - before
+            if new:
+                wid_hex = sorted(new)[0]
+                self._wid_dec = str(int(wid_hex, 16))
+                return
+        print("  [!] Could not detect gnome-terminal window XID; "
+              "tab routing may fail", file=sys.stderr)
 
     def open_tab(self, window_name, project_dir):
-        subprocess.Popen([
-            "gnome-terminal",
-            "--tab",
-            "--working-directory=" + str(project_dir),
-        ])
+        if self._wid_dec and shutil.which("xdotool"):
+            subprocess.run(
+                ["xdotool", "windowfocus", "--sync", self._wid_dec],
+                check=False,
+            )
+            time.sleep(0.1)
+            subprocess.run(["xdotool", "key", "ctrl+shift+t"], check=False)
+        else:
+            subprocess.Popen([
+                "gnome-terminal", "--tab",
+                "--working-directory=" + str(project_dir),
+            ])
 
     def activate(self, window_name):
-        if shutil.which("xdotool"):
-            result = subprocess.run(
-                ["xdotool", "search", "--name", window_name],
-                capture_output=True, text=True,
+        if self._wid_dec and shutil.which("xdotool"):
+            subprocess.run(
+                ["xdotool", "windowfocus", "--sync", self._wid_dec],
+                check=False,
             )
-            window_ids = result.stdout.strip().split("\n")
-            if window_ids and window_ids[0]:
-                subprocess.run(
-                    ["xdotool", "windowactivate", window_ids[0]],
-                    check=False,
-                )
-        # else: no-op, rely on tab open bringing focus
 
 
 class _PidTrackingDriver(TerminalDriver):
@@ -756,6 +789,22 @@ def run_check():
                 "install_cmd": "sudo apt install libxtst6",
                 "needs_sudo": True,
                 "required_for": "keystroke injection",
+            })
+
+    if os_name == "linux" and terminal.get("name") == "gnome-terminal":
+        if not shutil.which("wmctrl"):
+            missing.append({
+                "name": "wmctrl",
+                "install_cmd": "sudo apt install wmctrl",
+                "needs_sudo": True,
+                "required_for": "gnome-terminal window enumeration (tab routing)",
+            })
+        if not shutil.which("xdotool"):
+            missing.append({
+                "name": "xdotool",
+                "install_cmd": "sudo apt install xdotool",
+                "needs_sudo": True,
+                "required_for": "gnome-terminal window focus and tab creation",
             })
 
     warnings = []

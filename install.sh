@@ -78,14 +78,19 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
-# Check xdotool on Linux (needed by spawn for window focus)
-if [[ "$(uname -s)" == "Linux" ]] && ! command -v xdotool &>/dev/null; then
+# Check xdotool + wmctrl on Linux (needed by spawn for window focus/enumeration)
+if [[ "$(uname -s)" == "Linux" ]]; then
   if echo "$MODULES" | grep -q "sprint-pipeline"; then
-    echo ""
-    log "WARNING: xdotool is not installed. The /spawn command needs it to focus terminal windows."
-    log "Without it, all keystrokes land in a single window instead of being distributed."
-    log "Install it: sudo apt install xdotool  (or equivalent for your distro)"
-    echo ""
+    _missing=""
+    command -v xdotool &>/dev/null || _missing="xdotool"
+    command -v wmctrl &>/dev/null || _missing="${_missing:+$_missing }wmctrl"
+    if [[ -n "$_missing" ]]; then
+      echo ""
+      log "WARNING: $_missing not installed. The /spawn command needs both for terminal tab routing."
+      log "Without them, all keystrokes land in a single window instead of being distributed."
+      log "Install: sudo apt install xdotool wmctrl  (or equivalent for your distro)"
+      echo ""
+    fi
   fi
 fi
 

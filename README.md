@@ -448,7 +448,7 @@ If you already have Homebrew, skip the first line. Check what you have: `brew --
 ### Linux (Debian/Ubuntu)
 
 ```bash
-sudo apt update && sudo apt install -y nodejs npm jq python3 git xdotool && npm install -g @anthropic-ai/claude-code
+sudo apt update && sudo apt install -y nodejs npm jq python3 python3-tk git xdotool wmctrl && npm install -g @anthropic-ai/claude-code
 ```
 
 For Node.js 18+ (required by Claude Code), you may need the [NodeSource repository](https://github.com/nodesource/distributions#installation-instructions) if your distro ships an older version:
@@ -460,13 +460,13 @@ curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt i
 ### Linux (Fedora/RHEL)
 
 ```bash
-sudo dnf install -y nodejs npm jq python3 git xdotool && npm install -g @anthropic-ai/claude-code
+sudo dnf install -y nodejs npm jq python3 python3-tkinter git xdotool wmctrl && npm install -g @anthropic-ai/claude-code
 ```
 
 ### Linux (Arch)
 
 ```bash
-sudo pacman -S nodejs npm jq python git xdotool && npm install -g @anthropic-ai/claude-code
+sudo pacman -S nodejs npm jq python tk git xdotool wmctrl && npm install -g @anthropic-ai/claude-code
 ```
 
 ### Verify Prerequisites
