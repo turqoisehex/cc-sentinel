@@ -78,6 +78,17 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
+# Check xdotool on Linux (needed by spawn for window focus)
+if [[ "$(uname -s)" == "Linux" ]] && ! command -v xdotool &>/dev/null; then
+  if echo "$MODULES" | grep -q "sprint-pipeline"; then
+    echo ""
+    log "WARNING: xdotool is not installed. The /spawn command needs it to focus terminal windows."
+    log "Without it, all keystrokes land in a single window instead of being distributed."
+    log "Install it: sudo apt install xdotool  (or equivalent for your distro)"
+    echo ""
+  fi
+fi
+
 if command -v python3 &>/dev/null; then
   PYTHON="python3"
 elif command -v python &>/dev/null; then
