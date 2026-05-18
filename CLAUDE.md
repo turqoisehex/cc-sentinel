@@ -332,14 +332,15 @@ If the Sprint Pipeline module was installed, recommend complementary plugins. Pr
 
 ### Step 8: Run Self-Test
 
-Skills installed during this session are not loadable until the next session — do NOT invoke `/self-test`. Instead, verify inline using built-in tools (Glob, Read) to avoid permission prompts:
+Skills installed during this session are not loadable until the next session — do NOT invoke `/self-test`.
 
-1. Read settings.json — count hook event types and total hook entries.
-2. Glob for hook files on disk (`~/.claude/hooks/*` or `.claude/hooks/*`) — count them (includes both `.sh` and `.ps1` hook files).
-3. Glob for skill directories (`~/.claude/skills/*/SKILL.md` or `.claude/skills/*/SKILL.md`) — count them.
-4. Read the target CLAUDE.md — search for `cc-sentinel rules start`.
-5. Read settings.json — confirm `permissions.allow` contains cc-sentinel allow rules.
-6. Glob for reference files on disk (`~/.claude/reference/*.md` or `.claude/reference/*.md`) — confirm key files are present. If verification module was installed: `verification-behavior.md`. If governance-protection was installed: `audit-pointer-rules.md`.
+**Do NOT use Bash, PowerShell, or any shell command for this step.** Use ONLY built-in tools — Read and Glob require no permission and produce no prompts. Resolve `~` to the literal home directory per the path rule.
+
+1. **Read** the target settings.json. In the JSON content, count hook event types (keys under `hooks`) and total hook entries. Check that `permissions.allow` contains cc-sentinel rules. Check for `statusLine` key.
+2. **Glob** for hook files: `<home>/.claude/hooks/*` (or `.claude/hooks/*` for project). Count results.
+3. **Glob** for skill directories: `<home>/.claude/skills/*/SKILL.md` (or `.claude/skills/*/SKILL.md`). Count results.
+4. **Read** the target CLAUDE.md. Search for `cc-sentinel rules start` in the content.
+5. **Glob** for reference files: `<home>/.claude/reference/*.md` (or `.claude/reference/*.md`). Confirm key files present. If verification module was installed: `verification-behavior.md`. If governance-protection was installed: `audit-pointer-rules.md`.
 
 Present results as a table: each check PASS or FAIL with count. Exact counts depend on which modules were selected — do not compare to hardcoded expected values. Example format:
 
