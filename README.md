@@ -52,33 +52,17 @@ If Claude Code can do it, cc-sentinel can govern it.
 
 ## Installation
 
+cc-sentinel is installed through a guided conversation in Claude Code. The install protocol lives in [`CLAUDE.md`](CLAUDE.md) inside this repo — clone first, then Claude Code reads it and follows its 9-step script. **Do not** follow the README to install; use it to understand what gets installed.
+
 **Prerequisites:** Node.js, Git, jq, and Python 3 (Unix/macOS always; Windows only if using Sprint Pipeline's `/spawn` command). Optional: [OpenAI Codex CLI](https://github.com/openai/codex) for interleaved multi-model verification (requires OpenAI Plus, Pro, Team, or API key). See [Platform Setup](#platform-setup) for one-command install per platform.
 
-**In any Claude Code session:**
+**In any Claude Code session, type:**
 
 ```
 Install https://github.com/turqoisehex/cc-sentinel
 ```
 
-This clones the repo and runs a guided install. The install protocol is in `CLAUDE.md` inside the cloned repo — not in this README. Claude Code clones first, reads `CLAUDE.md`, then follows its 9-step conversation script (environment detection, use-case questions, module selection, installer execution, verification).
-
-For manual installation without Claude Code, see [Manual Installation](#manual-installation) below.
-
-### Manual Installation
-
-```bash
-# Clone
-git clone https://github.com/turqoisehex/cc-sentinel.git ~/.claude/cc-sentinel
-
-# Install to current project
-bash ~/.claude/cc-sentinel/install.sh --modules "core,context-awareness,verification" --target project
-
-# Or install globally
-bash ~/.claude/cc-sentinel/install.sh --modules "core,context-awareness" --target global
-
-# Windows (PowerShell)
-& "$env:USERPROFILE\.claude\cc-sentinel\install.ps1" -Modules "core,context-awareness" -Target project
-```
+For manual installation without Claude Code, see [`docs/manual-install.md`](docs/manual-install.md).
 
 ## Modules
 
