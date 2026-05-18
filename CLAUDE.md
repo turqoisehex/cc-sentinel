@@ -221,7 +221,7 @@ Determine the correct installer command based on OS. Use the full path to the in
 bash "<this-repo-path>/install.sh" --modules "<selected>" --target "<target>"
 ```
 
-Replace `<this-repo-path>` with the absolute path to this cloned repository. For the initial install run, use only these arguments. Additional flags: `-DenyRules` / `--deny-rules` (Step 6c covers when to append this), `-ForceOverwrite` (forces replacement of locally-modified files — use when a previous install left stale files that should be updated to the canonical version). The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
+Replace `<this-repo-path>` with the absolute path to this cloned repository. For the initial install run, use only these arguments. Additional flags: `-DenyRules` / `--deny-rules` (Step 6c covers when to append this), `-ForceOverwrite` / `--force-overwrite` (forces replacement of locally-modified files — use when a previous install left stale files that should be updated to the canonical version). The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
 
 ### Step 6b: Configure Spawn (if Sprint Pipeline selected)
 

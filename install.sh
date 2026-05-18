@@ -3,7 +3,7 @@
 # Called by CLAUDE.md conversation script with discovered parameters.
 #
 # Usage:
-#   bash install.sh --modules "core,verification,..." --target project|global [--bar-style unicode|ascii|auto] [--deny-rules] [--dry-run]
+#   bash install.sh --modules "core,verification,..." --target project|global [--bar-style unicode|ascii|auto] [--deny-rules] [--inject-rules] [--force-overwrite] [--dry-run]
 
 set -euo pipefail
 
