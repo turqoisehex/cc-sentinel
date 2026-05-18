@@ -269,29 +269,16 @@ For the initial install run, use only these arguments. Additional flags: `-DenyR
 
 ### Step 6b: Configure Spawn (if Sprint Pipeline selected)
 
-If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config. Substitute the actual integer for `N` before running:
+If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config using built-in tools (no Bash needed — avoids permission prompts):
 
-**macOS/Linux:**
-```bash
-SPAWN_DELAY=N python3 -c "
-import json, pathlib, os
-p = pathlib.Path.home() / '.claude' / 'tools' / 'spawn.json'
-p.parent.mkdir(parents=True, exist_ok=True)
-cfg = json.loads(p.read_text()) if p.exists() else {}
-cfg['startup_delay'] = int(os.environ['SPAWN_DELAY'])
-p.write_text(json.dumps(cfg, indent=2))
-print('Spawn config written: startup_delay =', cfg['startup_delay'])
-"
-```
+1. Determine spawn.json path: `~/.claude/tools/spawn.json` (resolve `~` to literal home directory per the path rule above).
+2. Read spawn.json with the Read tool (if it doesn't exist, start with `{}`).
+3. Set `startup_delay` to the user's value (default: 5).
+4. Write the updated JSON with the Write tool.
 
-**Windows:**
-```powershell
-$env:SPAWN_DELAY = "N"; python -c "import json, pathlib, os; p = pathlib.Path.home() / '.claude' / 'tools' / 'spawn.json'; p.parent.mkdir(parents=True, exist_ok=True); cfg = json.loads(p.read_text()) if p.exists() else {}; cfg['startup_delay'] = int(os.environ['SPAWN_DELAY']); p.write_text(json.dumps(cfg, indent=2)); print('Spawn config written: startup_delay =', cfg['startup_delay'])"
-```
-
-Then run the setup command to auto-detect terminal and key sender (the installer runs this automatically, but re-running is safe and recommended if you changed the delay):
-- **macOS/Linux:** `python3 ~/.claude/tools/spawn.py --setup`
-- **Windows:** `python ~/.claude/tools/spawn.py --setup`
+Then run the setup command to auto-detect terminal and key sender (the installer runs this automatically, but re-running is safe). Use the resolved literal path:
+- **macOS/Linux:** `python3 <home>/.claude/tools/spawn.py --setup`
+- **Windows:** `python <home>\.claude\tools\spawn.py --setup`
 
 ### Step 6c: Review .claudeignore
 
