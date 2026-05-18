@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 set -u
-# flash-macos.sh — Desktop notification when CC completes or needs input
+# flash-macos.sh — Audio + persistent dock bounce when CC needs attention
 # Hook events: Stop, Notification
+#
+# Terminal bell in Terminal.app bounces the dock icon persistently when
+# unfocused. iTerm2 shows a badge. afplay adds an audible ping.
 
 # Drain stdin (CC pipes JSON to all hooks)
 cat > /dev/null 2>/dev/null &
 
-# Terminal bell
-printf '\a'
+# System alert sound (audible when AFK)
+afplay /System/Library/Sounds/Tink.aiff 2>/dev/null &
 
-# macOS notification via osascript
-osascript -e 'display notification "Task completed or needs your attention" with title "Claude Code"' 2>/dev/null || true
+# Terminal bell — triggers persistent dock bounce (Terminal.app) or badge (iTerm2)
+printf '\a'
