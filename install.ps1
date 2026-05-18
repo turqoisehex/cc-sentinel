@@ -453,7 +453,11 @@ function Configure-Permissions {
             "PowerShell(*install.ps1*)",
             "PowerShell(*uninstall.ps1*)",
             "PowerShell(mkdir *verification_findings*)",
-            "PowerShell(*verification_findings*)"
+            "PowerShell(*verification_findings*)",
+            "Write(CURRENT_TASK*)",
+            "Edit(CURRENT_TASK*)",
+            "Write(verification_findings/*)",
+            "Edit(verification_findings/*)"
         )
     } else {
         $rules = @(
@@ -480,7 +484,11 @@ function Configure-Permissions {
             "PowerShell(*install.ps1*)",
             "PowerShell(*uninstall.ps1*)",
             "PowerShell(mkdir *verification_findings*)",
-            "PowerShell(*verification_findings*)"
+            "PowerShell(*verification_findings*)",
+            "Write(CURRENT_TASK*)",
+            "Edit(CURRENT_TASK*)",
+            "Write(verification_findings/*)",
+            "Edit(verification_findings/*)"
         )
     }
 

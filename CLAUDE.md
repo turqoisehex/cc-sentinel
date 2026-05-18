@@ -150,7 +150,11 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "PowerShell(*install.ps1*)",
 "PowerShell(*uninstall.ps1*)",
 "PowerShell(mkdir *verification_findings*)",
-"PowerShell(*verification_findings*)"
+"PowerShell(*verification_findings*)",
+"Write(CURRENT_TASK*)",
+"Edit(CURRENT_TASK*)",
+"Write(verification_findings/*)",
+"Edit(verification_findings/*)"
 ```
 
 **Project install:**
@@ -178,7 +182,11 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "PowerShell(*install.ps1*)",
 "PowerShell(*uninstall.ps1*)",
 "PowerShell(mkdir *verification_findings*)",
-"PowerShell(*verification_findings*)"
+"PowerShell(*verification_findings*)",
+"Write(CURRENT_TASK*)",
+"Edit(CURRENT_TASK*)",
+"Write(verification_findings/*)",
+"Edit(verification_findings/*)"
 ```
 
 Announce briefly: "Configuring permissions so cc-sentinel scripts run without manual approval..." then write the rules. No user prompt or confirmation needed — just the one-line announcement so it doesn't look like improvisation. The installer will also add these rules mechanically as a safety net.

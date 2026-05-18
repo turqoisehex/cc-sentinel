@@ -491,6 +491,10 @@ if target == "global":
         "PowerShell(*uninstall.ps1*)",
         "PowerShell(mkdir *verification_findings*)",
         "PowerShell(*verification_findings*)",
+        "Write(CURRENT_TASK*)",
+        "Edit(CURRENT_TASK*)",
+        "Write(verification_findings/*)",
+        "Edit(verification_findings/*)",
     ]
 else:
     rules = [
@@ -518,6 +522,10 @@ else:
         "PowerShell(*uninstall.ps1*)",
         "PowerShell(mkdir *verification_findings*)",
         "PowerShell(*verification_findings*)",
+        "Write(CURRENT_TASK*)",
+        "Edit(CURRENT_TASK*)",
+        "Write(verification_findings/*)",
+        "Edit(verification_findings/*)",
     ]
 
 added = []
