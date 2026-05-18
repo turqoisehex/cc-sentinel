@@ -18,3 +18,5 @@ printf '\a'
 if [[ -n "${WINDOWID:-}" ]] && command -v wmctrl &>/dev/null; then
   wmctrl -i -r "$WINDOWID" -b add,demands_attention 2>/dev/null
 fi
+
+exit 0

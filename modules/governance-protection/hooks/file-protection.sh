@@ -159,3 +159,5 @@ if [[ -n "$SENSITIVE_LIST" ]]; then
     exit 0
   fi
 fi
+
+exit 0

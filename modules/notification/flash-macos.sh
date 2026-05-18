@@ -14,3 +14,5 @@ afplay /System/Library/Sounds/Tink.aiff 2>/dev/null &
 
 # Terminal bell — triggers persistent dock bounce (Terminal.app) or badge (iTerm2)
 printf '\a'
+
+exit 0

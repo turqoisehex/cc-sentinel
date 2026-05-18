@@ -31,7 +31,7 @@ Claude Code: I see this is a Python/Django project with pytest. Here's what I re
 
   [x] Core (required) -- context loss prevention, anti-deferral, state management
   [x] Context Awareness -- visual context meter in your status bar
-  [ ] Verification -- multi-model verification squad (up to 15 agents with Codex)
+  [ ] Verification -- multi-model verification squad (Sonnet + Codex interleaved)
   [x] Commit Enforcement -- test gating, auto-format, diff review
   [ ] Sprint Pipeline -- structured /1 through /5 workflow
   [x] Governance Protection -- protect CLAUDE.md and config from mid-session edits
@@ -111,7 +111,7 @@ Auto-detects terminal Unicode support. Falls back to ASCII (`#`/`-`) when the lo
 Multi-model verification squad that independently audits work before any completion claim. Supports two architectures:
 
 - **Sonnet-only (5 agents):** Default when Codex CLI is not installed. Five Claude Sonnet agents with different adversarial perspectives run in parallel.
-- **Interleaved (up to 15 agents):** When OpenAI Codex CLI is available, runs 5 Sonnet + 5 Codex + conditional re-validation rounds. Architecturally diverse models find different classes of bugs -- issues one model misses, the other catches.
+- **Interleaved (Sonnet + Codex):** When OpenAI Codex CLI is available, runs 5 Sonnet + 5 Codex + conditional Sonnet re-validation + Opus closure. Architecturally diverse models find different classes of bugs -- issues one model misses, the other catches.
 
 | Agent | What It Catches |
 |---|---|
@@ -124,11 +124,12 @@ Multi-model verification squad that independently audits work before any complet
 **Interleaved procedure (when Codex is available):**
 
 ```
-R1: 5 Sonnet agents (baseline sweep)
-R2: 5 Codex agents (cross-architecture sweep on post-fix content)
-R3: Sonnet re-validation (flagged roles only)
-R4: Codex escalation (failing roles only, higher reasoning effort)
-Gate: All PASS → Opus closure
+R1: 5 Sonnet agents (baseline sweep) → fix
+R2: 5 Codex agents (cross-architecture sweep on post-fix content) → fix
+R3: Sonnet re-validation (flagged roles only) → Gate
+    Gate PASS → Opus closure (5 Opus agents)
+    Gate FAIL → R4: Codex escalation (failing roles only, higher reasoning)
+               → R3' re-validation → re-evaluate gate (max 2 cycles)
 ```
 
 The `setup-codex.sh` / `setup-codex.ps1` scripts handle Codex CLI probe, install, and auth verification during installation. Codex is optional -- the system degrades gracefully to Sonnet-only when unavailable.
@@ -305,7 +306,7 @@ Claude's self-assessment of its own work is structurally unreliable. Cherny's wo
 
 > "Say 'Grill me on these changes and don't make a PR until I pass your test.'" -- Cherny
 
-**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Up to fifteen independent verification agents across two model architectures (Sonnet + Codex) audit in interleaved rounds -- architecturally diverse models find different bug classes that no single model catches alone. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
+**cc-sentinel enforcement:** `stop-task-check.sh` blocks completion claims without verification evidence on disk. Independent verification agents across multiple model architectures (Sonnet + Codex + Opus) audit in interleaved rounds -- architecturally diverse models find different bug classes that no single model catches alone. Per-commit adversarial and cold reader agents check every commit. `/grill` provides iterative adversarial self-challenge. Self-attestation is explicitly rejected -- the stop hook checks for actual output files, not Claude's claim that it verified.
 
 ### Context is infrastructure, not conversation
 
@@ -353,7 +354,7 @@ Every session starts in Plan mode. For complex features, Cherny uses `/feature-d
 | Governance protection | Not mentioned | Protected files list + authorization marker protocol |
 | Cold-start protocol | CLAUDE.md as ground truth | CURRENT_TASK as complete cold-start survival document |
 | Multi-channel coordination | Parallel sessions (independent) | File-signal coordination between orchestrator + executor |
-| Verification depth | 2-layer review (check + challenge) | Up to 15 interleaved agents (Sonnet + Codex) + per-commit agents + stop hook gate |
+| Verification depth | 2-layer review (check + challenge) | Interleaved multi-model agents (Sonnet + Codex + Opus closure) + per-commit agents + stop hook gate |
 | Plan enforcement | Plan mode discipline (manual) | /design forces brainstorm, spec, adversarial review, user gate |
 | Completion loops | ralph-loop plugin (re-feed until done) | Stop hook + verification evidence gate + anti-deferral hook (three independent mechanisms) |
 | Permission model | Pre-approved allow list (manual) | Same + file-protection hook for governance files + authorization marker protocol |
@@ -419,7 +420,7 @@ sudo pacman -S nodejs npm jq python tk git xdotool wmctrl && npm install -g @ant
 
 ### Verify Prerequisites
 
-The Unix installer checks for `jq`, `python3`, and `bash` before proceeding and exits with specific install instructions if anything is missing. The Windows installer (PowerShell) checks for `jq` and `bash` (Python is not needed — settings merge uses native PowerShell JSON). After installing cc-sentinel, run `/self-test` to validate everything is wired up.
+The Unix installer checks for `jq` and `python3` before proceeding and exits with specific install instructions if anything is missing. The Windows installer (PowerShell) checks for `jq` and `bash` (Python is not needed — settings merge uses native PowerShell JSON). After installing cc-sentinel, run `/self-test` to validate everything is wired up.
 
 ### Tested On
 

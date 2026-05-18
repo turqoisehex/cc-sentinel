@@ -9,7 +9,7 @@ This is a side project maintained in spare time. Contributions are welcome — b
 - **Bash** 4.0+ (macOS ships 3.2 — use `brew install bash`)
 - **jq** for JSON processing (`brew install jq` / `apt install jq` / `choco install jq`)
 - **Git** 2.x+
-- **Python 3** (required for settings.json merge during installation)
+- **Python 3** (required for settings.json merge on Unix/macOS; Windows uses native PowerShell)
 
 ### Clone and Explore
 
@@ -40,7 +40,7 @@ python3 -m pytest modules/sprint-pipeline/tests/
 modules/              # 7 independent modules
   core/               # Anti-deferral, state management, context loss prevention
   context-awareness/  # Visual context window meter
-  verification/       # Up-to-5-agent verification squad
+  verification/       # Multi-model verification squad (Sonnet + Codex interleaved)
   commit-enforcement/ # Test gating, auto-format, diff review
   sprint-pipeline/    # Structured /1-/5 workflow phases
   governance-protection/ # Protected files, authorization markers
@@ -64,7 +64,7 @@ Use the [Feature Request](https://github.com/turqoisehex/cc-sentinel/issues/new?
 ### Submitting Code
 
 1. Fork the repo
-2. Create a branch from `master`: `git checkout -b feat/your-feature`
+2. Create a branch from `main`: `git checkout -b feat/your-feature`
 3. Make changes with clear commits (conventional commits preferred):
    - `feat:` new feature
    - `fix:` bug fix
@@ -72,7 +72,7 @@ Use the [Feature Request](https://github.com/turqoisehex/cc-sentinel/issues/new?
    - `refactor:` code restructuring
    - `test:` test improvements
 4. Ensure tests pass: `for f in modules/*/tests/test_*.sh; do bash "$f"; done`
-5. Submit a PR against `master`
+5. Submit a PR against `main`
 
 ### Branch Naming
 

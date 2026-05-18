@@ -115,7 +115,7 @@ fi
 
 # Non-zero exit handler — check raw output first (codex may exit 1 but still produce valid findings)
 if [[ $CODEX_EXIT -ne 0 ]]; then
-  if [[ -s "$RAW_FILE" ]] && grep -q '^VERDICT: \(PASS\|WARN\|FAIL\)' "$RAW_FILE" 2>/dev/null; then
+  if [[ -s "$RAW_FILE" ]] && grep -qE '^VERDICT: (PASS|WARN|FAIL)' "$RAW_FILE" 2>/dev/null; then
     # Raw output has a valid verdict despite non-zero exit — use it
     :
   else
@@ -132,7 +132,7 @@ if [[ $CODEX_EXIT -ne 0 ]]; then
 fi
 
 # Step 4: Extract structured output (last valid VERDICT to EOF)
-LAST_VERDICT_LINE=$(grep -n '^VERDICT: \(PASS\|WARN\|FAIL\)' "$RAW_FILE" | tail -1 | cut -d: -f1)
+LAST_VERDICT_LINE=$(grep -nE '^VERDICT: (PASS|WARN|FAIL)' "$RAW_FILE" | tail -1 | cut -d: -f1)
 
 if [[ -n "$LAST_VERDICT_LINE" ]]; then
   # Extract from last VERDICT line to end of file
@@ -147,7 +147,7 @@ else
 fi
 
 # Step 5: Validate extraction
-if ! grep -q '^VERDICT: \(PASS\|WARN\|FAIL\)' "$TMP_FILE"; then
+if ! grep -qE '^VERDICT: (PASS|WARN|FAIL)' "$TMP_FILE"; then
   echo "VERDICT: TRANSIENT — malformed output (exit 0, no VERDICT line)" > "$TMP_FILE"
 fi
 

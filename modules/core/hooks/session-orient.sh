@@ -70,7 +70,7 @@ if [[ -n "$ACTIVE_CHANNELS" ]] || [[ "$SHARED_ACTIVE" == "true" ]]; then
   fi
   MSG="${MSG}Resume from where the previous session left off."
   # Escape for JSON
-  MSG_ESCAPED=$(printf '%b' "$MSG" | jq -Rs '.' | tr -d '\r')
+  MSG_ESCAPED=$(printf '%s' "$MSG" | jq -Rs '.' | tr -d '\r')
   echo "{\"additionalContext\": ${MSG_ESCAPED}}"
 fi
 

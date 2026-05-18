@@ -8,6 +8,7 @@ desktop.ini
 
 # Python
 __pycache__/
+.pytest_cache/
 *.pyc
 
 # IDE

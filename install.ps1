@@ -361,7 +361,7 @@ function Merge-Settings {
                         }
                     }
 
-                    $newEntry = @{
+                    $newEntry = [PSCustomObject]@{
                         matcher = if ($entry.matcher) { $entry.matcher } else { "" }
                         hooks = $newHooks
                     }
@@ -768,7 +768,8 @@ if ($Modules -match "sprint-pipeline") {
         } else {
             Log "Configuring spawn (auto-detect terminal + key sender)..."
             try {
-                & python $spawnPath --setup 2>$null
+                $py = if (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
+                & $py $spawnPath --setup 2>$null
             } catch {
                 Log "  spawn.py --setup failed - run manually: python ~/.claude/tools/spawn.py --setup"
             }
