@@ -1,10 +1,12 @@
 # cc-sentinel
 
-You are installing **cc-sentinel**, a modular governance package for Claude Code. This file instructs you to run an interactive setup conversation with the user.
+**STOP.** Do not run diagnostic commands. Do not list files. Do not fetch web pages. Do not explore the repo structure. Read this file and follow the steps below — they are the entire installation process.
+
+You are installing **cc-sentinel**, a modular governance package for Claude Code. This file is a step-by-step script. Execute each step in order.
 
 ## Installation Instructions
 
-When the user installs this package (by saying "Install" followed by this repo's URL), follow these steps exactly:
+When the user installs this package (by saying "Install" followed by this repo's URL), follow these steps exactly. Do not improvise, skip ahead, or run commands not specified here:
 
 ### Step 1: Detect Environment
 
