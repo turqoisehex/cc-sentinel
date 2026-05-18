@@ -108,6 +108,7 @@ Auto-include dependencies: Sprint Pipeline requires Core + Verification + Commit
 
 ### Step 4b: Spawn Configuration (if Sprint Pipeline selected)
 
+Sprint Pipeline is only included when the user chose "All modules" in Step 3. If they chose any other option, skip this step entirely.
 
 If Sprint Pipeline was selected, ask:
 
@@ -389,9 +390,17 @@ bash "<this-repo-path>/uninstall.sh" --target "<target>"
 ```
 
 Replace `<this-repo-path>` with the cloned repo location (typically `~/.claude/cc-sentinel` or `/tmp/cc-sentinel`). If the repo was already deleted, clone it first:
+
+**macOS/Linux:**
 ```bash
 git clone https://github.com/turqoisehex/cc-sentinel /tmp/cc-sentinel
 bash /tmp/cc-sentinel/uninstall.sh --target global
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/turqoisehex/cc-sentinel "$env:TEMP\cc-sentinel"
+& "$env:TEMP\cc-sentinel\uninstall.ps1" -Target global
 ```
 
 Add `--dry-run` (Unix) or `-DryRun` (Windows PowerShell) to preview what would be removed without removing it.

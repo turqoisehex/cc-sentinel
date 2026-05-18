@@ -11,8 +11,11 @@ SESSION_ID="$(echo "$SAVED_INPUT" | jq -r '.session_id // ""' | tr -d '\r')" || 
 
 [[ -z "$SESSION_ID" ]] && exit 0
 
-# Determine config file location (local takes precedence over global)
-if [[ -f "./.claude/cc-context-awareness/config.json" ]]; then
+# Determine config file location (script-relative, then local CWD, then global)
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$_SCRIPT_DIR/config.json" ]]; then
+  CONFIG_FILE="$_SCRIPT_DIR/config.json"
+elif [[ -f "./.claude/cc-context-awareness/config.json" ]]; then
   CONFIG_FILE="./.claude/cc-context-awareness/config.json"
 elif [[ -f "$HOME/.claude/cc-context-awareness/config.json" ]]; then
   CONFIG_FILE="$HOME/.claude/cc-context-awareness/config.json"
