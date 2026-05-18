@@ -17,23 +17,61 @@ Before asking any questions, silently detect. Use built-in tools (Glob, Read) in
 - **Project type:** Use Glob for `pubspec.yaml`, `package.json`, `Cargo.toml`, `go.mod`, `setup.py`, `pyproject.toml`, `Makefile`.
 - **Existing hooks:** Use Read on `~/.claude/settings.json` (or `.claude/settings.json`). Check for `"hooks"` key.
 
-### Step 2: Discovery Questions (one at a time, ALL mandatory)
+### Step 2: Discovery Questions (single bundled prompt)
 
-Ask these questions one at a time. Wait for each answer before proceeding. Do NOT skip any question. Do NOT combine questions. Never say "press Enter" or "just hit Enter" — on many terminals, an empty Enter does nothing or submits an empty string. Always provide an explicit text alternative (e.g., "type 'default'" or "say 'skip'").
+Ask ALL discovery questions in a **single AskUserQuestion call** with multiple questions. Do NOT ask them one at a time. Bundle them so the user sees everything at once and answers in one interaction.
 
-**Question 1 (MANDATORY):** "What do you use Claude Code for? (For example: software development, research, translation, writing, data analysis, or something else)"
+Use `AskUserQuestion` with the following questions array. If git was NOT detected in Step 1, omit the "Commit verification" question (max 4 questions per call):
 
-**Question 2 (MANDATORY):** "Do you work on long, multi-step projects that span multiple sessions? The sprint pipeline (/audit -> /design -> /build -> /perfect -> /finalize) is designed for this."
+```
+questions: [
+  {
+    question: "What do you use Claude Code for?",
+    header: "Use case",
+    options: [
+      { label: "Software development", description: "Building and maintaining codebases" },
+      { label: "Research & analysis", description: "Exploring data, papers, or technical topics" },
+      { label: "Writing & content", description: "Documentation, articles, or creative work" }
+    ],
+    multiSelect: false
+  },
+  {
+    question: "Do you work on long, multi-step projects that span multiple sessions?",
+    header: "Workflow",
+    options: [
+      { label: "Yes", description: "The sprint pipeline (/audit → /design → /build → /perfect → /finalize) is designed for this" },
+      { label: "No", description: "Mostly single-session tasks" }
+    ],
+    multiSelect: false
+  },
+  {
+    question: "Do you want commits verified automatically?",
+    header: "Commits",
+    options: [
+      { label: "Yes (Recommended)", description: "Adversarial agents review every commit diff and block unverified code" },
+      { label: "No", description: "Skip commit verification" }
+    ],
+    multiSelect: false
+  },
+  {
+    question: "Would you like a project-level or global install?",
+    header: "Scope",
+    options: [
+      { label: "Global (Recommended)", description: "Installs to ~/.claude/ — applies to every Claude Code session" },
+      { label: "Project only", description: "Installs to .claude/ in the current directory only" }
+    ],
+    multiSelect: false
+  }
+]
+```
 
-**Question 3 (MANDATORY if git detected):** "Do you want commits to be verified automatically? cc-sentinel can run adversarial checks on every commit and block unverified code."
+If git was not detected, remove the "Commits" question entirely (3 questions total). The user can always type a custom answer via "Other" for any question.
 
-**Question 4 (MANDATORY):** "Would you like project-level install (just this project) or global install (all projects)?"
-- Explain: Project = `.claude/` in this directory only. Good for trying it out.
-- Global = `~/.claude/`. Applies to all projects. Recommended for most users.
+### Step 3: Present Problem Table + Module Selection (same turn)
 
-### Step 3: Present Problem→Solution Table
+In a **single response**, output the problem table as text AND immediately follow with an AskUserQuestion for module selection. Do NOT split these into separate turns.
 
-Present ALL of these problems as a table. Do NOT filter or select a subset. Show every row:
+First, output this table:
 
 | # | Problem | Solution |
 |---|---------|----------|
@@ -46,25 +84,25 @@ Present ALL of these problems as a table. Do NOT filter or select a subset. Show
 | 7 | "It modified files it shouldn't." | Governance Protection — blocks mid-session edits to rules |
 | 8 | "I walked away and missed the finish." | Notification — desktop alerts when done |
 
-### Step 4: Recommend Modules
+Then in the SAME response, call AskUserQuestion:
 
-Referencing the problem table above, present the module selection table below. Always include Core.
+```
+questions: [
+  {
+    question: "Which modules would you like to install?",
+    header: "Modules",
+    options: [
+      { label: "All modules (Recommended)", description: "Core + Context Awareness + Verification + Commit Enforcement + Sprint Pipeline + Governance Protection + Notification" },
+      { label: "Core only", description: "Context loss prevention, anti-deferral, state management — the minimum install" },
+      { label: "Core + Verification", description: "Adds multi-agent verification squad for completion claims" },
+      { label: "Core + Verification + Commit Enforcement", description: "Adds commit gating with adversarial diff review" }
+    ],
+    multiSelect: false
+  }
+]
+```
 
-| Module | What it solves | Recommended? |
-|--------|---------------|-------------|
-| Core | Context loss, deferral, state management | Always (required) |
-| Context Awareness | Silent context window fill | Yes |
-| Verification | Premature completion claims | Yes |
-| Commit Enforcement | Unreviewed commits | Yes |
-| Sprint Pipeline | Ad-hoc workflows | Yes |
-| Governance Protection | Accidental rule modification | Yes |
-| Notification | No alerts when done | Yes |
-
-Present options in this exact order:
-1. **All modules (Recommended)** — install everything
-2. Individual module selection
-
-Do NOT present individual selection first. "All modules" is the default. Auto-include dependencies (e.g., Sprint Pipeline requires Core + Verification + Commit Enforcement).
+Auto-include dependencies: Sprint Pipeline requires Core + Verification + Commit Enforcement. Notification and Governance Protection require Core.
 
 ### Step 4b: Spawn Configuration (if Sprint Pipeline selected)
 
