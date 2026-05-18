@@ -60,47 +60,11 @@ If Claude Code can do it, cc-sentinel can govern it.
 Install https://github.com/turqoisehex/cc-sentinel
 ```
 
-Claude Code clones the repo and runs the installer — two commands, then conversation.
+This clones the repo and runs a guided install. The install protocol is in `CLAUDE.md` inside the cloned repo — not in this README. Claude Code clones first, reads `CLAUDE.md`, then follows its 9-step conversation script (environment detection, use-case questions, module selection, installer execution, verification).
 
-**Step 1 — Clone** (one command, no prior exploration needed):
+For manual installation without Claude Code, see [Manual Installation](#manual-installation) below.
 
-```bash
-git clone https://github.com/turqoisehex/cc-sentinel.git ~/.claude/cc-sentinel
-```
-
-Windows:
-
-```powershell
-git clone https://github.com/turqoisehex/cc-sentinel.git "$env:USERPROFILE\.claude\cc-sentinel"
-```
-
-**Step 2 — Claude Code runs the installer** (with args discovered during the conversation):
-
-The commands below are run by Claude Code automatically after gathering your preferences in the interactive flow. You do not need to run them manually — for manual installation, see the "Manual installation" section below.
-
-```bash
-bash ~/.claude/cc-sentinel/install.sh --modules "..." --target global|project
-```
-
-Windows (run directly — do not wrap in `powershell -File`, which spawns a nested process):
-
-```powershell
-& "$env:USERPROFILE\.claude\cc-sentinel\install.ps1" -Modules "..." -Target global|project
-```
-
-**Interactive flow (after CLAUDE.md is loaded):**
-
-1. **Detect** your OS, shell, terminal, and project type. Report findings.
-2. **Ask your use case** — use `AskUserQuestion` to ask what you use Claude Code for (development, research, writing, etc.).
-3. **Present a problem→solution table** showing each failure mode and the module that solves it.
-4. **Recommend modules** — use `AskUserQuestion` with module options. Always offer "All modules" as the first option. Include one-line descriptions of what each module prevents.
-5. **Ask about global vs project install** — use `AskUserQuestion`. Recommend global for most users.
-6. **Run the installer** with the selected modules. Do not ask for confirmation after module selection — just run it.
-7. **Offer deny rules** — use `AskUserQuestion` for binary/media file exclusions (conservative: block media/archives/binaries, keep images and PDFs readable).
-8. **Suggest plugins** that complement cc-sentinel (superpowers, context7, feature-dev).
-9. **Report results** — the installer prints counts and writes an install report. Use the `Read` tool on that file for details (no shell commands needed). Tell the user to run `/self-test` in their next session for ongoing validation.
-
-**Manual installation:**
+### Manual Installation
 
 ```bash
 # Clone
@@ -550,14 +514,6 @@ Look for issues labeled [`good first issue`](https://github.com/turqoisehex/cc-s
 - **Boris Cherny** -- Creator of Claude Code at Anthropic. His publicly documented workflow principles form the philosophical foundation. cc-sentinel implements his methodology as enforceable infrastructure. Community index: [howborisusesclaudecode.com](https://howborisusesclaudecode.com). Config reconstruction: [github.com/0xquinto/bcherny-claude](https://github.com/0xquinto/bcherny-claude).
 - **cc-context-awareness** by [sdi2200262](https://github.com/sdi2200262/cc-context-awareness) -- Canonical context window monitoring tool for macOS/Linux. cc-sentinel includes a Windows-compatible rewrite (the only known working Windows version) and recommends the canonical version for non-Windows users.
 - **Production-refined** through hundreds of hours of iterative development on a production codebase, translating Cherny's principles into hooks, agents, and skills that enforce behavior rather than suggest it. Works with any tech stack — Flutter, React, Python, Go, Rust, and more.
-
-## For AI Assistants
-
-If you are an AI assistant asked to install cc-sentinel:
-
-1. `git clone` this repo to `~/.claude/cc-sentinel`
-2. Read `CLAUDE.md` in the cloned repo
-3. Follow its 9-step protocol exactly — do not improvise from this README
 
 ## License
 
