@@ -850,16 +850,21 @@ print('  Spawn config: startup_delay =', cfg['startup_delay'])
   fi
 fi
 
-# Verify skills are installed
-log "Verifying skill installation..."
-SKILL_COUNT=0
+# Count installed artifacts
+SKILL_COUNT=0; HOOK_COUNT=0; SCRIPT_COUNT=0; REF_COUNT=0
 if [[ -d "${CLAUDE_DIR}/skills" ]]; then
-  for skill_file in "${CLAUDE_DIR}"/skills/*/SKILL.md; do
-    [[ ! -f "$skill_file" ]] && continue
-    SKILL_COUNT=$((SKILL_COUNT + 1))
-  done
+  for f in "${CLAUDE_DIR}"/skills/*/SKILL.md; do [[ -f "$f" ]] && SKILL_COUNT=$((SKILL_COUNT + 1)); done
 fi
-log "  $SKILL_COUNT skills installed"
+if [[ -d "${CLAUDE_DIR}/hooks" ]]; then
+  HOOK_COUNT=$(find "${CLAUDE_DIR}/hooks" -maxdepth 1 -type f 2>/dev/null | wc -l)
+fi
+if [[ -d "$SCRIPTS_DIR" ]]; then
+  SCRIPT_COUNT=$(find "$SCRIPTS_DIR" -maxdepth 1 -type f 2>/dev/null | wc -l)
+fi
+if [[ -d "${CLAUDE_DIR}/reference" ]]; then
+  REF_COUNT=$(find "${CLAUDE_DIR}/reference" -maxdepth 1 -name "*.md" -type f 2>/dev/null | wc -l)
+fi
+log "  Hooks: $HOOK_COUNT  Skills: $SKILL_COUNT  Scripts: $SCRIPT_COUNT  Reference: $REF_COUNT"
 
 # Write the install marker. On subsequent reinstalls, copy_file() uses this
 # marker to gate local-preservation: files present and modified are kept as-is
@@ -883,10 +888,10 @@ Target: $TARGET
 Modules: $MODULES
 
 ## Counts
+Hooks: $HOOK_COUNT
 Skills: $SKILL_COUNT
-
-## Reference files
-$REF_LIST
+Scripts: $SCRIPT_COUNT
+Reference: $REF_COUNT
 
 ## Status
 $(if grep -q "cc-sentinel rules start" "$CLAUDE_MD" 2>/dev/null; then echo "ALL PASS"; else echo "PASS (CLAUDE.md rules pending — inject via conversation Step 5 or --inject-rules)"; fi)
