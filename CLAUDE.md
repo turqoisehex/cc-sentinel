@@ -6,7 +6,9 @@ You are installing **cc-sentinel**, a modular governance package for Claude Code
 
 ## Installation Instructions
 
-When the user installs this package (by saying "Install" followed by this repo's URL), follow these steps exactly. Do not improvise, skip ahead, or run commands not specified here:
+When the user installs this package (by saying "Install" followed by this repo's URL), follow these steps exactly. Do not improvise, skip ahead, or run commands not specified here.
+
+**Path rule:** In ALL commands you run, use resolved literal paths — never `$env:USERPROFILE`, `$HOME`, or `~`. Resolve these to the actual directory (e.g., `C:\Users\username` or `/Users/username`) before constructing any command. Shell variables make commands "dynamic expressions" that Claude Code cannot match against allow rules, causing unnecessary permission prompts.
 
 ### Step 1: Detect Environment
 
@@ -261,7 +263,9 @@ Determine the correct installer command based on OS. Use the full path to the in
 bash "<this-repo-path>/install.sh" --modules "<selected>" --target "<target>"
 ```
 
-Replace `<this-repo-path>` with the absolute path to this cloned repository. For the initial install run, use only these arguments. Additional flags: `-DenyRules` / `--deny-rules` (Step 6c covers when to append this), `-ForceOverwrite` / `--force-overwrite` (forces replacement of locally-modified files — use when a previous install left stale files that should be updated to the canonical version). The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
+Replace `<this-repo-path>` with the **resolved literal absolute path** to this cloned repository. Do NOT use `$env:USERPROFILE`, `~`, `$HOME`, or any shell variable — use the actual path (e.g., `C:\Users\username\.claude\cc-sentinel` or `/Users/username/.claude/cc-sentinel`). Shell variables in the command make it a "dynamic expression" that Claude Code cannot statically validate, triggering a permission prompt that defeats the allow rules configured in Step 4c.
+
+For the initial install run, use only these arguments. Additional flags: `-DenyRules` / `--deny-rules` (Step 6c covers when to append this), `-ForceOverwrite` / `--force-overwrite` (forces replacement of locally-modified files — use when a previous install left stale files that should be updated to the canonical version). The `<selected>` value is a comma-separated list with NO spaces (e.g., `core,context-awareness,verification,commit-enforcement,sprint-pipeline,governance-protection,notification`).
 
 ### Step 6b: Configure Spawn (if Sprint Pipeline selected)
 
