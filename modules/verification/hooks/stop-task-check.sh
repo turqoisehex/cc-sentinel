@@ -11,8 +11,8 @@
 #   R2. Staleness gate — if any active CT file is >2 min stale, block and
 #       request progress update before stopping.
 #   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
-#       loops) must never be blocked. Detection: SENTINEL_LISTENER or
-#       SENTINEL_LISTENER env var (primary, set by spawn.py) or "Watching _pending_(sonnet|opus)/"
+#       loops) must never be blocked. Detection: SENTINEL_LISTENER env var
+#       (primary, set by spawn.py) or "Watching _pending_(sonnet|opus)/"
 #       / "Waiting for work on ch[0-9]+" message patterns (fallback).
 #   R4. Channel scoping — each session only checks its own CT files.
 #       SENTINEL_CHANNEL=N → shared CT + ch{N} CT.
@@ -262,7 +262,7 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     for tf in "${SQUAD_EXPECTED[@]}"; do
       if [[ -f "$SQUAD_DIR/$tf" ]]; then
         SQUAD_EXISTS=$((SQUAD_EXISTS + 1))
-        if grep -qE "VERDICT: (PASS|WARN)" "$SQUAD_DIR/$tf" 2>/dev/null; then
+        if grep -qE "^VERDICT: (PASS|WARN)" "$SQUAD_DIR/$tf" 2>/dev/null; then
           SQUAD_PASS=$((SQUAD_PASS + 1))
         else
           SQUAD_FAILED="${SQUAD_FAILED} ${tf}"

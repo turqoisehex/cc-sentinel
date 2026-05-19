@@ -32,7 +32,7 @@ LAST_STDOUT=""
 LAST_EXIT=0
 
 # Run a shell script with optional stdin, using timeout to guarantee no hang.
-# Redirects stderr to /dev/null since bell/notify-send/osascript noise is expected.
+# Redirects stderr to /dev/null since bell/wmctrl/afplay noise is expected.
 # Uses gtimeout (macOS via coreutils) or timeout (Linux), falls back to plain bash.
 if command -v timeout &>/dev/null; then
   _TIMEOUT_CMD="timeout"
@@ -154,10 +154,10 @@ run_with_timeout "$LINUX_SCRIPT" '{"event":"Stop","session_id":"abc-123","tool_n
 assert_exit 0 "exit 0 with JSON stdin"
 
 echo ""
-echo "Test 7: flash-linux.sh exits 0 without notify-send (guards with command -v)"
-# Even if notify-send is not on PATH, the script must not fail.
+echo "Test 7: flash-linux.sh guards wmctrl with command -v"
+# Even if wmctrl is not on PATH, the script must not fail.
 # We already tested it exits 0 above; additionally verify the guard exists.
-assert_file_contains "$LINUX_SCRIPT" "command -v notify-send" "guards notify-send with command -v"
+assert_file_contains "$LINUX_SCRIPT" "command -v wmctrl" "guards wmctrl with command -v"
 
 echo ""
 echo "Test 8: flash-linux.sh drains stdin (cat > /dev/null)"
@@ -184,10 +184,9 @@ run_with_timeout "$MACOS_SCRIPT" '{"event":"Notification","session_id":"xyz-789"
 assert_exit 0 "exit 0 with JSON stdin"
 
 echo ""
-echo "Test 13: flash-macos.sh exits 0 even without osascript (uses || true)"
-# On non-macOS systems osascript won't exist; the script must still exit 0.
-# The previous exit-code tests already prove this. Verify the guard pattern too.
-assert_file_contains "$MACOS_SCRIPT" '\|\| true' "osascript guarded with || true"
+echo "Test 13: flash-macos.sh uses afplay for audible notification"
+# Verify afplay is used as the audible notification mechanism.
+assert_file_contains "$MACOS_SCRIPT" "afplay" "uses afplay for audible alert"
 
 echo ""
 echo "Test 14: flash-macos.sh drains stdin (cat > /dev/null)"

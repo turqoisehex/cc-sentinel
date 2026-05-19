@@ -77,7 +77,7 @@ First, output this table:
 
 | # | Problem | Solution |
 |---|---------|----------|
-| 1 | "It said it was done, but it wasn't." | Verification — multi-agent squad audits before completion (up to 15 agents with Codex) |
+| 1 | "It said it was done, but it wasn't." | Verification — multi-model verification squad (Sonnet + Codex interleaved) |
 | 2 | "It slammed into auto-compact and lost its work." | Context Awareness — visual status bar with 5 graduated warnings |
 | 3 | "It deferred instead of fixing." | Core — anti-deferral hook scans every write |
 | 4 | "After compaction, it forgot everything." | Core — CURRENT_TASK.md state survives compaction |
@@ -108,7 +108,7 @@ Auto-include dependencies: Sprint Pipeline requires Core + Verification + Commit
 
 ### Step 4b: Spawn Configuration (if Sprint Pipeline selected)
 
-Sprint Pipeline is only included when the user chose "All modules" in Step 3. If they chose any other option, skip this step entirely.
+Sprint Pipeline is only included when sprint-pipeline appears in the user's final module selection (currently only the "All modules" option includes it). If sprint-pipeline was not selected, skip this step entirely.
 
 If Sprint Pipeline was selected, ask:
 
@@ -155,7 +155,9 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Write(CURRENT_TASK*)",
 "Edit(CURRENT_TASK*)",
 "Write(verification_findings/*)",
-"Edit(verification_findings/*)"
+"Write(verification_findings/*/*)",
+"Edit(verification_findings/*)",
+"Edit(verification_findings/*/*)"
 ```
 
 **Project install:**
@@ -187,7 +189,9 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Write(CURRENT_TASK*)",
 "Edit(CURRENT_TASK*)",
 "Write(verification_findings/*)",
-"Edit(verification_findings/*)"
+"Write(verification_findings/*/*)",
+"Edit(verification_findings/*)",
+"Edit(verification_findings/*/*)"
 ```
 
 Announce briefly: "Configuring permissions so cc-sentinel scripts run without manual approval..." then write the rules. No user prompt or confirmation needed — just the one-line announcement so it doesn't look like improvisation. The installer will also add these rules mechanically as a safety net.
@@ -280,14 +284,14 @@ For the initial install run, use only these arguments. Additional flags: `-DenyR
 
 If Sprint Pipeline was installed and `spawn_startup_delay` was captured, write the startup delay to spawn config using built-in tools (no Bash needed — avoids permission prompts):
 
-1. Determine spawn.json path: `~/.claude/tools/spawn.json` (resolve `~` to literal home directory per the path rule above).
+1. Determine spawn.json path: `<home>/.claude/tools/spawn.json` (resolve `<home>` to the literal home directory per the path rule above).
 2. Read spawn.json with the Read tool (if it doesn't exist, start with `{}`).
 3. Set `startup_delay` to the user's value (default: 5).
 4. Write the updated JSON with the Write tool.
 
-Then run the setup command to auto-detect terminal and key sender (the installer runs this automatically, but re-running is safe). Use the resolved literal path:
-- **macOS/Linux:** `python3 <home>/.claude/tools/spawn.py --setup`
-- **Windows:** `python <home>\.claude\tools\spawn.py --setup`
+Then run the setup command to auto-detect terminal and key sender (the installer runs this automatically, but re-running is safe). Use the resolved literal path — try `python3` first; if not found, fall back to `python`:
+- **macOS/Linux:** `python3 <home>/.claude/tools/spawn.py --setup` (or `python` if `python3` is unavailable)
+- **Windows:** `python3 <home>\.claude\tools\spawn.py --setup` (or `python` if `python3` is unavailable)
 
 ### Step 6c: Review .claudeignore
 
@@ -399,8 +403,9 @@ bash /tmp/cc-sentinel/uninstall.sh --target global
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/turqoisehex/cc-sentinel "$env:TEMP\cc-sentinel"
-& "$env:TEMP\cc-sentinel\uninstall.ps1" -Target global
+git clone https://github.com/turqoisehex/cc-sentinel cc-sentinel-temp
+& .\cc-sentinel-temp\uninstall.ps1 -Target global
+Remove-Item -Recurse -Force cc-sentinel-temp
 ```
 
 Add `--dry-run` (Unix) or `-DryRun` (Windows PowerShell) to preview what would be removed without removing it.

@@ -100,8 +100,19 @@ fi
 
 cd "$PROJECT_ROOT"
 
+# Detect codex binary (codex.cmd on Windows Git Bash)
+if command -v codex >/dev/null 2>&1; then
+  CODEX_CMD=codex
+elif command -v codex.cmd >/dev/null 2>&1; then
+  CODEX_CMD=codex.cmd
+else
+  echo "VERDICT: TRANSIENT — codex CLI not in PATH (checked: codex, codex.cmd)" > "$TMP_FILE"
+  mv -f "$TMP_FILE" "$OUTPUT_PATH"
+  exit 0
+fi
+
 CODEX_EXIT=0
-echo "$PROMPT_BODY" | codex exec "${CODEX_ARGS[@]}" > "${RAW_FILE}" 2>"$STDERR_TMP" || CODEX_EXIT=$?
+echo "$PROMPT_BODY" | "$CODEX_CMD" exec "${CODEX_ARGS[@]}" > "${RAW_FILE}" 2>"$STDERR_TMP" || CODEX_EXIT=$?
 
 # Reasoning-flag fallback: if non-zero exit AND reasoning was set, retry without it
 if [[ $CODEX_EXIT -ne 0 && -n "$USED_REASONING" ]]; then
@@ -109,7 +120,7 @@ if [[ $CODEX_EXIT -ne 0 && -n "$USED_REASONING" ]]; then
     echo "WARN: reasoning flag '$USED_REASONING' rejected by codex exec; retrying without it" >&2
     CODEX_ARGS=(-m "$MODEL" -s read-only --skip-git-repo-check --ephemeral)
     CODEX_EXIT=0
-    echo "$PROMPT_BODY" | codex exec "${CODEX_ARGS[@]}" > "${RAW_FILE}" 2>"$STDERR_TMP" || CODEX_EXIT=$?
+    echo "$PROMPT_BODY" | "$CODEX_CMD" exec "${CODEX_ARGS[@]}" > "${RAW_FILE}" 2>"$STDERR_TMP" || CODEX_EXIT=$?
   fi
 fi
 
@@ -132,7 +143,7 @@ if [[ $CODEX_EXIT -ne 0 ]]; then
 fi
 
 # Step 4: Extract structured output (last valid VERDICT to EOF)
-LAST_VERDICT_LINE=$(grep -nE '^VERDICT: (PASS|WARN|FAIL)' "$RAW_FILE" | tail -1 | cut -d: -f1)
+LAST_VERDICT_LINE=$(grep -nE '^VERDICT: (PASS|WARN|FAIL)' "$RAW_FILE" | tail -1 | cut -d: -f1) || true
 
 if [[ -n "$LAST_VERDICT_LINE" ]]; then
   # Extract from last VERDICT line to end of file

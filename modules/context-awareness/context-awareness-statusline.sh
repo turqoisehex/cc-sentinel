@@ -18,9 +18,11 @@ read -r SESSION_ID USED_PCT REMAINING_PCT <<< "$(echo "$INPUT" | jq -r '[
 # Exit early if no session
 [[ -z "$SESSION_ID" ]] && exit 0
 
-# Determine config file location (script-relative, then local CWD, then global)
+# Determine config file location (env override, then script-relative, then local CWD, then global)
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "$_SCRIPT_DIR/config.json" ]]; then
+if [[ -n "${CC_CTX_CONFIG:-}" && -f "$CC_CTX_CONFIG" ]]; then
+  CONFIG_FILE="$CC_CTX_CONFIG"
+elif [[ -f "$_SCRIPT_DIR/config.json" ]]; then
   CONFIG_FILE="$_SCRIPT_DIR/config.json"
 elif [[ -f "./.claude/cc-context-awareness/config.json" ]]; then
   CONFIG_FILE="./.claude/cc-context-awareness/config.json"
@@ -32,8 +34,8 @@ fi
 
 # Parse all config values in a single jq call (with defaults)
 # Use newlines + while loop (bash 3 compatible) to handle empty values correctly
+CONFIG_VALUES=()
 if [[ -n "$CONFIG_FILE" ]]; then
-  CONFIG_VALUES=()
   while IFS= read -r line || [[ -n "$line" ]]; do
     CONFIG_VALUES+=("$line")
   done < <(jq -r '
@@ -47,8 +49,12 @@ if [[ -n "$CONFIG_FILE" ]]; then
     (.statusline.warning_indicator // ""),
     (.statusline.bar_style // "auto"),
     (.repeat_mode // "once_per_tier_reset_on_compaction"),
-    ((.thresholds // []) | @json)
-  ' "$CONFIG_FILE" | tr -d '\r')
+    ((.thresholds // []) | @json),
+    (if .statusline.enabled == false then "false" else "true" end)
+  ' "$CONFIG_FILE" 2>/dev/null | tr -d '\r')
+fi
+
+if [[ ${#CONFIG_VALUES[@]} -ge 12 ]]; then
   FLAG_DIR="${CONFIG_VALUES[0]}"
   BAR_WIDTH="${CONFIG_VALUES[1]}"
   BAR_FILLED="${CONFIG_VALUES[2]}"
@@ -60,8 +66,8 @@ if [[ -n "$CONFIG_FILE" ]]; then
   BAR_STYLE="${CONFIG_VALUES[8]}"
   REPEAT_MODE="${CONFIG_VALUES[9]}"
   THRESHOLDS_JSON="${CONFIG_VALUES[10]}"
+  STATUSLINE_ENABLED="${CONFIG_VALUES[11]}"
 else
-  # Defaults if no config file
   FLAG_DIR="/tmp"
   BAR_WIDTH=20
   BAR_FILLED="█"
@@ -73,6 +79,7 @@ else
   BAR_STYLE="auto"
   REPEAT_MODE="once_per_tier_reset_on_compaction"
   THRESHOLDS_JSON="[]"
+  STATUSLINE_ENABLED="true"
 fi
 
 # Apply bar_style override
@@ -162,6 +169,9 @@ fi
 
 # Persist fired-tiers tracking
 echo "$NEW_FIRED" > "$FIRED_FILE"
+
+# Skip rendering if statusline.enabled is false (thresholds still fire above)
+[[ "$STATUSLINE_ENABLED" == "false" ]] && exit 0
 
 # Render status bar efficiently (no loops)
 FILLED_COUNT=$(( USED_PCT * BAR_WIDTH / 100 ))

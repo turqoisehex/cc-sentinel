@@ -250,11 +250,14 @@ class TestGnomeTermDriver(unittest.TestCase):
     def test_activate_uses_xdotool(self):
         from spawn import GnomeTermDriver
         driver = GnomeTermDriver()
+        driver._wid_dec = "12345"
         with patch("spawn.shutil.which", return_value="/usr/bin/xdotool"):
             with patch("spawn.subprocess.run") as mock_run:
                 driver.activate("opus")
-                # Should search by window name, then activate
-                self.assertEqual(mock_run.call_count, 2)
+                self.assertEqual(mock_run.call_count, 1)
+                cmd = mock_run.call_args[0][0]
+                self.assertIn("windowfocus", cmd)
+                self.assertIn("12345", cmd)
 
 
 class TestKonsoleDriver(unittest.TestCase):

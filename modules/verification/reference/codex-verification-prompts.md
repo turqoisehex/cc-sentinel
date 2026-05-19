@@ -53,7 +53,7 @@ Claims extracted: [N]
 ## Summary
 1. [X] One-line — file:line or search detail
 
----
+----
 ## Detail
 ### Finding 1: [title]
 Claimed, found, searched
@@ -119,7 +119,7 @@ Work product: [path]
 1. [CATEGORY] One-line — file:line or rule
 Categories: [SPEC_SANITY], [REGRESSION], [CONTRADICTION], [RULE_VIOLATION], [IMPOSSIBLE], [CHARITY_BIAS]
 
----
+----
 ## Detail
 ### Finding 1: [title]
 Category, full evidence, rule file:specific rule cited (if applicable)
@@ -177,7 +177,7 @@ Work product: [path] | Source spec: [path] | Requirements: N
 ## Summary
 1. [GAP/PARTIAL/ORPHAN/UNSPECIFIED] One-line — requirement or item
 
----
+----
 ## Detail
 ### Finding 1: [title]
 Requirement text, expected, found/missing
@@ -233,7 +233,7 @@ Work product: [path] | Changes traced: N
 1. [UNTRACED] One-line — specific risk
 Categories: [UNTRACED], [UNCERTAIN]
 
----
+----
 ## Detail
 ### Finding 1: [title]
 Change, upstream/downstream/lateral trace, specific risk (what breaks, how, when)
@@ -339,7 +339,7 @@ Work product: [path]
 1. [CATEGORY] One-line — file:section or line
 Categories: [NONSENSE], [BROKEN], [DEAD], [ORPHANED], [STALE], [CONTRADICTION]
 
----
+----
 ## Detail
 ### Finding 1: [title]
 What it literally says, why wrong/broken/stale, evidence

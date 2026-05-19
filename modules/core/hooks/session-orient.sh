@@ -47,9 +47,9 @@ for CT_FILE in "$PROJECT_DIR"/CURRENT_TASK_ch*.md; do
   CH_NUM=$(echo "$BASENAME" | grep -oE 'ch[0-9]+' | grep -oE '[0-9]+')
   # Check for active status (Phase line without complete/done/finished)
   if grep -iE '\*\*Phase:\*\*[[:space:]]*/[0-9]' "$CT_FILE" 2>/dev/null | grep -qivE '(complete|done|finished)'; then
-    ACTIVE_CHANNELS="${ACTIVE_CHANNELS}  - Channel ${CH_NUM}: ${BASENAME}\n"
+    ACTIVE_CHANNELS="${ACTIVE_CHANNELS}  - Channel ${CH_NUM}: ${BASENAME}"$'\n'
   elif grep -qiE '\*\*Status:\*\*[[:space:]]*IN PROGRESS' "$CT_FILE" 2>/dev/null; then
-    ACTIVE_CHANNELS="${ACTIVE_CHANNELS}  - Channel ${CH_NUM}: ${BASENAME}\n"
+    ACTIVE_CHANNELS="${ACTIVE_CHANNELS}  - Channel ${CH_NUM}: ${BASENAME}"$'\n'
   fi
 done
 
@@ -63,7 +63,7 @@ fi
 if [[ -n "$ACTIVE_CHANNELS" ]] || [[ "$SHARED_ACTIVE" == "true" ]]; then
   MSG="SESSION START: Active work detected. Read CURRENT_TASK.md first."
   if [[ -n "$ACTIVE_CHANNELS" ]]; then
-    MSG="${MSG} Active channel files:\n${ACTIVE_CHANNELS}"
+    MSG="${MSG} Active channel files:"$'\n'"${ACTIVE_CHANNELS}"
   fi
   if [[ "$SHARED_ACTIVE" == "true" ]]; then
     MSG="${MSG} Shared CURRENT_TASK.md also has active unchanneled work."

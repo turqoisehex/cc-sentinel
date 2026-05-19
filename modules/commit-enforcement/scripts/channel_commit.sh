@@ -79,7 +79,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 _cleanup_exit() {
   rm -f "$COMMIT_ACTIVE_FILE" 2>/dev/null
-  rm -rf "$LOCK_DIR" 2>/dev/null
+  # Only remove lock if we own it (another session may hold it)
+  if [[ -f "$LOCK_DIR/pid" ]] && [[ "$(cat "$LOCK_DIR/pid" 2>/dev/null)" == "$$" ]]; then
+    rm -rf "$LOCK_DIR" 2>/dev/null
+  fi
 }
 trap _cleanup_exit EXIT
 
@@ -160,10 +163,11 @@ phase1_stage_and_hash() {
 stamp_hash_into_outputs() {
   for f in "$CHECK_FILE" "$COLD_READ_FILE"; do
     [[ -f "$f" ]] || continue
+    local tmp="${f}.tmp"
     if grep -q '^HASH:' "$f" 2>/dev/null; then
-      sed -i "s/^HASH:.*/HASH: $HASH/" "$f"
+      sed "s/^HASH:.*/HASH: $HASH/" "$f" > "$tmp" && mv "$tmp" "$f"
     else
-      sed -i "/^VERDICT:/a HASH: $HASH" "$f"
+      sed "/^VERDICT:/a HASH: $HASH" "$f" > "$tmp" && mv "$tmp" "$f"
     fi
   done
 }

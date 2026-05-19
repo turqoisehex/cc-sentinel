@@ -224,21 +224,26 @@ mkdir -p "$STREAK_DIR" || {
   echo "FATAL: cannot create streak state dir '$STREAK_DIR' (HOME read-only? volume permissions? CI/Docker restricted profile?). Exit 3." >&2
   exit 3
 }
-# Compute a portable hash of the spec path. REQUIRE sha256sum — coreutils is
-# universally available on Linux/macOS and Windows Git Bash. cksum's 32-bit CRC
+# Compute a portable hash of the spec path. Prefer sha256sum (coreutils);
+# fall back to shasum -a 256 (stock macOS perl utility). cksum's 32-bit CRC
 # has a real collision rate across many distinct spec paths in long-running
 # squads, which would alias two specs to the same streak counter and silently
-# confuse STOP accounting. Exit 3 (config error) if absent — the operator must
-# install coreutils rather than have the wrapper run with a weaker identifier.
-if ! command -v sha256sum >/dev/null 2>&1; then
-  echo "FATAL: sha256sum not found. Install coreutils (Linux/macOS: package manager; Windows: Git Bash includes it; if missing, reinstall Git for Windows)." >&2
+# confuse STOP accounting. Exit 3 (config error) if neither is available.
+if command -v sha256sum >/dev/null 2>&1; then
+  _sha256() { sha256sum "$@"; }
+elif command -v shasum >/dev/null 2>&1; then
+  _sha256() { shasum -a 256 "$@"; }
+else
+  echo "FATAL: neither sha256sum nor shasum found. Install coreutils (Linux: package manager; macOS: stock shasum should be present — check PATH; Windows Git Bash includes sha256sum)." >&2
   exit 3
 fi
-# Probe `timeout` early so its absence surfaces a clear actionable message rather
-# than cascading into the rc=127 branch on the codex invocation below (which would
-# misdiagnose the operator into chasing a phantom Codex install issue).
-if ! command -v timeout >/dev/null 2>&1; then
-  echo "FATAL: timeout binary not found in PATH (Linux/macOS: install coreutils; Homebrew 'brew install coreutils' provides 'gtimeout' — symlink as 'timeout'; BusyBox: install full coreutils). Exit 3." >&2
+# Probe `timeout` early (Homebrew installs it as `gtimeout`; detect both).
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_CMD=timeout
+elif command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_CMD=gtimeout
+else
+  echo "FATAL: neither timeout nor gtimeout found in PATH (Linux: install coreutils; macOS: brew install coreutils). Exit 3." >&2
   exit 3
 fi
 # Probe `wc` early. The wrapper uses `wc -c` to size-check the spec; placeholder
@@ -256,7 +261,7 @@ fi
 # files. Without this probe, mktemp absence surfaces only at the first mktemp
 # call (after state-dir creation, after streak file hashing) — at a different
 # code site than the other coreutils probes. Pre-flight here to keep error
-# diagnostics symmetrical with sha256sum/timeout/wc.
+# diagnostics symmetrical with sha256sum (or shasum)/timeout/wc.
 if ! command -v mktemp >/dev/null 2>&1; then
   echo "FATAL: mktemp binary not found in PATH (install coreutils). Exit 3." >&2
   exit 3
@@ -313,7 +318,7 @@ if [ "$SPEC_PATH_CANON" = "$OUTPUT_PATH_CANON" ]; then
   exit 3
 fi
 
-SPEC_HASH=$(printf '%s' "$SPEC_PATH_CANON" | sha256sum | cut -c1-12)
+SPEC_HASH=$(printf '%s' "$SPEC_PATH_CANON" | _sha256 | cut -c1-12)
 STREAK_FILE="$STREAK_DIR/codex_postfix_streak_${SPEC_HASH}.txt"
 
 # Streak helpers — called from each exit point. Centralizes the consecutive-exit-2
@@ -531,7 +536,7 @@ streak_increment_and_exit() {  # increments streak; exit 2 on first transient, e
     echo "WARN: lockdir $LOCKDIR could not be acquired after retries; skipping streak write to avoid concurrent-write corruption. STOP enforcement may miss this round." >&2
   fi
   if [ "$STREAK" -ge 2 ]; then
-    echo "STOP: $STREAK consecutive exit-2 results on $SPEC_PATH (streak file: $STREAK_FILE). Per Task 6a/6b, investigate before next squad dispatch. Reset by either (a) the next scan returning exit 0/1, or (b) deleting the streak file after manually resolving the underlying transient cause and noting the resolution in CT." >&2
+    echo "STOP: $STREAK consecutive exit-2 results on $SPEC_PATH (streak file: $STREAK_FILE). Per Task 6a/6b, investigate before next squad dispatch. Reset by either (a) the next scan returning exit 0/1, or (b) deleting the streak file after manually resolving the underlying transient cause and noting the resolution in CURRENT_TASK.md (or your project's state file)." >&2
     # Distinct exit code 4 for the STOP path so callers (the `verify` SKILL.md
     # insertions in Task 6a/6b) can branch on STOP vs. plain transient.
     # Exit 2 = TRANSIENT, single retry permitted; Exit 4 = STOP, do not auto-retry,
@@ -944,7 +949,7 @@ echo "Running Codex integrity scan on $(basename "$SPEC_PATH")..." >&2
 # cannot tell whether codex itself returned non-zero or whether the wrapper's
 # heuristics fired on a successful-but-malformed reply.
 set +e
-timeout 300 "$CODEX_CMD" exec --skip-git-repo-check < "$TMP_PROMPT" \
+"$TIMEOUT_CMD" 300 "$CODEX_CMD" exec --skip-git-repo-check < "$TMP_PROMPT" \
   > "$OUTPUT_TMP" 2>"$TMP_STDERR"
 CODEX_EXIT=$?
 set -e

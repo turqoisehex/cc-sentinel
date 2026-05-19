@@ -182,7 +182,7 @@
     },
     "verification": {
       "name": "Verification",
-      "description": "Multi-agent /verify squad (5 Sonnet, or 5+5+5 interleaved with Codex), adversarial self-check, completion gate",
+      "description": "Multi-agent /verify squad (5 Sonnet, or interleaved Sonnet + Codex + Opus closure), adversarial self-check, completion gate",
       "required": false,
       "dependencies": [
         "core"

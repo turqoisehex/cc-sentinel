@@ -510,7 +510,9 @@ if target == "global":
         "Write(CURRENT_TASK*)",
         "Edit(CURRENT_TASK*)",
         "Write(verification_findings/*)",
+        "Write(verification_findings/*/*)",
         "Edit(verification_findings/*)",
+        "Edit(verification_findings/*/*)",
     ]
 else:
     rules = [
@@ -541,7 +543,9 @@ else:
         "Write(CURRENT_TASK*)",
         "Edit(CURRENT_TASK*)",
         "Write(verification_findings/*)",
+        "Write(verification_findings/*/*)",
         "Edit(verification_findings/*)",
+        "Edit(verification_findings/*/*)",
     ]
 
 added = []
@@ -550,8 +554,11 @@ for rule in rules:
         settings["permissions"]["allow"].append(rule)
         added.append(rule)
 
-with open(settings_file, "w") as f:
+import tempfile
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(settings_file), suffix=".tmp")
+with os.fdopen(fd, "w") as f:
     json.dump(settings, f, indent=2)
+os.replace(tmp, settings_file)
 
 if added:
     for r in added:
@@ -598,8 +605,11 @@ for rule in rules:
         settings["permissions"]["deny"].append(rule)
         added.append(rule)
 
-with open(settings_file, "w") as f:
+import tempfile
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(settings_file), suffix=".tmp")
+with os.fdopen(fd, "w") as f:
     json.dump(settings, f, indent=2)
+os.replace(tmp, settings_file)
 
 if added:
     for r in added:
@@ -645,16 +655,29 @@ generate_claudeignore() {
 
   if [[ -n "$claudeignore" ]]; then
     if [[ -f ".claudeignore" ]]; then
-      if grep -q "Added by cc-sentinel" .claudeignore 2>/dev/null; then
-        log "  .claudeignore already has cc-sentinel entries — skipping"
-      else
-        log "  .claudeignore already exists — appending new entries"
+      local existing
+      existing="$(cat .claudeignore)"
+      local missing=""
+      while IFS= read -r pattern; do
+        [[ -z "$pattern" ]] && continue
+        [[ "$pattern" == \#* ]] && continue
+        if ! grep -qxF "$pattern" .claudeignore 2>/dev/null; then
+          missing="${missing}${pattern}"$'\n'
+        fi
+      done <<< "$claudeignore"
+      if [[ -n "$missing" ]]; then
         echo "" >> .claudeignore
         echo "# Added by cc-sentinel" >> .claudeignore
-        echo "$claudeignore" >> .claudeignore
+        printf '%s' "$missing" >> .claudeignore
+        local count
+        count=$(printf '%s' "$missing" | grep -c .)
+        log "  Appended $count new patterns to .claudeignore"
+      else
+        log "  .claudeignore already has all cc-sentinel patterns"
       fi
     else
-      echo "$claudeignore" > .claudeignore
+      echo "# Added by cc-sentinel" > .claudeignore
+      echo "$claudeignore" >> .claudeignore
       log "  Created .claudeignore"
     fi
   fi
@@ -856,7 +879,7 @@ if echo "$MODULES" | grep -q "sprint-pipeline"; then
       log "  WOULD RUN: spawn.py --setup"
     else
       log "Configuring spawn (auto-detect terminal + key sender)..."
-      "$PYTHON" "${HOME}/.claude/tools/spawn.py" --setup 2>/dev/null || log "  spawn.py --setup failed — run manually: python3 ~/.claude/tools/spawn.py --setup"
+      "$PYTHON" "${HOME}/.claude/tools/spawn.py" --setup 2>/dev/null || log "  spawn.py --setup failed — run manually: $PYTHON ~/.claude/tools/spawn.py --setup"
       # Write default startup_delay to spawn.json
       spawn_json="${HOME}/.claude/tools/spawn.json"
       if [[ ! -f "$spawn_json" ]] || ! "$PYTHON" -c "import json; d=json.load(open('$spawn_json')); assert 'startup_delay' in d" 2>/dev/null; then

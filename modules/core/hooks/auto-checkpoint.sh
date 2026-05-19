@@ -9,18 +9,16 @@ git rev-parse --git-dir >/dev/null 2>&1 || exit 0
 # No changes? Nothing to checkpoint.
 git status --porcelain 2>/dev/null | grep -q . || exit 0
 
-# Create checkpoint without modifying working directory
+# Create checkpoint without modifying working directory or staged state
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S)
-# Save which files were staged before we touch the index
-STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
+# Save exact index state (preserves partial staging)
+INDEX_TREE=$(git write-tree 2>/dev/null) || INDEX_TREE=""
 git add -A 2>/dev/null
 SHA=$(git stash create "sentinel-checkpoint: $TIMESTAMP" 2>/dev/null)
-git reset --quiet 2>/dev/null
-# Restore any files that were staged before the hook ran (including staged deletions)
-if [[ -n "$STAGED_FILES" ]]; then
-  while IFS= read -r f; do
-    [[ -n "$f" ]] && git add "$f" 2>/dev/null
-  done <<< "$STAGED_FILES"
+if [[ -n "$INDEX_TREE" ]]; then
+  git read-tree "$INDEX_TREE" 2>/dev/null || git reset --quiet 2>/dev/null
+else
+  git reset --quiet 2>/dev/null
 fi
 
 # stash create returns empty if nothing to stash (shouldn't happen given porcelain check, but guard)

@@ -11,9 +11,11 @@ SESSION_ID="$(echo "$SAVED_INPUT" | jq -r '.session_id // ""' | tr -d '\r')" || 
 
 [[ -z "$SESSION_ID" ]] && exit 0
 
-# Determine config file location (script-relative, then local CWD, then global)
+# Determine config file location (env override, then script-relative, then local CWD, then global)
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "$_SCRIPT_DIR/config.json" ]]; then
+if [[ -n "${CC_CTX_CONFIG:-}" && -f "$CC_CTX_CONFIG" ]]; then
+  CONFIG_FILE="$CC_CTX_CONFIG"
+elif [[ -f "$_SCRIPT_DIR/config.json" ]]; then
   CONFIG_FILE="$_SCRIPT_DIR/config.json"
 elif [[ -f "./.claude/cc-context-awareness/config.json" ]]; then
   CONFIG_FILE="./.claude/cc-context-awareness/config.json"
@@ -23,13 +25,14 @@ else
   CONFIG_FILE=""
 fi
 
-# Load config values
+# Load config values (2>/dev/null: malformed JSON falls through to defaults)
+FLAG_DIR=""
+HOOK_EVENT=""
 if [[ -n "$CONFIG_FILE" ]]; then
-  read -r FLAG_DIR HOOK_EVENT <<< "$(jq -r '[.flag_dir // "/tmp", .hook_event // "PreToolUse"] | @tsv' "$CONFIG_FILE" | tr -d '\r')"
-else
-  FLAG_DIR="/tmp"
-  HOOK_EVENT="PreToolUse"
+  read -r FLAG_DIR HOOK_EVENT <<< "$(jq -r '[.flag_dir // "/tmp", .hook_event // "PreToolUse"] | @tsv' "$CONFIG_FILE" 2>/dev/null | tr -d '\r')" || true
 fi
+[[ -z "$FLAG_DIR" ]] && FLAG_DIR="/tmp"
+[[ -z "$HOOK_EVENT" ]] && HOOK_EVENT="PreToolUse"
 
 TRIGGER_FILE="${FLAG_DIR}/.cc-ctx-trigger-${SESSION_ID}"
 

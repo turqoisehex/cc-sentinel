@@ -477,6 +477,7 @@ class GnomeTermDriver(TerminalDriver):
         before = self._enum_windows()
         subprocess.Popen([
             "gnome-terminal",
+            "--title=" + window_name,
             "--working-directory=" + str(project_dir),
         ])
         for _ in range(50):

@@ -354,7 +354,7 @@ function Merge-Settings {
                             }
                         }
 
-                        $newHooks += @{
+                        $newHooks += [PSCustomObject]@{
                             type = $hook.type
                             command = $cmd
                             timeout = $hook.timeout
@@ -457,7 +457,9 @@ function Configure-Permissions {
             "Write(CURRENT_TASK*)",
             "Edit(CURRENT_TASK*)",
             "Write(verification_findings/*)",
-            "Edit(verification_findings/*)"
+            "Write(verification_findings/*/*)",
+            "Edit(verification_findings/*)",
+            "Edit(verification_findings/*/*)"
         )
     } else {
         $rules = @(
@@ -488,7 +490,9 @@ function Configure-Permissions {
             "Write(CURRENT_TASK*)",
             "Edit(CURRENT_TASK*)",
             "Write(verification_findings/*)",
-            "Edit(verification_findings/*)"
+            "Write(verification_findings/*/*)",
+            "Edit(verification_findings/*)",
+            "Edit(verification_findings/*/*)"
         )
     }
 
@@ -771,7 +775,7 @@ if ($Modules -match "sprint-pipeline") {
                 $py = if (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
                 & $py $spawnPath --setup 2>$null
             } catch {
-                Log "  spawn.py --setup failed - run manually: python ~/.claude/tools/spawn.py --setup"
+                Log "  spawn.py --setup failed - run manually: $py $($env:USERPROFILE)\.claude\tools\spawn.py --setup"
             }
             # Write default startup_delay to spawn.json
             $spawnJson = [PSCustomObject]@{}

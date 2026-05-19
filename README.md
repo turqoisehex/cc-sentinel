@@ -54,7 +54,7 @@ If Claude Code can do it, cc-sentinel can govern it.
 
 cc-sentinel is installed through a guided conversation in Claude Code. The install protocol lives in [`CLAUDE.md`](CLAUDE.md) inside this repo — clone first, then Claude Code reads it and follows its 9-step script. **Do not** follow the README to install; use it to understand what gets installed.
 
-**Prerequisites:** Node.js, Git, jq, and Python 3 (Unix/macOS always; Windows only if using Sprint Pipeline's `/spawn` command). Optional: [OpenAI Codex CLI](https://github.com/openai/codex) for interleaved multi-model verification (requires OpenAI Plus, Pro, Team, or API key). See [Platform Setup](#platform-setup) for one-command install per platform.
+**Prerequisites:** Node.js, Git, jq, and Python 3 (Unix/macOS always; Windows only if using Sprint Pipeline's `/spawn` command). macOS also needs GNU coreutils for `timeout` (used by verification scanning). Optional: [OpenAI Codex CLI](https://github.com/openai/codex) for interleaved multi-model verification (requires OpenAI Plus, Pro, Team, or API key). See [Platform Setup](#platform-setup) for one-command install per platform.
 
 **In any Claude Code session, type:**
 
@@ -277,7 +277,7 @@ cc-sentinel/
   modules/
     core/                # Required -- hooks, templates, /cold, /cleanup, /status
     context-awareness/   # Status bar meter, graduated warnings
-    verification/        # Multi-model squad (5 Sonnet or 15 interleaved), /verify, /grill
+    verification/        # Multi-model squad (Sonnet + Codex interleaved), /verify, /grill
     commit-enforcement/  # safe-commit, auto-format, channel routing
     sprint-pipeline/     # /1-/5 workflow, /spawn multi-session
     governance-protection/ # file-protection, /mistake, /prune-rules
@@ -387,10 +387,12 @@ Fresh Mac -- install Homebrew first, then everything else:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install node jq python-tk@3.12 && npm install -g @anthropic-ai/claude-code
+brew install node jq python-tk@3.12 coreutils && npm install -g @anthropic-ai/claude-code
 ```
 
-macOS includes Git and bash; Python 3 is available via Xcode Command Line Tools or Homebrew. `python-tk@3.12` provides tkinter (needed for Spawn's Cancel dialog). If using a different Python version, adjust accordingly (e.g., `python-tk@3.13`). Only Node.js, jq, and python-tk need to be installed via Homebrew.
+macOS includes Git and bash; Python 3 is available via Xcode Command Line Tools or Homebrew. `python-tk@3.12` provides tkinter (needed for Spawn's Cancel dialog). If using a different Python version, adjust accordingly (e.g., `python-tk@3.13`). `coreutils` provides GNU `timeout` (installed as `gtimeout`), used by the Codex postfix integrity scan — the scan script detects both `timeout` and `gtimeout` automatically.
+
+Only Node.js, jq, python-tk, and coreutils need to be installed via Homebrew.
 
 If you already have Homebrew, skip the first line. Check what you have: `brew --version && node -v && jq --version`.
 

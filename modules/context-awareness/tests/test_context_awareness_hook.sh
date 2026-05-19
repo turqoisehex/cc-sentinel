@@ -41,6 +41,7 @@ setup_temp() {
   "hook_event": "PreToolUse"
 }
 EOF
+  export CC_CTX_CONFIG="$CONFIG_DIR/config.json"
 }
 
 teardown_temp() {
@@ -74,7 +75,7 @@ run_hook() {
   local stdout_file="$TMPDIR_ROOT/stdout"
   local stderr_file="$TMPDIR_ROOT/stderr"
   cd "$workdir"
-  echo "$input" | bash "$HOOK_SCRIPT" > "$stdout_file" 2> "$stderr_file"
+  echo "$input" | CC_CTX_CONFIG="${CC_CTX_CONFIG:-}" bash "$HOOK_SCRIPT" > "$stdout_file" 2> "$stderr_file"
   LAST_EXIT=$?
   LAST_STDOUT=$(cat "$stdout_file")
   LAST_STDERR=$(cat "$stderr_file")
@@ -269,12 +270,25 @@ EOF
 create_trigger_in_tmp "sess-009" "Fallback to /tmp works"
 INPUT=$(build_input "sess-009")
 # Need to run from a dir without .claude/cc-context-awareness/config.json
-# and without global config
+# and without global config — unset override so fallback chain kicks in
+unset CC_CTX_CONFIG
 run_hook "$INPUT" "$TMPDIR_ROOT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "Fallback" "/tmp trigger picked up without config"
 # Cleanup
 rm -f "/tmp/.cc-ctx-trigger-sess-009"
+teardown_temp
+
+# --- Test 10: CC_CTX_CONFIG pointing to malformed file -> falls back gracefully ---
+echo ""
+echo "Test 10: Malformed CC_CTX_CONFIG -> exits 0 (no crash)"
+setup_temp
+INPUT=$(build_input "sess-010")
+echo "NOT VALID JSON {{{" > "$TMPDIR_ROOT/bad_config.json"
+export CC_CTX_CONFIG="$TMPDIR_ROOT/bad_config.json"
+run_hook "$INPUT"
+assert_exit 0 "exit 0 with malformed config"
+assert_stdout_empty "malformed config produces no output (no trigger in fallback dir)"
 teardown_temp
 
 # ==================== SUMMARY ====================
