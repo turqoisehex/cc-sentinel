@@ -324,6 +324,22 @@ If user picks D: make the requested changes.
 
 **Conservative (Recommended):** Block media, video, archives, and binaries. Keep images and PDFs readable for OCR."
 
+Then call AskUserQuestion with a SHORT question (long text renders unreadably in some terminal themes):
+
+```
+questions: [
+  {
+    question: "Add deny rules?",
+    header: "Deny rules",
+    options: [
+      { label: "Yes, add them (Recommended)", description: "Re-runs installer with -DenyRules; blocks media/video/archives/binaries; keeps images and PDFs readable for OCR" },
+      { label: "Skip", description: "Don't add deny rules — you can re-run later with -DenyRules" }
+    ],
+    multiSelect: false
+  }
+]
+```
+
 If they accept, re-run the installer with `--deny-rules` appended to the command. The installer handles the edit automatically (governance hooks do not block the installer's own settings writes):
 
 **Windows:** append `-DenyRules` to the powershell command
