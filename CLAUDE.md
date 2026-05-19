@@ -12,12 +12,12 @@ When the user installs this package (by saying "Install" followed by this repo's
 
 ### Step 1: Detect Environment
 
-Before asking any questions, silently detect. Use built-in tools (Glob, Read) instead of Bash wherever possible — Bash triggers permission prompts, built-in tools do not:
+Before asking any questions, silently detect. Use built-in tools (Glob, Read) when available — they require no permission and produce no prompts. **If Glob or Grep are not in your tool index** (some platforms omit them), use `ls` for directory listings, `cat` for file reads, and `find` for recursive file searches instead — these are read-only commands that cannot modify anything. If prompted to approve them, do so — they will be added to permanent allow rules in Step 4c.
 - **OS:** Claude Code already knows the platform from session metadata (`win32`, `darwin`, `linux`). No shell call needed — read the platform from your system context.
-- **Existing .claude/:** Use Glob for `.claude/settings.json` and `~/.claude/settings.json`.
-- **Git:** Use Glob for `.git/` in the current directory.
-- **Project type:** Use Glob for `pubspec.yaml`, `package.json`, `Cargo.toml`, `go.mod`, `setup.py`, `pyproject.toml`, `Makefile`.
-- **Existing hooks:** Use Read on `~/.claude/settings.json` (or `.claude/settings.json`). Check for `"hooks"` key.
+- **Existing .claude/:** Glob (or `ls`) for `.claude/settings.json` and `~/.claude/settings.json`.
+- **Git:** Glob (or `ls`) for `.git/` in the current directory.
+- **Project type:** Glob (or `ls`) for `pubspec.yaml`, `package.json`, `Cargo.toml`, `go.mod`, `setup.py`, `pyproject.toml`, `Makefile`.
+- **Existing hooks:** Read (or `cat`) on `~/.claude/settings.json` (or `.claude/settings.json`). Check for `"hooks"` key.
 
 ### Step 2: Discovery Questions (single bundled prompt)
 
@@ -112,11 +112,16 @@ Auto-include dependencies: Sprint Pipeline requires Core + Verification + Commit
 
 Sprint Pipeline is only included when sprint-pipeline appears in the user's final module selection (currently only the "All modules" option includes it). If sprint-pipeline was not selected, skip this step entirely.
 
-If Sprint Pipeline was selected, ask:
+If Sprint Pipeline was selected, ask via AskUserQuestion:
 
-"The Sprint Pipeline includes `/spawn` for launching multiple Claude Code sessions in parallel. How long does Claude Code take to start on your machine? (This is the delay between launching `claude` and the REPL being ready for input. Default: 5 seconds, fast machines: 3 seconds. Type a number or say 'default'.)"
+"Sprint Pipeline includes `/spawn` for launching parallel Claude Code sessions. How long does Claude Code take to start on your machine?"
 
-Store the answer as `spawn_startup_delay`. Default 5 if the user skips or says "default." Never say "press Enter to accept" — on many terminals, an empty Enter does nothing or submits an empty string that confuses parsing.
+Options:
+- **5 seconds (Recommended)** — "Default. Works for most machines."
+- **3 seconds** — "Fast machines with SSD and few startup hooks."
+- **8 seconds** — "Slower machines or heavy startup configuration."
+
+Store the selected value as `spawn_startup_delay`. If the user picks "Other", parse their number. Default 5.
 
 ### Step 4c: Configure Permissions
 
@@ -138,6 +143,8 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Bash(python *.claude?tools?*)",
 "Bash(git *)",
 "Bash(ls *)",
+"Bash(cat *)",
+"Bash(find *)",
 "Bash(echo *)",
 "Bash(powershell *setup-codex*)",
 "Bash(powershell -File *setup-codex*)",
@@ -172,6 +179,8 @@ Read the current settings.json (create `{"permissions":{"allow":[]}}` if it does
 "Bash(python *.claude?tools?*)",
 "Bash(git *)",
 "Bash(ls *)",
+"Bash(cat *)",
+"Bash(find *)",
 "Bash(echo *)",
 "Bash(powershell *setup-codex*)",
 "Bash(powershell -File *setup-codex*)",
@@ -365,13 +374,13 @@ If the Sprint Pipeline module was installed, recommend complementary plugins. Pr
 
 Skills installed during this session are not loadable until the next session — do NOT invoke `/self-test`.
 
-**Do NOT use Bash, PowerShell, or any shell command for this step.** Use ONLY built-in tools — Read and Glob require no permission and produce no prompts. Resolve `~` to the literal home directory per the path rule.
+Use built-in tools (Read, Glob) when available. **If Glob is not in your tool index**, use `ls` and `find` instead — these are pre-approved read-only commands in the permission rules and will not trigger prompts. Resolve `~` to the literal home directory per the path rule.
 
-1. **Read** the target settings.json. In the JSON content, count hook event types (keys under `hooks`) and total hook entries. Check that `permissions.allow` contains cc-sentinel rules. Check for `statusLine` key.
-2. **Glob** for hook files: `<home>/.claude/hooks/*` (or `.claude/hooks/*` for project). Count results.
-3. **Glob** for skill directories: `<home>/.claude/skills/*/SKILL.md` (or `.claude/skills/*/SKILL.md`). Count results.
-4. **Read** the target CLAUDE.md. Search for `cc-sentinel rules start` in the content.
-5. **Glob** for reference files: `<home>/.claude/reference/*.md` (or `.claude/reference/*.md`). Confirm key files present. If verification module was installed: `verification-behavior.md`. If governance-protection was installed: `audit-pointer-rules.md`.
+1. **Read** (or `cat`) the target settings.json. In the JSON content, count hook event types (keys under `hooks`) and total hook entries. Check that `permissions.allow` contains cc-sentinel rules. Check for `statusLine` key.
+2. **Glob** (or `ls`) for hook files: `<home>/.claude/hooks/*` (or `.claude/hooks/*` for project). Count results.
+3. **Glob** (or `ls`) for skill directories: `<home>/.claude/skills/*/SKILL.md` (or `.claude/skills/*/SKILL.md`). Count results.
+4. **Read** (or `cat`) the target CLAUDE.md. Search for `cc-sentinel rules start` in the content.
+5. **Glob** (or `ls`) for reference files: `<home>/.claude/reference/*.md` (or `.claude/reference/*.md`). Confirm key files present. If verification module was installed: `verification-behavior.md`. If governance-protection was installed: `audit-pointer-rules.md`.
 
 Present results as a table: each check PASS or FAIL with count. Exact counts depend on which modules were selected — do not compare to hardcoded expected values. Example format:
 
