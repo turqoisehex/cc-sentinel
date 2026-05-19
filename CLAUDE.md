@@ -71,6 +71,8 @@ If git was not detected, remove the "Commits" question entirely (3 questions tot
 
 ### Step 3: Present Problem Table + Module Selection (same turn)
 
+**MANDATORY: You MUST output the problem table below as text BEFORE asking the module question. The user needs to understand what each module does before choosing. Do NOT skip the table. Do NOT substitute your own module bundles. Use the EXACT options below verbatim — do not invent alternatives, regroup modules, or change the recommended option. If AskUserQuestion fails, present the 4 options as numbered text and ask the user to type a number.**
+
 In a **single response**, output the problem table as text AND immediately follow with an AskUserQuestion for module selection. Do NOT split these into separate turns.
 
 First, output this table:
@@ -86,7 +88,7 @@ First, output this table:
 | 7 | "It modified files it shouldn't." | Governance Protection — blocks mid-session edits to rules |
 | 8 | "I walked away and missed the finish." | Notification — desktop alerts when done |
 
-Then in the SAME response, call AskUserQuestion:
+Then in the SAME response, call AskUserQuestion with these EXACT options (do not modify):
 
 ```
 questions: [
