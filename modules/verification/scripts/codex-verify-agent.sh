@@ -131,11 +131,17 @@ if [[ $CODEX_EXIT -ne 0 ]]; then
     :
   else
     STDERR_FIRST=$(head -1 "$STDERR_TMP" 2>/dev/null || echo "unknown error")
-    if grep -qiE 'usage.limit|rate.limit|429|too many requests|quota' "$STDERR_TMP" 2>/dev/null; then
-      echo "VERDICT: TRANSIENT — rate limit" > "$TMP_FILE"
+    if grep -qiE 'usage[. ]limit' "$STDERR_TMP" 2>/dev/null; then
+      RESET_HINT=$(grep -oiE 'try again at [^.]*' "$STDERR_TMP" | head -1 || echo "")
+      echo "VERDICT: TRANSIENT — usage cap${RESET_HINT:+ — $RESET_HINT}" > "$TMP_FILE"
+    elif grep -qiE 'rate[. ]limit|429|too many requests' "$STDERR_TMP" 2>/dev/null; then
+      echo "VERDICT: TRANSIENT — rate limit (retry within seconds)" > "$TMP_FILE"
+    elif grep -qiE 'quota' "$STDERR_TMP" 2>/dev/null; then
+      echo "VERDICT: TRANSIENT — quota exhausted" > "$TMP_FILE"
     else
       echo "VERDICT: TRANSIENT — exit $CODEX_EXIT $STDERR_FIRST" > "$TMP_FILE"
     fi
+    cp "$STDERR_TMP" "${OUTPUT_PATH}.stderr.preserved.txt" 2>/dev/null || true
     mv -f "$TMP_FILE" "$OUTPUT_PATH"
     rm -f "$STDERR_TMP"
     exit 0
