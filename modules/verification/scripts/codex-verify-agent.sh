@@ -114,13 +114,16 @@ fi
 CODEX_EXIT=0
 echo "$PROMPT_BODY" | "$CODEX_CMD" exec "${CODEX_ARGS[@]}" > "${RAW_FILE}" 2>"$STDERR_TMP" || CODEX_EXIT=$?
 
-# Reasoning-flag fallback: if non-zero exit AND reasoning was set, retry without it
+# Reasoning-flag rejection: fail loudly (no silent demotion to default reasoning).
+# Sub-high reasoning produces fix-theater output that downstream triage trusts as a Codex verdict.
+# Per user mandate: a Codex dispatch that cannot honor high/xhigh MUST emit TRANSIENT, not retry without the flag.
 if [[ $CODEX_EXIT -ne 0 && -n "$USED_REASONING" ]]; then
   if grep -qiE 'invalid.*option|unknown.*flag|unrecognized|model_reasoning' "$STDERR_TMP" 2>/dev/null; then
-    echo "WARN: reasoning flag '$USED_REASONING' rejected by codex exec; retrying without it" >&2
-    CODEX_ARGS=(-m "$MODEL" -s read-only --skip-git-repo-check --ephemeral)
-    CODEX_EXIT=0
-    echo "$PROMPT_BODY" | "$CODEX_CMD" exec "${CODEX_ARGS[@]}" > "${RAW_FILE}" 2>"$STDERR_TMP" || CODEX_EXIT=$?
+    echo "VERDICT: TRANSIENT — reasoning flag '$USED_REASONING' rejected by codex exec; reasoning floor (high/xhigh) cannot be honored. Retry with the alternate floor value or escalate to operator." > "$TMP_FILE"
+    cp "$STDERR_TMP" "${OUTPUT_PATH}.stderr.preserved.txt" 2>/dev/null || true
+    mv -f "$TMP_FILE" "$OUTPUT_PATH"
+    rm -f "$STDERR_TMP"
+    exit 0
   fi
 fi
 
