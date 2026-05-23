@@ -370,6 +370,10 @@ fi
 # Catches "Deferred items:", "future sprint", etc. in conversational output
 # where the PreToolUse anti-deferral hook cannot see it (not a file write).
 DEFERRAL_PATTERNS="deferred (items|deployment|to |as )|future sprint|later sprint|next sprint|handle this later|address this later|out of scope for now|separate (pass|effort|session) needed"
+DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|flag(ging|ged)?( this| it| them)?( for| as) (future|later|cleanup|follow.?up)"
+DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|noting (this |it |them )?for (future|later|cleanup|follow.?up)"
+DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|not (touching|fixing|changing|addressing|resolving)( this| that| it| them)? without (your |the |developer |explicit )?permission"
+DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|leaving( this| that| it| them)? (for|to) (future|later|cleanup|follow.?up)"
 if echo "$LAST_MSG" | grep -qiE "$DEFERRAL_PATTERNS" 2>/dev/null; then
   REASON="DEFERRAL IN CONVERSATION: Your last message contains deferral language. Rule 0: Fix it now. Never defer without explicit developer permission. If the developer already approved these deferrals, ignore this and stop again."
   REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0

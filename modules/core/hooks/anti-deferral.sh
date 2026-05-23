@@ -47,7 +47,14 @@ PUNT="$PUNT|deferred —|deferred [(]|deferred as |deferred to "
 PUNT="$PUNT|TODO.*(later|future|someday|eventually)"
 PUNT="$PUNT|revisit in a future|we can revisit"
 PUNT="$PUNT|next session|next conversation|separate session"
-PUNT="$PUNT|note.*(for|it).*(next|later)|note this for|flag.*(for|it).*(next|later)"
+PUNT="$PUNT|note.*(for|it).*(next|later|future|cleanup|follow.?up)|note this for|flag.*(for|it).*(next|later|future|cleanup|follow.?up)"
+# Tier 1d: "Flagging for cleanup" idioms — CC noting a found issue and
+# refusing to fix it, often paired with "without permission." Rule 0 says
+# if you found it, you own it; asking permission is itself the deferral.
+PUNT="$PUNT|flag(ging|ged)?( this| it| them)?( for| as) (future|later|cleanup|follow.?up|future cleanup|future review)"
+PUNT="$PUNT|noting (this |it |them )?for (future|later|cleanup|follow.?up)"
+PUNT="$PUNT|not (touching|fixing|changing|addressing|resolving)( this| that| it| them)? without (your |the |developer |explicit )?permission"
+PUNT="$PUNT|leaving( this| that| it| them)? (for|to) (future|later|cleanup|follow.?up)"
 # Tier 1b: Design-doc deferral phrasing — spec/plan-specific patterns
 # These slipped past the original Tier 1 because they appear in formal
 # Non-Goals / Out-of-Scope sections where "defer until X" sounds reasoned.
