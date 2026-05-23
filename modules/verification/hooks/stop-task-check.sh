@@ -326,6 +326,13 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
     if [[ -n "$HOOK_CHANNEL" ]] && [[ "$FNAME" == "CURRENT_TASK.md" ]]; then
       continue
     fi
+    # Symmetric guard: unchanneled (manual) sessions don't own channel CTs.
+    # The glob fallback above adds every active channel CT to ACTIVE_FILES so
+    # the completion gate (R1) can detect verification claims, but staleness
+    # of other sessions' CTs is not this session's responsibility to fix.
+    if [[ -z "$HOOK_CHANNEL" ]] && [[ "$FNAME" == CURRENT_TASK_ch*.md ]]; then
+      continue
+    fi
     FILE_MTIME=$(stat -c %Y "$tf" 2>/dev/null || stat -f %m "$tf" 2>/dev/null) || continue
     FILE_MTIME=$(echo "$FILE_MTIME" | tr -d '\r')
     DIFF=$((NOW - FILE_MTIME)) || continue
