@@ -104,8 +104,16 @@ if [[ -n "$HOOK_CHANNEL" ]]; then
   [[ -f "${PROJECT_DIR}/CURRENT_TASK.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK.md")
   [[ -f "${PROJECT_DIR}/CURRENT_TASK_ch${HOOK_CHANNEL}.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK_ch${HOOK_CHANNEL}.md")
 else
-  # Unchanneled: shared CT only
-  TASK_FILES=("${PROJECT_DIR}/CURRENT_TASK.md")
+  # Manual session (no channel env var): scope = shared CT + every channel CT
+  # in project root. Recovers stop-time enforcement for sessions that didn't
+  # go through spawn.py. Terminal-status channels (PAUSED/AWAITING/etc.) are
+  # treated as non-active below, so this won't false-positive on idle channels.
+  [[ -f "${PROJECT_DIR}/CURRENT_TASK.md" ]] && TASK_FILES+=("${PROJECT_DIR}/CURRENT_TASK.md")
+  shopt -s nullglob
+  for ct in "${PROJECT_DIR}"/CURRENT_TASK_ch*.md; do
+    TASK_FILES+=("$ct")
+  done
+  shopt -u nullglob
 fi
 
 # Helper: extract channel number from a CT file (empty = unchanneled/shared)
@@ -119,7 +127,7 @@ get_channel() {
 TASK_STATUS="none"
 ACTIVE_FILES=()
 for tf in "${TASK_FILES[@]}"; do
-  if grep -qiE '\*\*Status:\*\*[[:space:]]*(COMPLETE|ALL DONE)' "$tf" 2>/dev/null; then
+  if grep -qiE '\*\*Status:\*\*[[:space:]]*(COMPLETE|ALL DONE|PAUSED|AWAITING|BLOCKED|ARCHIVED)' "$tf" 2>/dev/null; then
     [[ "$TASK_STATUS" == "none" ]] && TASK_STATUS="complete"
   elif grep -qiE '\*\*Status:\*\*' "$tf" 2>/dev/null; then
     # Any non-COMPLETE status with a Status header = active
