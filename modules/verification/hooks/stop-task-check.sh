@@ -197,6 +197,55 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     fi
   done
 
+  # Check 1.5: Commit-time pair (commit-adversarial + commit-cold-reader)
+  # channel_commit.sh runs these two reviewers before letting a commit land. If
+  # their PASS/WARN verdicts are recent, they satisfy R1 for the work that just
+  # landed. Window is configurable via SENTINEL_COMMIT_RECENCY_SEC (default 900s).
+  # Fail-closed on clock or stat failure — unknown age != recent.
+  # Trust model is the same as VERIFICATION_BLOCKED: operator + audit, not crypto.
+  if [[ "$VERIFICATION_FOUND" == "false" ]]; then
+    COMMIT_RECENCY_SEC="${SENTINEL_COMMIT_RECENCY_SEC:-900}"
+    if [[ -n "$HOOK_CHANNEL" ]]; then
+      PAIR_CHECK="${PROJECT_DIR}/verification_findings/commit_check_ch${HOOK_CHANNEL}.md"
+      PAIR_COLD="${PROJECT_DIR}/verification_findings/commit_cold_read_ch${HOOK_CHANNEL}.md"
+    else
+      PAIR_CHECK="${PROJECT_DIR}/verification_findings/commit_check.md"
+      PAIR_COLD="${PROJECT_DIR}/verification_findings/commit_cold_read.md"
+    fi
+
+    if [[ -f "$PAIR_CHECK" ]] && [[ -f "$PAIR_COLD" ]]; then
+      PAIR_CHECK_OK="false"
+      PAIR_COLD_OK="false"
+      grep -qE "^VERDICT: (PASS|WARN)" "$PAIR_CHECK" 2>/dev/null && PAIR_CHECK_OK="true"
+      grep -qE "^VERDICT: (PASS|WARN)" "$PAIR_COLD" 2>/dev/null && PAIR_COLD_OK="true"
+
+      if [[ "$PAIR_CHECK_OK" == "true" ]] && [[ "$PAIR_COLD_OK" == "true" ]]; then
+        NOW=$(date +%s 2>/dev/null || echo 0)
+        CHECK_MTIME=$(stat -c %Y "$PAIR_CHECK" 2>/dev/null || stat -f %m "$PAIR_CHECK" 2>/dev/null || echo 0)
+        COLD_MTIME=$(stat -c %Y "$PAIR_COLD" 2>/dev/null || stat -f %m "$PAIR_COLD" 2>/dev/null || echo 0)
+
+        # Fail-closed on clock or stat failure: unknown age != recent
+        if [[ "$NOW" -gt 0 ]] && [[ "$CHECK_MTIME" -gt 0 ]] && [[ "$COLD_MTIME" -gt 0 ]]; then
+          CHECK_AGE=$((NOW - CHECK_MTIME))
+          COLD_AGE=$((NOW - COLD_MTIME))
+          if [[ "$CHECK_AGE" -le "$COMMIT_RECENCY_SEC" ]] && [[ "$COLD_AGE" -le "$COMMIT_RECENCY_SEC" ]]; then
+            VERIFICATION_FOUND="true"
+            echo "  -> commit pair satisfies R1 ($(basename "$PAIR_CHECK") + $(basename "$PAIR_COLD"), ages ${CHECK_AGE}s/${COLD_AGE}s)" >> "$LOGFILE" 2>/dev/null
+          else
+            echo "  -> commit pair stale (ages ${CHECK_AGE}s/${COLD_AGE}s vs window ${COMMIT_RECENCY_SEC}s)" >> "$LOGFILE" 2>/dev/null
+          fi
+        else
+          echo "  -> commit pair recency check skipped (clock/stat failure: NOW=$NOW CHECK_MTIME=$CHECK_MTIME COLD_MTIME=$COLD_MTIME)" >> "$LOGFILE" 2>/dev/null
+        fi
+      else
+        PAIR_FAIL=""
+        [[ "$PAIR_CHECK_OK" == "false" ]] && PAIR_FAIL="${PAIR_FAIL} $(basename "$PAIR_CHECK")"
+        [[ "$PAIR_COLD_OK" == "false" ]] && PAIR_FAIL="${PAIR_FAIL} $(basename "$PAIR_COLD")"
+        echo "  -> commit pair present but no PASS/WARN verdict:${PAIR_FAIL}" >> "$LOGFILE" 2>/dev/null
+      fi
+    fi
+  fi
+
   # Check 2: Squad validation — scoped to active channels to prevent cross-channel leak
   # Build allowed squad dir patterns from ACTIVE_FILES
   SQUAD_PATTERNS=()
@@ -285,7 +334,10 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     # block fires instead). If a newer passing squad also exists, the old one
     # still blocks — clean up old dirs before claiming completion. Safe direction
     # (false block, not false allow). The anti-loop (R5) limits to one extra stop.
-    if [[ "$SQUAD_EXISTS" -gt 0 ]] && [[ "$SQUAD_PASS" -lt ${#SQUAD_EXPECTED[@]} ]]; then
+    # H3 fix: if commit-pair (Check 1.5) or VERIFICATION_BLOCKED (Check 1) already
+    # satisfied R1, do not block on a stale partial squad. Stale dirs should still
+    # be cleaned up; pair path provides relief, not amnesty.
+    if [[ "$VERIFICATION_FOUND" == "false" ]] && [[ "$SQUAD_EXISTS" -gt 0 ]] && [[ "$SQUAD_PASS" -lt ${#SQUAD_EXPECTED[@]} ]]; then
       REASON="INCOMPLETE VERIFICATION SQUAD (${SQUAD_TAG}): Squad directory exists but not all ${#SQUAD_EXPECTED[@]} agents passed (${SQUAD_PASS}/${#SQUAD_EXPECTED[@]})."
       if [[ -n "$SQUAD_MISSING" ]]; then
         REASON="${REASON} Missing:${SQUAD_MISSING}."
@@ -374,6 +426,14 @@ DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|flag(ging|ged)?( this| it| them)?( for| 
 DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|noting (this |it |them )?for (future|later|cleanup|follow.?up)"
 DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|not (touching|fixing|changing|addressing|resolving)( this| that| it| them)? without (your |the |developer |explicit )?permission"
 DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|leaving( this| that| it| them)? (for|to) (future|later|cleanup|follow.?up)"
+# Responsibility deflection — reclassifying found work as "not mine to fix".
+# Mirrors the DEFLECT cluster in modules/core/hooks/anti-deferral.sh so the
+# Stop hook catches the same pattern in conversational output (PreToolUse
+# only sees file writes).
+DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|pre.?existing"
+DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|known (issue|bug|debt|problem)|existing (issue|bug|debt|problem)|legacy (issue|bug|debt|problem)"
+DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|inherited (issue|bug|debt|problem)|outside (my|this|the|current) scope"
+DEFERRAL_PATTERNS="${DEFERRAL_PATTERNS}|not (my|our) (problem|responsibility|concern|job)|was (like this|this way) before"
 if echo "$LAST_MSG" | grep -qiE "$DEFERRAL_PATTERNS" 2>/dev/null; then
   REASON="DEFERRAL IN CONVERSATION: Your last message contains deferral language. Rule 0: Fix it now. Never defer without explicit developer permission. If the developer already approved these deferrals, ignore this and stop again."
   REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0

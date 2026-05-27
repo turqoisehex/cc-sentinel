@@ -834,9 +834,13 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (no manifest uses default 5)"
 teardown_temp
 
-# --- Test 26: Non-standard Status (e.g. AWAITING) counts as active ---
+# --- Test 26: AWAITING is parked (not active) — no staleness block ---
+# AWAITING USER APPROVAL means the assistant has done its part and is waiting
+# on a human; forcing a staleness block would create false alarms when the
+# user takes hours/days to review. Hook intentionally treats AWAITING as
+# complete-equivalent (see hook line ~130).
 echo ""
-echo "Test 26: AWAITING USER APPROVAL status -> active (stale blocks)"
+echo "Test 26: AWAITING USER APPROVAL status -> parked, not stale-blocked"
 setup_temp
 mkdir -p "$PROJECT"
 cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
@@ -848,8 +852,7 @@ touch_aged "$PROJECT/CURRENT_TASK.md" 300
 INPUT=$(build_input "$PROJECT" "Continuing work on the design.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_contains '"decision".*"block"' "AWAITING status treated as active"
-assert_stdout_contains "CURRENT_TASK.md" "identifies the stale file"
+assert_stdout_empty "AWAITING is parked — staleness does not block"
 teardown_temp
 
 # --- Test 27: Deferral language in assistant message -> BLOCK ---
@@ -1039,6 +1042,320 @@ INPUT=$(build_input "$PROJECT" "Deferred as low priority for this sprint.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "DEFERRAL" "deferred as triggers R7"
+teardown_temp
+
+# --- Tests 45-48: Responsibility deflection patterns (mirrors DEFLECT cluster) ---
+echo ""
+echo "Test 45: 'pre-existing failure' -> BLOCK (DEFLECT)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "Test 26 is a pre-existing failure, not introduced by my changes.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "pre-existing triggers R7 deflection"
+teardown_temp
+
+echo ""
+echo "Test 46: 'preexisting' (no hyphen) -> BLOCK (DEFLECT)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "That's a preexisting issue I won't touch.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "preexisting variant triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 47: 'known issue' -> BLOCK (DEFLECT)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "That's a known issue from before this sprint.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "known issue triggers R7"
+teardown_temp
+
+echo ""
+echo "Test 48: 'outside current scope' -> BLOCK (DEFLECT)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "That bug is outside current scope.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "outside current scope triggers R7"
+teardown_temp
+
+# ==================== COMMIT-PAIR R1 EVIDENCE (Check 1.5) ====================
+# Pair = commit-adversarial + commit-cold-reader output, written by
+# channel_commit.sh --local-verify before a commit lands. If their verdicts are
+# recent (default 900s), they satisfy R1 as alternative evidence to the full
+# 5-agent squad. Channel-scoped via filename suffix.
+
+# --- Test T-pair-1: Channeled session + fresh passing pair -> ALLOW ---
+echo ""
+echo "Test T-pair-1: Channeled passing pair -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"  # shared not active
+create_channel_ct "$PROJECT" "2" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+SENTINEL_CHANNEL=2 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "channeled pair satisfies R1"
+teardown_temp
+
+# --- Test T-pair-2: Unchanneled session + fresh passing pair -> ALLOW ---
+echo ""
+echo "Test T-pair-2: Unchanneled passing pair -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: WARN (1 minor)" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "unchanneled pair satisfies R1 (PASS+WARN)"
+teardown_temp
+
+# --- Test T-pair-3: Stale pair (>900s) -> BLOCK ---
+echo ""
+echo "Test T-pair-3: Stale pair (aged 1200s, window 900s) -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_aged "$PROJECT/verification_findings/commit_check.md" 1200
+touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 1200
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "stale pair does not satisfy R1"
+teardown_temp
+
+# --- Test T-pair-4: FAIL verdict in pair -> BLOCK ---
+echo ""
+echo "Test T-pair-4: Pair with FAIL verdict -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: FAIL (3 issues)" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "FAIL verdict does not satisfy R1"
+teardown_temp
+
+# --- Test T-pair-5: Half-pair (only commit_check) -> BLOCK ---
+echo ""
+echo "Test T-pair-5: Only commit_check.md present, no commit_cold_read.md -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+# commit_cold_read.md deliberately absent
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "half-pair does not satisfy R1"
+teardown_temp
+
+# --- Test T-pair-6: Cross-channel isolation — ch3 pair does not satisfy ch2 gate ---
+echo ""
+echo "Test T-pair-6: ch3 pair files do not satisfy ch2 session -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"
+create_channel_ct "$PROJECT" "2" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK_ch2.md"
+# Pair at ch3, not ch2
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch3.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+SENTINEL_CHANNEL=2 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "ch3 pair does not leak to ch2"
+teardown_temp
+
+# --- Test T-pair-7: Pair + passing squad both present -> ALLOW ---
+echo ""
+echo "Test T-pair-7: Valid pair + valid squad both present -> ALLOW (either suffices)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+create_passing_squad "$PROJECT" "squad_sonnet"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "either evidence path satisfies R1"
+teardown_temp
+
+# --- Test T-pair-8: SENTINEL_COMMIT_RECENCY_SEC=30 override -> BLOCK on 60s pair ---
+echo ""
+echo "Test T-pair-8: Recency override (30s window) + 60s-aged pair -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_aged "$PROJECT/verification_findings/commit_check.md" 60
+touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 60
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+SENTINEL_COMMIT_RECENCY_SEC=30 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "override tightens window"
+teardown_temp
+
+# --- Test T-pair-9: Boundary — age within larger custom window -> ALLOW ---
+echo ""
+echo "Test T-pair-9: Custom window 200s + 100s-aged pair -> ALLOW (within window)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_aged "$PROJECT/verification_findings/commit_check.md" 100
+touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 100
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+SENTINEL_COMMIT_RECENCY_SEC=200 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "age within configured window satisfies R1"
+teardown_temp
+
+# --- Test T-pair-10: Stat failure (fail-closed via H1 guard) -> BLOCK ---
+# Override `stat` in PATH so mtime reads fail (echo 0 fallback fires).
+# H1 guard requires NOW>0 && CHECK_MTIME>0 && COLD_MTIME>0 — any zero
+# short-circuits the recency comparison and leaves VERIFICATION_FOUND false.
+echo ""
+echo "Test T-pair-10: Pair stat failure (H1 fail-closed guard) -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "COMPLETE"  # COMPLETE so staleness check skipped (uses stat too)
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+# Install stat shim that always fails — exercises echo-0 fallback + H1 guard
+mkdir -p "$TMPDIR_ROOT/stub_bin"
+cat > "$TMPDIR_ROOT/stub_bin/stat" << 'STUB'
+#!/usr/bin/env bash
+exit 1
+STUB
+chmod +x "$TMPDIR_ROOT/stub_bin/stat"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+PATH="$TMPDIR_ROOT/stub_bin:$PATH" run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "broken stat = fail-closed (H1 guard) = no ALLOW"
+teardown_temp
+
+# --- Test T-pair-11: Empty pair files (no VERDICT line) -> BLOCK ---
+echo ""
+echo "Test T-pair-11: Pair files exist but contain no VERDICT line -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+> "$PROJECT/verification_findings/commit_check.md"
+> "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "empty pair files do not satisfy R1"
+teardown_temp
+
+# --- Test T-pair-12: VERIFICATION_BLOCKED + pair both present -> ALLOW (Check 1 wins) ---
+echo ""
+echo "Test T-pair-12: VERIFICATION_BLOCKED in CT + valid pair -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
+# CURRENT TASK
+**Status:** IN PROGRESS
+## Notes
+VERIFICATION_BLOCKED — max rounds reached.
+EOF
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "VERIFICATION_BLOCKED satisfies R1 ahead of pair check"
+teardown_temp
+
+# --- Test T-pair-13: H3 fix — partial squad + valid pair -> ALLOW ---
+echo ""
+echo "Test T-pair-13: Partial (incomplete) squad + valid pair -> ALLOW (H3 fix)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+# Stale partial squad — 2 of 5 agents pass
+create_failing_squad "$PROJECT" "squad_sonnet" 3
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "H3: pair preempts partial-squad block"
+teardown_temp
+
+# --- Test T-pair-14: Unchanneled session ignores channeled pair -> BLOCK ---
+echo ""
+echo "Test T-pair-14: Unchanneled session + ch2-suffixed pair only -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+# No unchanneled commit_check.md / commit_cold_read.md
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "channeled pair does not satisfy unchanneled session"
 teardown_temp
 
 # ==================== SUMMARY ====================
