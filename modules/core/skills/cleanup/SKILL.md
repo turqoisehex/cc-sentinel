@@ -75,10 +75,10 @@ Read EVERY CT file that belongs to this session — shared `CURRENT_TASK.md` (yo
 
 For each item found, determine:
 1. **Actually done?** Verify against git log, file state, or grep. If done, check it off now.
-2. **Tracked elsewhere?** If it's already in SC.md or CIP.md as an open item, it's accounted for — not a blocker.
-3. **Orphaned?** If it's not done AND not tracked in SC/CIP — this is a FAIL.
+2. **Tracked elsewhere?** If it's already in SPRINT_CHECKLIST.md or COMPREHENSIVE_IMPLEMENTATION_PLAN.md as an open item, it's accounted for — not a blocker.
+3. **Orphaned?** If it's not done AND not tracked in SPRINT_CHECKLIST/COMPREHENSIVE_IMPLEMENTATION_PLAN — this is a FAIL.
 
-**Any orphaned incomplete item = CLEANUP BLOCKED.** Do not proceed to Step 8. For each orphan: either finish the work (if trivial), add it to SC.md/CIP.md with enough context for cold-start pickup, or get explicit user permission to drop it. Re-run this step after resolution.
+**Any orphaned incomplete item = CLEANUP BLOCKED.** Do not proceed to Step 8. For each orphan: either finish the work (if trivial), add it to SPRINT_CHECKLIST.md/COMPREHENSIVE_IMPLEMENTATION_PLAN.md with enough context for cold-start pickup, or get explicit user permission to drop it. Re-run this step after resolution.
 
 Only proceed when: zero unchecked items remain in your CT scope, or every unchecked item has a matching SC/CIP entry.
 

@@ -29,6 +29,8 @@ For MISSING files, sub-classify: `UNIVERSAL` (belongs in public repo) vs `PERSON
 
 For each STALE or UNIVERSAL-MISSING file, grep for forbidden patterns BEFORE copying to cc-sentinel:
 
+**Exemption:** template files in `modules/*/templates/` exist precisely to be canonical universal forms of host-project artifacts. They legitimately contain literal names like `SPRINT_CHECKLIST`, `COMPREHENSIVE_IMPLEMENTATION_PLAN`, `CURRENT_TASK`, etc. in their skeleton/comments. Skip the forbidden-pattern check for `modules/*/templates/*-template.md`. Apply the normal grep rules to everything else.
+
 ```bash
 # Forbidden patterns — ALL must be checked:
 grep -n "Wakeful\|wakeful\|WAKEFUL" "$file"
@@ -93,10 +95,10 @@ Historical bug: `codex-postfix-prompt.md` installed to `reference/` but script l
 
 ```bash
 cd <cc-sentinel-repo>
-git diff HEAD -- . | grep -i "wakeful\|ExerciseDefinition\|superpowers\|WAKEFUL_CHANNEL\|SPRINT_CHECKLIST\|breathing.engine\|Ankhara"
+git diff HEAD -- . ':!modules/*/templates/*-template.md' | grep -i "wakeful\|ExerciseDefinition\|superpowers\|WAKEFUL_CHANNEL\|SPRINT_CHECKLIST\|breathing.engine\|Ankhara"
 ```
 
-If any hits: fix before staging. This is your last gate before the content enters git history.
+If any hits: fix before staging. This is your last gate before the content enters git history. The `:!modules/*/templates/*-template.md` pathspec excludes the canonical project-artifact templates, which legitimately contain literal names like `SPRINT_CHECKLIST` in their skeleton/instructional content.
 
 ### Step 6: Update modules.json
 

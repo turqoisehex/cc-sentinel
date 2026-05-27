@@ -96,9 +96,9 @@ For every item in scope — task, acceptance criterion, sub-bullet, note, follow
 - Any item marked complete but with open sub-tasks
 - Any item that appears only in the middle of the file with no verdict
 - Any item marked "deferred" without EXPLICIT current-conversation permission from the user
-- Any TODO, FIXME, or follow-up note that was not converted to SC.md / CIP.md or resolved
+- Any TODO, FIXME, or follow-up note that was not converted to SPRINT_CHECKLIST.md / COMPREHENSIVE_IMPLEMENTATION_PLAN.md or resolved
 
-**On FAIL:** List every problematic item verbatim with the line it appears on. Resolve each — fix the work or get explicit user approval to defer with a SC.md entry — before proceeding. Do not batch-dismiss; each item requires individual resolution.
+**On FAIL:** List every problematic item verbatim with the line it appears on. Resolve each — fix the work or get explicit user approval to defer with a SPRINT_CHECKLIST.md entry — before proceeding. Do not batch-dismiss; each item requires individual resolution.
 
 **On PASS:** State "CT audit PASS — all N items verified complete" before moving to Step 10.
 
