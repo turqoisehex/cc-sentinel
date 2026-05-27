@@ -13,7 +13,7 @@ Read `CURRENT_TASK.md` and your `CURRENT_TASK_chN.md` (if channeled) in full. No
 STATUS
 ======
 Sprint:    [number and name, or "none active"]
-Phase:     [/0-/5, or "between sprints"]
+Phase:     [/1-/5, or "between sprints"]
 Done:      [checked items count + brief list]
 Next:      [first unchecked item, or "close-out"]
 Blockers:  [VERIFICATION_BLOCKED, failing tests, pending decisions — or "none"]
@@ -21,4 +21,4 @@ Context:   [percentage from cc-context-awareness]
 Threshold: [last fired, or "none fired"]
 ```
 
-Phase key: /0=spec, /1=start, /2=plan, /3=build, /4=quality, /5=finalize. Context: from most recent cc-context-awareness message; if none, "below 50%". Keep brief — glance, not analysis.
+Phase key: /1=audit, /2=design, /3=build, /4=perfect, /5=finalize. Context: from most recent cc-context-awareness message; if none, "below 50%". Keep brief — glance, not analysis.
