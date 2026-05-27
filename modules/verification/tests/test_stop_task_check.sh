@@ -1358,6 +1358,82 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "channeled pair does not satisfy unchanneled session"
 teardown_temp
 
+# --- Test T-pair-15: Marker file resolves channel for non-/spawn session -> ALLOW ---
+echo ""
+echo "Test T-pair-15: No env channel + recent marker=2 + ch2 pair PASS -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
+touch_now "$PROJECT/verification_findings/.commit_channel_marker"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "marker file resolves channel without SENTINEL_CHANNEL in env"
+teardown_temp
+
+# --- Test T-pair-16: Stale marker ignored, falls through to top-level (none) -> BLOCK ---
+echo ""
+echo "Test T-pair-16: No env channel + stale marker=2 + ch2 pair PASS -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
+touch_aged "$PROJECT/verification_findings/.commit_channel_marker" 1200  # > 900s default
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "stale marker does not resolve channel"
+teardown_temp
+
+# --- Test T-pair-17: Garbage marker content (non-integer) ignored -> BLOCK ---
+echo ""
+echo "Test T-pair-17: No env channel + recent marker='garbage' + ch2 pair PASS -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+printf 'not-a-channel\n' > "$PROJECT/verification_findings/.commit_channel_marker"
+touch_now "$PROJECT/verification_findings/.commit_channel_marker"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "non-integer marker content rejected"
+teardown_temp
+
+# --- Test T-pair-18: HOOK_CHANNEL env takes precedence over marker -> ALLOW (env wins) ---
+echo ""
+echo "Test T-pair-18: SENTINEL_CHANNEL=5 set + marker says 2 + ch5 pair PASS + ch2 absent -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch5.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
+touch_now "$PROJECT/verification_findings/.commit_channel_marker"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+SENTINEL_CHANNEL=5 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "env channel wins over marker; ch5 pair satisfies"
+teardown_temp
+
 # ==================== SUMMARY ====================
 
 echo ""

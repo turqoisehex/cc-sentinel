@@ -205,9 +205,35 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
   # Trust model is the same as VERIFICATION_BLOCKED: operator + audit, not crypto.
   if [[ "$VERIFICATION_FOUND" == "false" ]]; then
     COMMIT_RECENCY_SEC="${SENTINEL_COMMIT_RECENCY_SEC:-900}"
-    if [[ -n "$HOOK_CHANNEL" ]]; then
-      PAIR_CHECK="${PROJECT_DIR}/verification_findings/commit_check_ch${HOOK_CHANNEL}.md"
-      PAIR_COLD="${PROJECT_DIR}/verification_findings/commit_cold_read_ch${HOOK_CHANNEL}.md"
+
+    # Marker-file fallback: plain CC sessions (not spawned by /spawn) have no
+    # SENTINEL_CHANNEL/WAKEFUL_CHANNEL in env, so HOOK_CHANNEL is empty even
+    # when the operator just ran `channel_commit.sh --channel N`. The script
+    # writes verification_findings/.commit_channel_marker on success; we read
+    # it here if HOOK_CHANNEL is empty. Marker is recency-bounded by mtime
+    # (same window as the pair files) and must contain a valid integer.
+    EFFECTIVE_CHANNEL="$HOOK_CHANNEL"
+    if [[ -z "$EFFECTIVE_CHANNEL" ]]; then
+      MARKER_FILE="${PROJECT_DIR}/verification_findings/.commit_channel_marker"
+      if [[ -f "$MARKER_FILE" ]]; then
+        MARKER_MTIME=$(stat -c %Y "$MARKER_FILE" 2>/dev/null || stat -f %m "$MARKER_FILE" 2>/dev/null || echo 0)
+        NOW_MARKER=$(date +%s 2>/dev/null || echo 0)
+        if [[ "$NOW_MARKER" -gt 0 ]] && [[ "$MARKER_MTIME" -gt 0 ]]; then
+          MARKER_AGE=$((NOW_MARKER - MARKER_MTIME))
+          if [[ "$MARKER_AGE" -le "$COMMIT_RECENCY_SEC" ]]; then
+            MARKER_CHANNEL=$(head -n1 "$MARKER_FILE" 2>/dev/null | tr -d '[:space:]')
+            if [[ "$MARKER_CHANNEL" =~ ^[0-9]+$ ]]; then
+              EFFECTIVE_CHANNEL="$MARKER_CHANNEL"
+              echo "  -> commit pair using channel from marker file: ${EFFECTIVE_CHANNEL} (marker age ${MARKER_AGE}s)" >> "$LOGFILE" 2>/dev/null
+            fi
+          fi
+        fi
+      fi
+    fi
+
+    if [[ -n "$EFFECTIVE_CHANNEL" ]]; then
+      PAIR_CHECK="${PROJECT_DIR}/verification_findings/commit_check_ch${EFFECTIVE_CHANNEL}.md"
+      PAIR_COLD="${PROJECT_DIR}/verification_findings/commit_cold_read_ch${EFFECTIVE_CHANNEL}.md"
     else
       PAIR_CHECK="${PROJECT_DIR}/verification_findings/commit_check.md"
       PAIR_COLD="${PROJECT_DIR}/verification_findings/commit_cold_read.md"
