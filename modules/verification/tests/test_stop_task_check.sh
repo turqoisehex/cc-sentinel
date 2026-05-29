@@ -887,6 +887,72 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (no manifest uses default 5)"
 teardown_temp
 
+# --- Test T_manifest_sonnet_prefixed_allow: sonnet_-prefixed manifest entries + matching files -> ALLOW ---
+# Characterizes the hook's exact-string match: manifest says "sonnet_mechanical.md" and the
+# file IS "sonnet_mechanical.md" -> the entry is satisfied and the gate passes.
+echo ""
+echo "Test T_manifest_sonnet_prefixed_allow: sonnet_-prefixed launched[] with matching sonnet_*.md files -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+MANI_SQUAD="$PROJECT/verification_findings/squad_sonnet"
+mkdir -p "$MANI_SQUAD"
+# Write sonnet_-prefixed squad files INLINE (do NOT use create_passing_squad — it writes unprefixed names)
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_mechanical.md"
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_adversarial.md"
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_completeness.md"
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_dependency.md"
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_cold_reader.md"
+printf '{"launched":["sonnet_mechanical.md","sonnet_adversarial.md","sonnet_completeness.md","sonnet_dependency.md","sonnet_cold_reader.md"],"reason":"sonnet prefix","timestamp":"2026-01-01T00:00:00Z"}' > "$MANI_SQUAD/manifest.json"
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "no block (sonnet_-prefixed manifest + matching files satisfies gate)"
+teardown_temp
+
+# --- Test T_manifest_sonnet_prefixed_block_when_missing: manifest says sonnet_*.md but only unprefixed files exist -> BLOCK ---
+# Exact-string match means "sonnet_mechanical.md" in launched[] is NOT satisfied by "mechanical.md" on disk.
+echo ""
+echo "Test T_manifest_sonnet_prefixed_block_when_missing: manifest launched sonnet_*.md but only unprefixed mechanical.md exists -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+MANI_SQUAD="$PROJECT/verification_findings/squad_sonnet"
+mkdir -p "$MANI_SQUAD"
+# Manifest declares sonnet_-prefixed names; only the UNprefixed file is present
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/mechanical.md"
+printf '{"launched":["sonnet_mechanical.md","sonnet_adversarial.md","sonnet_completeness.md","sonnet_dependency.md","sonnet_cold_reader.md"],"reason":"sonnet prefix","timestamp":"2026-01-01T00:00:00Z"}' > "$MANI_SQUAD/manifest.json"
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains '"decision".*"block"' "blocked (sonnet_mechanical.md not satisfied by mechanical.md)"
+teardown_temp
+
+# --- Test T_manifest_unprefixed_block_when_only_sonnet: manifest says unprefixed names but only sonnet_*.md files exist -> BLOCK ---
+# Mirror case: manifest says "mechanical.md" but file is "sonnet_mechanical.md" -> not satisfied.
+echo ""
+echo "Test T_manifest_unprefixed_block_when_only_sonnet: manifest launched unprefixed names but only sonnet_*.md files exist -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+MANI_SQUAD="$PROJECT/verification_findings/squad_sonnet"
+mkdir -p "$MANI_SQUAD"
+# Only sonnet_-prefixed files exist; manifest declares unprefixed names
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_mechanical.md"
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_adversarial.md"
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_completeness.md"
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_dependency.md"
+printf 'VERDICT: PASS\n' > "$MANI_SQUAD/sonnet_cold_reader.md"
+printf '{"launched":["mechanical.md","adversarial.md","completeness.md","dependency.md","cold_reader.md"],"reason":"unprefixed","timestamp":"2026-01-01T00:00:00Z"}' > "$MANI_SQUAD/manifest.json"
+INPUT=$(build_input "$PROJECT" "All work is complete. Sprint done.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains '"decision".*"block"' "blocked (mechanical.md not satisfied by sonnet_mechanical.md)"
+teardown_temp
+
 # --- Test 26: AWAITING is parked (not active) — no staleness block ---
 # AWAITING USER APPROVAL means the assistant has done its part and is waiting
 # on a human; forcing a staleness block would create false alarms when the
