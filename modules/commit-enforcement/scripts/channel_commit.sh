@@ -242,11 +242,11 @@ validate_results() {
   # The old listener-mode hash grep is removed — it became tautological after
   # the script took ownership of stamping from agents.
 
-  if ! grep -qE "VERDICT: (PASS|WARN)" "$CHECK_FILE" 2>/dev/null; then
+  if ! grep -qE "^VERDICT: (PASS|WARN)( |$)" "$CHECK_FILE" 2>/dev/null; then
     echo "ADVERSARIAL CHECK FAILED — see: $CHECK_FILE" >&2
     return 2
   fi
-  if ! grep -qE "VERDICT: (PASS|WARN)" "$COLD_READ_FILE" 2>/dev/null; then
+  if ! grep -qE "^VERDICT: (PASS|WARN)( |$)" "$COLD_READ_FILE" 2>/dev/null; then
     echo "COLD-READER CHECK FAILED — see: $COLD_READ_FILE" >&2
     return 2
   fi

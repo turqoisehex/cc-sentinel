@@ -169,7 +169,7 @@ if [[ -n "$STAGED_FOR_CHECKS" ]]; then
           exit 1
         fi
 
-        if ! grep -qE "^VERDICT: (PASS|WARN)" "$CHECK_PATH" 2>/dev/null; then
+        if ! grep -qE "^VERDICT: (PASS|WARN)( |$)" "$CHECK_PATH" 2>/dev/null; then
           echo "" >&2
           echo "================================================================" >&2
           echo "  COMMIT BLOCKED: ${DISPLAY_NAME} check FAILED." >&2
@@ -256,7 +256,7 @@ if [[ -n "$STAGED_FILES" ]]; then
 
         ALL_PASS="true"
         for ef in "${SQUAD_EXPECTED[@]}"; do
-          if [[ ! -f "$sd/$ef" ]] || ! grep -qE "^VERDICT: (PASS|WARN)" "$sd/$ef" 2>/dev/null; then
+          if [[ ! -f "$sd/$ef" ]] || ! grep -qE "^VERDICT: (PASS|WARN)( |$)" "$sd/$ef" 2>/dev/null; then
             ALL_PASS="false"
             break
           fi
@@ -295,7 +295,7 @@ if [[ -n "$STAGED_FILES" ]]; then
           for _ef in "${SQUAD_EXPECTED[@]}"; do
             if [[ ! -f "$_sd/$_ef" ]]; then
               echo "    MISSING: $_ef" >&2
-            elif ! grep -qE "^VERDICT: (PASS|WARN)" "$_sd/$_ef" 2>/dev/null; then
+            elif ! grep -qE "^VERDICT: (PASS|WARN)( |$)" "$_sd/$_ef" 2>/dev/null; then
               echo "    NO PASS/WARN: $_ef" >&2
             else
               echo "    OK: $_ef" >&2
@@ -327,7 +327,7 @@ if [[ "$COMMIT_EXIT" -eq 0 ]]; then
 
     ALL_DONE="true"
     for ef in "${SQUAD_EXPECTED[@]}"; do
-      if [[ ! -f "$sd/$ef" ]] || ! grep -qE "^VERDICT: (PASS|WARN)" "$sd/$ef" 2>/dev/null; then
+      if [[ ! -f "$sd/$ef" ]] || ! grep -qE "^VERDICT: (PASS|WARN)( |$)" "$sd/$ef" 2>/dev/null; then
         ALL_DONE="false"
         break
       fi
@@ -338,7 +338,8 @@ if [[ "$COMMIT_EXIT" -eq 0 ]]; then
       rmdir "$sd" 2>/dev/null
     fi
   done
-  rm -f "verification_findings/commit_check${CH_SUFFIX}.md" "verification_findings/commit_cold_read${CH_SUFFIX}.md" 2>/dev/null
+  # Pair files (commit_check/commit_cold_read) are intentionally NOT deleted here.
+  # stop-task-check.sh uses them as R1 evidence post-commit (recency-bounded by mtime).
 fi
 
 exit $COMMIT_EXIT

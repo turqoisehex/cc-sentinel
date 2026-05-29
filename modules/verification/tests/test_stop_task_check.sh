@@ -168,31 +168,84 @@ touch_now() {
   touch "$1"
 }
 
-# Touch a file and set its mtime to N seconds ago
+# Touch a file and set its mtime to N seconds in the future (for clock-skew tests).
+# Fail-loud: if all three fallback branches fail to set the mtime, exit nonzero
+# so the test harness reports a real failure rather than running a recency test
+# with a stale "now" mtime that silently masks a regression.
+touch_future() {
+  local file="$1" ahead="$2"
+  touch "$file"
+  local target_time
+  # Branch 1: GNU date (-d relative)
+  target_time=$(date -d "+${ahead} seconds" '+%Y%m%d%H%M.%S' 2>/dev/null)
+  if [[ -n "$target_time" ]] && touch -t "$target_time" "$file" 2>/dev/null; then
+    return 0
+  fi
+  # Branch 2: BSD/macOS date (-r epoch)
+  local now epoch
+  now=$(date +%s)
+  epoch=$((now + ahead))
+  target_time=$(date -r "$epoch" '+%Y%m%d%H%M.%S' 2>/dev/null) || true
+  if [[ -n "$target_time" ]] && touch -t "$target_time" "$file" 2>/dev/null; then
+    return 0
+  fi
+  # Branch 3: Python fallback (Windows Git Bash). Pass values via env so paths
+  # with spaces or quotes don't break the string-interpolated Python literal.
+  if FILE="$file" EPOCH="$epoch" python3 -c \
+       'import os; t=int(os.environ["EPOCH"]); os.utime(os.environ["FILE"], (t, t))' \
+       2>/dev/null; then
+    return 0
+  fi
+  if FILE="$file" EPOCH="$epoch" python -c \
+       'import os; t=int(os.environ["EPOCH"]); os.utime(os.environ["FILE"], (t, t))' \
+       2>/dev/null; then
+    return 0
+  fi
+  echo "    FATAL: touch_future could not set future mtime for $file (no working date or python)" >&2
+  return 1
+}
+
+# Touch a file and set its mtime to N seconds ago.
+# Fail-loud: if all three fallback branches fail, exit nonzero rather than
+# leaving the file with current mtime (which would silently mask recency-test
+# regressions).
 touch_aged() {
   local file="$1" age="$2"
   touch "$file"
-  # Use touch -d for GNU or python fallback
   local target_time
+  # Branch 1: GNU date (-d relative)
   target_time=$(date -d "-${age} seconds" '+%Y%m%d%H%M.%S' 2>/dev/null)
-  if [[ -n "$target_time" ]]; then
-    touch -t "$target_time" "$file"
-  else
-    # macOS/BSD fallback
-    local epoch now
-    now=$(date +%s)
-    epoch=$((now - age))
-    target_time=$(date -r "$epoch" '+%Y%m%d%H%M.%S' 2>/dev/null) || true
-    if [[ -n "$target_time" ]]; then
-      touch -t "$target_time" "$file"
-    else
-      # Python fallback for Windows Git Bash
-      python3 -c "import os; os.utime('$file', ($(date +%s)-$age, $(date +%s)-$age))" 2>/dev/null || \
-      python -c "import os; os.utime('$file', ($(date +%s)-$age, $(date +%s)-$age))" 2>/dev/null || \
-      echo "    WARNING: Could not set mtime for $file" >&2
-    fi
+  if [[ -n "$target_time" ]] && touch -t "$target_time" "$file" 2>/dev/null; then
+    return 0
   fi
+  # Branch 2: BSD/macOS date (-r epoch)
+  local now epoch
+  now=$(date +%s)
+  epoch=$((now - age))
+  target_time=$(date -r "$epoch" '+%Y%m%d%H%M.%S' 2>/dev/null) || true
+  if [[ -n "$target_time" ]] && touch -t "$target_time" "$file" 2>/dev/null; then
+    return 0
+  fi
+  # Branch 3: Python fallback. Pass values via env so paths with spaces or
+  # quotes don't break the string-interpolated Python literal.
+  if FILE="$file" EPOCH="$epoch" python3 -c \
+       'import os; t=int(os.environ["EPOCH"]); os.utime(os.environ["FILE"], (t, t))' \
+       2>/dev/null; then
+    return 0
+  fi
+  if FILE="$file" EPOCH="$epoch" python -c \
+       'import os; t=int(os.environ["EPOCH"]); os.utime(os.environ["FILE"], (t, t))' \
+       2>/dev/null; then
+    return 0
+  fi
+  echo "    FATAL: touch_aged could not set aged mtime for $file (no working date or python)" >&2
+  return 1
 }
+
+# Wrapper: abort harness if mtime helpers fail (callers don't check returns
+# because set -e is intentionally off — this provides the fail-loud guarantee).
+must_touch_aged()   { touch_aged   "$@" || { echo "ABORT: touch_aged failed — cannot run mtime-dependent tests" >&2; exit 1; }; }
+must_touch_future() { touch_future "$@" || { echo "ABORT: touch_future failed — cannot run mtime-dependent tests" >&2; exit 1; }; }
 
 # ==================== TESTS ====================
 
@@ -307,7 +360,7 @@ echo "Test 6: Active task + stale CT -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 300  # 5 minutes old
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 300  # 5 minutes old
 INPUT=$(build_input "$PROJECT" "Let me check that file for you.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -321,7 +374,7 @@ echo "Test 7: stop_hook_active=true -> ALLOW (anti-loop)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # very stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # very stale
 INPUT=$(build_input "$PROJECT" "All work is done!" "true")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -334,7 +387,7 @@ echo "Test 7b: SENTINEL_LISTENER=true -> ALLOW (env var bypass)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 INPUT=$(build_input "$PROJECT" "All work is complete. What's next?")
 # Even with completion language and stale CT, listener env var bypasses everything
 SENTINEL_LISTENER=true run_hook "$INPUT"
@@ -348,7 +401,7 @@ echo "Test 8: Sonnet listener session -> ALLOW"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 INPUT=$(build_input "$PROJECT" "Watching _pending_sonnet/ for new work...")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -361,7 +414,7 @@ echo "Test 8b: Opus listener session -> ALLOW (message pattern)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 INPUT=$(build_input "$PROJECT" "Opus listener active. Watching _pending_opus/ch1/ for new work...")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -374,7 +427,7 @@ echo "Test 8b2: 'Waiting for work on ch10' listener pattern -> ALLOW (multi-digi
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 # Use ch10 (multi-digit) to prove the regex handles [0-9]+, not just [0-9]
 INPUT=$(build_input "$PROJECT" "Waiting for work on ch10.")
 run_hook "$INPUT"
@@ -388,7 +441,7 @@ echo "Test 8c: Sonnet heartbeat does NOT bypass stale CT"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
 touch "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat"
 INPUT=$(build_input "$PROJECT" "Processing the prompt file...")
@@ -403,7 +456,7 @@ echo "Test 8d: Opus heartbeat does NOT bypass stale CT"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 mkdir -p "$PROJECT/verification_findings/_pending_opus/ch2"
 touch "$PROJECT/verification_findings/_pending_opus/ch2/.heartbeat"
 INPUT=$(build_input "$PROJECT" "Running verification agents...")
@@ -468,7 +521,7 @@ echo "Test 12: Waiting for agents -> ALLOW"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
 INPUT=$(build_input "$PROJECT" "Both agents are still running in the background. Waiting for results.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -495,8 +548,8 @@ mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 create_channel_ct "$PROJECT" "1" "IN PROGRESS"
 create_channel_ct "$PROJECT" "2" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 300   # shared CT stale
-touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 300   # shared CT stale
+must_touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300
 touch_now "$PROJECT/CURRENT_TASK_ch2.md"
 INPUT=$(build_input "$PROJECT" "Continuing work.")
 run_hook "$INPUT"
@@ -513,8 +566,8 @@ mkdir -p "$PROJECT"
 create_ct "$PROJECT" "COMPLETE"  # shared not active
 create_channel_ct "$PROJECT" "1" "IN PROGRESS"
 create_channel_ct "$PROJECT" "2" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300  # stale but not our channel
-touch_aged "$PROJECT/CURRENT_TASK_ch2.md" 300  # stale and IS our channel
+must_touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300  # stale but not our channel
+must_touch_aged "$PROJECT/CURRENT_TASK_ch2.md" 300  # stale and IS our channel
 INPUT=$(build_input "$PROJECT" "Continuing work on channel 2.")
 SENTINEL_CHANNEL=2 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -533,7 +586,7 @@ cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
 ## Plan
 - Step 1: Implement feature
 EOF
-touch_aged "$PROJECT/CURRENT_TASK.md" 300
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 300
 INPUT=$(build_input "$PROJECT" "Continuing implementation.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -551,7 +604,7 @@ cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
 ## Plan
 - Done
 EOF
-touch_aged "$PROJECT/CURRENT_TASK.md" 300
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 300
 INPUT=$(build_input "$PROJECT" "Reviewing results.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -564,7 +617,7 @@ echo "Test 16: COMPLETE status + no completion language -> ALLOW"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "COMPLETE"
-touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale but COMPLETE
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale but COMPLETE
 INPUT=$(build_input "$PROJECT" "Reading the spec file now.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -612,7 +665,7 @@ setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 create_channel_ct "$PROJECT" "5" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 300   # shared stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 300   # shared stale
 touch_now "$PROJECT/CURRENT_TASK_ch5.md"    # own channel fresh
 INPUT=$(build_input "$PROJECT" "Continuing work.")
 SENTINEL_CHANNEL=5 run_hook "$INPUT"
@@ -626,7 +679,7 @@ echo "Test 20: Empty CWD in JSON -> falls through to pwd-based discovery"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-touch_aged "$PROJECT/CURRENT_TASK.md" 300
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 300
 # Build input with empty CWD; the hook's cd to TMPDIR_ROOT won't find CT
 # but if we pass a valid CWD in JSON it should work
 INPUT=$(build_input "" "Continuing work.")
@@ -682,7 +735,7 @@ Some notes here but no Status or Phase header.
 ## Plan
 - Step 1: Do something
 EOF
-touch_aged "$PROJECT/CURRENT_TASK.md" 300
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 300
 INPUT=$(build_input "$PROJECT" "All work is done. Sprint is complete.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -848,7 +901,7 @@ cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
 **Status:** AWAITING USER APPROVAL — Design spec + implementation plan complete.
 **Phase:** /2 complete → /3 pending approval
 EOF
-touch_aged "$PROJECT/CURRENT_TASK.md" 300
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 300
 INPUT=$(build_input "$PROJECT" "Continuing work on the design.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -1098,6 +1151,15 @@ teardown_temp
 # channel_commit.sh --local-verify before a commit lands. If their verdicts are
 # recent (default 900s), they satisfy R1 as alternative evidence to the full
 # 5-agent squad. Channel-scoped via filename suffix.
+#
+# ENV-VAR COVERAGE NOTE:
+# Canonical cc-sentinel hook reads SENTINEL_CHANNEL only. Deployed Wakeful mirror
+# resolves HOOK_CHANNEL="${SENTINEL_CHANNEL:-${WAKEFUL_CHANNEL:-}}", adding
+# WAKEFUL_CHANNEL as a project-aware fallback. The Wakeful-specific fallback is
+# NOT exercised by this canonical test suite by design — both env vars feed the
+# same HOOK_CHANNEL value via mechanically equivalent bash parameter expansion,
+# and T-pair-18 covers the env-precedence behavior using SENTINEL_CHANNEL.
+# WAKEFUL_CHANNEL is intentionally out-of-scope for cc-sentinel canonical tests.
 
 # --- Test T-pair-1: Channeled session + fresh passing pair -> ALLOW ---
 echo ""
@@ -1143,8 +1205,8 @@ create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
 echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
 echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
-touch_aged "$PROJECT/verification_findings/commit_check.md" 1200
-touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 1200
+must_touch_aged "$PROJECT/verification_findings/commit_check.md" 1200
+must_touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 1200
 INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -1166,6 +1228,7 @@ INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "FAIL verdict does not satisfy R1"
+assert_stdout_contains "commit_check.md" "A4: block reason names the failing pair file"
 teardown_temp
 
 # --- Test T-pair-5: Half-pair (only commit_check) -> BLOCK ---
@@ -1230,29 +1293,34 @@ create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
 echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
 echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
-touch_aged "$PROJECT/verification_findings/commit_check.md" 60
-touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 60
+must_touch_aged "$PROJECT/verification_findings/commit_check.md" 60
+must_touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 60
 INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
 SENTINEL_COMMIT_RECENCY_SEC=30 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "override tightens window"
 teardown_temp
 
-# --- Test T-pair-9: Boundary — age within larger custom window -> ALLOW ---
+# --- Test T-pair-9: Boundary — age near window -> ALLOW ---
+# Tests the -le inclusivity of the pair recency check. Setting age = window - 2
+# (198s set, 200s window) exercises near-boundary; the 2s buffer absorbs test
+# execution latency (touch_aged → hook run). A regression from -le to -lt
+# would only matter at exact equality, which is not reliably testable without
+# freezing time, but this still proves the pair path accepts ages within window.
 echo ""
-echo "Test T-pair-9: Custom window 200s + 100s-aged pair -> ALLOW (within window)"
+echo "Test T-pair-9: Custom window 200s + 198s-aged pair -> ALLOW (near-boundary -le)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 touch_now "$PROJECT/CURRENT_TASK.md"
 echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
 echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
-touch_aged "$PROJECT/verification_findings/commit_check.md" 100
-touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 100
+must_touch_aged "$PROJECT/verification_findings/commit_check.md" 198
+must_touch_aged "$PROJECT/verification_findings/commit_cold_read.md" 198
 INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
 SENTINEL_COMMIT_RECENCY_SEC=200 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_empty "age within configured window satisfies R1"
+assert_stdout_empty "age within configured window satisfies R1 (-le boundary)"
 teardown_temp
 
 # --- Test T-pair-10: Stat failure (fail-closed via H1 guard) -> BLOCK ---
@@ -1389,7 +1457,7 @@ echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
 touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
 touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
 printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
-touch_aged "$PROJECT/verification_findings/.commit_channel_marker" 1200  # > 900s default
+must_touch_aged "$PROJECT/verification_findings/.commit_channel_marker" 1200  # > 900s default
 INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -1432,6 +1500,74 @@ INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
 SENTINEL_CHANNEL=5 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_empty "env channel wins over marker; ch5 pair satisfies"
+teardown_temp
+
+# --- Test T-pair-19: Future-dated marker (negative age, clock skew) -> BLOCK ---
+echo ""
+echo "Test T-pair-19: No env channel + future-dated marker=2 + ch2 pair PASS -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
+must_touch_future "$PROJECT/verification_findings/.commit_channel_marker" 120  # 2 min in future
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "future-dated marker rejected (negative age)"
+teardown_temp
+
+# --- Test T-pair-20: channel_commit.sh unchanneled path clears marker -> BLOCK ---
+# Direct test of the script-side `rm -f verification_findings/.commit_channel_marker`
+# branch in channel_commit.sh (D5 contract). We don't run channel_commit.sh end-to-end
+# here (would need a git repo + commit context); instead we exercise the exact
+# rm-f semantic the script executes on unchanneled commit, then prove the hook
+# falls through to top-level paths.
+echo ""
+echo "Test T-pair-20: Marker present, unchanneled clear runs, ch2 pair PASS only -> BLOCK (marker gone, top-level absent)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# Stage: ch2 pair files PASS + a stale marker pointing at ch2
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
+touch_now "$PROJECT/verification_findings/.commit_channel_marker"
+# Simulate the unchanneled-commit branch from channel_commit.sh:
+#   else
+#     rm -f verification_findings/.commit_channel_marker 2>/dev/null || true
+rm -f "$PROJECT/verification_findings/.commit_channel_marker" 2>/dev/null || true
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "marker cleared on unchanneled commit; hook resolves to top-level paths which are absent"
+teardown_temp
+
+# --- Test T-pair-21: Future-dated pair files (negative age, clock skew) -> BLOCK ---
+# Parallel to T-pair-19 but for the pair files themselves (not the marker).
+# Bash -le treats negative ages as "within window"; without the -ge 0 guard
+# on CHECK_AGE/COLD_AGE a future-dated pair would silently satisfy R1.
+echo ""
+echo "Test T-pair-21: Channel env=2 + future-dated ch2 pair PASS -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
+must_touch_future "$PROJECT/verification_findings/commit_check_ch2.md" 120
+must_touch_future "$PROJECT/verification_findings/commit_cold_read_ch2.md" 120
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+SENTINEL_CHANNEL=2 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "future-dated pair files rejected (negative age)"
 teardown_temp
 
 # ==================== SUMMARY ====================

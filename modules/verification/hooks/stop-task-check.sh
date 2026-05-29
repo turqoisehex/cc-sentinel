@@ -16,10 +16,18 @@
 #       / "Waiting for work on ch[0-9]+" message patterns (fallback).
 #   R4. Channel scoping — each session only checks its own CT files.
 #       SENTINEL_CHANNEL=N → shared CT + ch{N} CT.
-#       Unset → shared CT only. Squad evidence scoped to active channels.
+#       Unset (manual session) → shared CT + every channel CT (parent has no
+#       channel of its own, so it owns every channel CT in the repo).
+#       Squad evidence is always scoped to the active channels found above.
 #   R5. Anti-loop — CC sets stop_hook_active=true after first block.
 #       Second stop attempt always allowed.
-#   R6. Fail-open — any parse/stat/jq error → exit 0, no output → allow stop.
+#   R6. Fail-open at boundaries — input-parse / decision-emit failures
+#       (jq / unknown JSON shape) → exit 0, no output → allow stop. This
+#       prevents a malformed input from soft-bricking the session.
+#       Note: this fail-open rule does NOT extend to evidence integrity.
+#       Commit-pair recency (Check 1.5) and marker fallback BOTH fail
+#       CLOSED when stat/date return 0/empty or yield a negative age —
+#       unknown age is treated as "not recent," not as "recent."
 #   R7. Deferral gate — if assistant message contains deferral language
 #       ("deferred items", "future sprint", etc.), block and require developer
 #       permission. Complements PreToolUse anti-deferral hook (which only
@@ -97,7 +105,15 @@ fi
 # check shared CT — channel CTs belong to other sessions and checking them
 # causes cross-channel noise (stale alerts for files this session doesn't own,
 # which can lead to models deleting or overwriting other sessions' state).
+# Deployed mirrors may extend this with project-local fallbacks (e.g.,
+# WAKEFUL_CHANNEL). See spec A1 canonical/deployed divergence note.
 HOOK_CHANNEL="${SENTINEL_CHANNEL:-}"
+# Sanitize: channel must be a bare integer (prevents glob/pattern injection in
+# file-path construction and [[ pattern ]] matching downstream).
+if [[ -n "$HOOK_CHANNEL" ]] && ! [[ "$HOOK_CHANNEL" =~ ^[0-9]+$ ]]; then
+  echo "  -> SENTINEL_CHANNEL='$HOOK_CHANNEL' is not a bare integer; treating as unchanneled" >> "$LOGFILE" 2>/dev/null
+  HOOK_CHANNEL=""
+fi
 TASK_FILES=()
 if [[ -n "$HOOK_CHANNEL" ]]; then
   # Channeled session: own channel + shared index
@@ -184,6 +200,7 @@ fi
 if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
   # Claimed completion — check for verification evidence
   VERIFICATION_FOUND="false"
+  PAIR_FAIL=""  # Hoisted to outer scope so the terminal REASON block can name failing pair files (A4).
 
   # Check 1: VERIFICATION_BLOCKED marker in ACTIVE CT files only (not all files)
   # BLOCKED means max-rounds exhausted and issues presented to user — still counts as verification done
@@ -220,7 +237,9 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
         NOW_MARKER=$(date +%s 2>/dev/null || echo 0)
         if [[ "$NOW_MARKER" -gt 0 ]] && [[ "$MARKER_MTIME" -gt 0 ]]; then
           MARKER_AGE=$((NOW_MARKER - MARKER_MTIME))
-          if [[ "$MARKER_AGE" -le "$COMMIT_RECENCY_SEC" ]]; then
+          # Fail-closed on negative age (clock skew / future-dated marker):
+          # treat as untrusted rather than resolving a possibly-wrong channel.
+          if [[ "$MARKER_AGE" -ge 0 ]] && [[ "$MARKER_AGE" -le "$COMMIT_RECENCY_SEC" ]]; then
             MARKER_CHANNEL=$(head -n1 "$MARKER_FILE" 2>/dev/null | tr -d '[:space:]')
             if [[ "$MARKER_CHANNEL" =~ ^[0-9]+$ ]]; then
               EFFECTIVE_CHANNEL="$MARKER_CHANNEL"
@@ -242,8 +261,8 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     if [[ -f "$PAIR_CHECK" ]] && [[ -f "$PAIR_COLD" ]]; then
       PAIR_CHECK_OK="false"
       PAIR_COLD_OK="false"
-      grep -qE "^VERDICT: (PASS|WARN)" "$PAIR_CHECK" 2>/dev/null && PAIR_CHECK_OK="true"
-      grep -qE "^VERDICT: (PASS|WARN)" "$PAIR_COLD" 2>/dev/null && PAIR_COLD_OK="true"
+      grep -qE "^VERDICT: (PASS|WARN)( |$)" "$PAIR_CHECK" 2>/dev/null && PAIR_CHECK_OK="true"
+      grep -qE "^VERDICT: (PASS|WARN)( |$)" "$PAIR_COLD" 2>/dev/null && PAIR_COLD_OK="true"
 
       if [[ "$PAIR_CHECK_OK" == "true" ]] && [[ "$PAIR_COLD_OK" == "true" ]]; then
         NOW=$(date +%s 2>/dev/null || echo 0)
@@ -254,17 +273,23 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
         if [[ "$NOW" -gt 0 ]] && [[ "$CHECK_MTIME" -gt 0 ]] && [[ "$COLD_MTIME" -gt 0 ]]; then
           CHECK_AGE=$((NOW - CHECK_MTIME))
           COLD_AGE=$((NOW - COLD_MTIME))
-          if [[ "$CHECK_AGE" -le "$COMMIT_RECENCY_SEC" ]] && [[ "$COLD_AGE" -le "$COMMIT_RECENCY_SEC" ]]; then
+          # Fail-closed on negative age (clock skew / future-dated pair file):
+          # mirrors the marker-file guard above. Bash -le treats negative ages
+          # as "within window," so without this guard a future-dated pair would
+          # silently satisfy R1.
+          if [[ "$CHECK_AGE" -ge 0 ]] && [[ "$COLD_AGE" -ge 0 ]] && [[ "$CHECK_AGE" -le "$COMMIT_RECENCY_SEC" ]] && [[ "$COLD_AGE" -le "$COMMIT_RECENCY_SEC" ]]; then
             VERIFICATION_FOUND="true"
             echo "  -> commit pair satisfies R1 ($(basename "$PAIR_CHECK") + $(basename "$PAIR_COLD"), ages ${CHECK_AGE}s/${COLD_AGE}s)" >> "$LOGFILE" 2>/dev/null
           else
-            echo "  -> commit pair stale (ages ${CHECK_AGE}s/${COLD_AGE}s vs window ${COMMIT_RECENCY_SEC}s)" >> "$LOGFILE" 2>/dev/null
+            _pair_note=""
+            [[ "$CHECK_AGE" -lt 0 || "$COLD_AGE" -lt 0 ]] && _pair_note=" (negative age = future-dated file, check clock skew)"
+            PAIR_FAIL="${PAIR_FAIL} $(basename "$PAIR_CHECK")(age=${CHECK_AGE}s) $(basename "$PAIR_COLD")(age=${COLD_AGE}s) vs window ${COMMIT_RECENCY_SEC}s${_pair_note}"
+            echo "  -> commit pair stale or future-dated (ages ${CHECK_AGE}s/${COLD_AGE}s vs window ${COMMIT_RECENCY_SEC}s)" >> "$LOGFILE" 2>/dev/null
           fi
         else
           echo "  -> commit pair recency check skipped (clock/stat failure: NOW=$NOW CHECK_MTIME=$CHECK_MTIME COLD_MTIME=$COLD_MTIME)" >> "$LOGFILE" 2>/dev/null
         fi
       else
-        PAIR_FAIL=""
         [[ "$PAIR_CHECK_OK" == "false" ]] && PAIR_FAIL="${PAIR_FAIL} $(basename "$PAIR_CHECK")"
         [[ "$PAIR_COLD_OK" == "false" ]] && PAIR_FAIL="${PAIR_FAIL} $(basename "$PAIR_COLD")"
         echo "  -> commit pair present but no PASS/WARN verdict:${PAIR_FAIL}" >> "$LOGFILE" 2>/dev/null
@@ -345,7 +370,7 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     for tf in "${SQUAD_EXPECTED[@]}"; do
       if [[ -f "$SQUAD_DIR/$tf" ]]; then
         SQUAD_EXISTS=$((SQUAD_EXISTS + 1))
-        if grep -qE "^VERDICT: (PASS|WARN)" "$SQUAD_DIR/$tf" 2>/dev/null; then
+        if grep -qE "^VERDICT: (PASS|WARN)( |$)" "$SQUAD_DIR/$tf" 2>/dev/null; then
           SQUAD_PASS=$((SQUAD_PASS + 1))
         else
           SQUAD_FAILED="${SQUAD_FAILED} ${tf}"
@@ -386,6 +411,9 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
 
   if [[ "$VERIFICATION_FOUND" == "false" ]]; then
     REASON="COMPLETION WITHOUT VERIFICATION: No verification evidence found. Run the Verification Squad — it is required by default for all non-exempt work. The feeling of completion is a trigger to BEGIN verification, not end work. If the completion language in your message was incidental (not a real claim), you may stop again — the anti-loop (R5) always allows the second stop."
+    if [[ -n "$PAIR_FAIL" ]]; then
+      REASON="${REASON} Commit pair did not satisfy R1:${PAIR_FAIL}. Both files must have VERDICT: PASS|WARN and mtimes within ${COMMIT_RECENCY_SEC}s. Fix the failing pair file(s) or rerun the commit-time agents and stop again."
+    fi
     REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
     echo "  -> BLOCK (completion without verification)" >> "$LOGFILE" 2>/dev/null
     echo "{\"decision\": \"block\", \"reason\": ${REASON_JSON}}"
