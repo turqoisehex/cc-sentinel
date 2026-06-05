@@ -8,15 +8,20 @@
 #       in last message), require verification evidence before allowing stop.
 #       Evidence: squad dir with all expected PASS/WARN verdicts, or VERIFICATION_BLOCKED
 #       marker in the active CT file. (WARN = issues found but non-blocking.)
-#   R2. Staleness gate — if any active CT file is >2 min stale, block and
-#       request progress update before stopping.
+#   R2. Staleness gate — if any active CT file is stale (default 15 min,
+#       env-overridable via SENTINEL_STALE_SEC), block and request a progress
+#       update before stopping.
 #   R3. Listener bypass — Sonnet/Opus listener sessions (stateless service
 #       loops) must never be blocked. Detection: SENTINEL_LISTENER env var
 #       (primary, set by spawn.py) or "Watching _pending_(sonnet|opus)/"
 #       / "Waiting for work on ch[0-9]+" message patterns (fallback).
 #   R4. Channel scoping — each session only checks its own CT files.
 #       SENTINEL_CHANNEL=N → shared CT + ch{N} CT.
-#       Unset (manual session) → shared CT + every channel CT (parent has no
+#       No env var → the resolver derives the channel from the session transcript
+#       (genuine /opus N, re-derived every Stop) or the per-session registry
+#       (.session_channel/<session_id>); presence-but-unresolved fails closed on
+#       a completion claim.
+#       Unset (truly unchanneled) → shared CT + every channel CT (parent has no
 #       channel of its own, so it owns every channel CT in the repo).
 #       Squad evidence is always scoped to the active channels found above.
 #   R5. Anti-loop — CC sets stop_hook_active=true after first block.
@@ -108,12 +113,15 @@ if [[ -z "$PROJECT_DIR" ]]; then
   exit 0
 fi
 
-# Collect CT files: scope to own channel only. Without a channel env var, only
-# check shared CT — channel CTs belong to other sessions and checking them
-# causes cross-channel noise (stale alerts for files this session doesn't own,
-# which can lead to models deleting or overwriting other sessions' state).
+# Channel scoping starts here. This env line reads the channel from the env var (the
+# /spawn back-compat path); the resolver below derives it from the transcript or registry
+# when no env var is set. A RESOLVED channel scopes TASK_FILES to own-channel CT + shared
+# CT (the FM-2 fix). A TRULY unchanneled session (no env, no transcript/registry witness)
+# is the parent: TASK_FILES = shared + EVERY channel CT so Check 1 can catch any channel's
+# VERIFICATION_BLOCKED — but the CHECK 2 staleness guard skips channel CTs for it (a parent
+# isn't nagged about other channels' staleness). See the TASK_FILES build + guards below.
 # Deployed mirrors may extend this with project-local fallbacks (e.g.,
-# WAKEFUL_CHANNEL). See spec A1 canonical/deployed divergence note.
+# WAKEFUL_CHANNEL). See spec § F8 canonical/deployed divergence note.
 HOOK_CHANNEL="${SENTINEL_CHANNEL:-}"
 # Sanitize: channel must be a bare integer (prevents glob/pattern injection in
 # file-path construction and [[ pattern ]] matching downstream).
@@ -121,6 +129,9 @@ if [[ -n "$HOOK_CHANNEL" ]] && ! [[ "$HOOK_CHANNEL" =~ ^[0-9]+$ ]]; then
   echo "  -> SENTINEL_CHANNEL='$HOOK_CHANNEL' is not a bare integer; treating as unchanneled" >> "$LOGFILE" 2>/dev/null
   HOOK_CHANNEL=""
 fi
+# Normalize leading zeros from the env channel too (SENTINEL_CHANNEL=04 -> 4), matching the
+# transcript + pre-warm paths so every channel source builds the same ch{N} filenames.
+[[ -n "$HOOK_CHANNEL" ]] && HOOK_CHANNEL="$((10#$HOOK_CHANNEL))"
 
 # BEGIN resolve_hook_channel
 # Env-var-free channel resolution. Operates only on $HOOK_CHANNEL (already set by the
@@ -154,6 +165,8 @@ _rhc_find_transcript() {
   for c in "${uniq[@]}"; do
     if [[ "$c" == *"$slug"* ]]; then printf '%s' "$c"; return 0; fi
   done
+  # No cwd-slug match (e.g. a case-variant project dir) — fall back to newest mtime.
+  echo "  -> transcript glob: no cwd-slug match among ${#uniq[@]} candidates; using newest mtime" >> "$LOGFILE" 2>/dev/null
   local newest="" newest_mt=0 mt
   for c in "${uniq[@]}"; do
     mt="$(stat -c %Y "$c" 2>/dev/null || stat -f %m "$c" 2>/dev/null || echo 0)"
@@ -166,6 +179,10 @@ _rhc_transcript_channel() {
   local file="$1"
   { [[ -z "$file" ]] || [[ ! -f "$file" ]]; } && return 1
   local n
+  # Tag asymmetry is INTENTIONAL (spec F3): the grep prefilter keys on
+  # <command-name>/opus</command-name> (cheap line narrowing); the jq predicate keys on
+  # <command-message>opus</command-message> (the genuine-wrapper witness). Both tags appear
+  # on every real /opus invocation and on NO tool_result/echo — equivalent narrowing gates.
   n="$(grep -a '<command-name>/opus</command-name>' "$file" 2>/dev/null \
     | jq -r 'select(.type=="user")
         | select((.message.content|type)=="string")
@@ -173,12 +190,17 @@ _rhc_transcript_channel() {
         | select(.message.content|test("<command-message>opus</command-message>"))
         | (.message.content|capture("<command-args>(?<n>[0-9]+)")|.n)' 2>/dev/null \
     | tr -d '\r' | grep -E '^[0-9]+$' | tail -1)"
+  # Normalize leading zeros (/opus 04 -> 4) so HOOK_CHANNEL matches CURRENT_TASK_ch4.md,
+  # not a nonexistent ch04. 10# forces base-10 (no octal); digit-only validated above.
+  [[ -n "$n" ]] && n="$((10#$n))"
   [[ -n "$n" ]] && { printf '%s' "$n"; return 0; }
   return 1
 }
 _rhc_transcript_presence() {
   local file="$1"
   { [[ -z "$file" ]] || [[ ! -f "$file" ]]; } && return 1
+  # Same intentional tag asymmetry as _rhc_transcript_channel (grep prefilter on
+  # <command-name>, jq witness on <command-message>; spec F3).
   grep -a '<command-name>/opus</command-name>' "$file" 2>/dev/null \
     | jq -e 'select(.type=="user")
         | select((.message.content|type)=="string")
@@ -188,17 +210,18 @@ _rhc_transcript_presence() {
 }
 _rhc_cache_write() {
   local n="$1"
-  [[ "$SESSION_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || return 0
+  [[ "$SESSION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] || return 0
   local dir="${PROJECT_DIR}/verification_findings/.session_channel"
   local tmp="${dir}/.${SESSION_ID}.tmp.$$"
   { mkdir -p "$dir" && printf '%s' "$n" > "$tmp" && mv -f "$tmp" "$dir/$SESSION_ID"; } 2>/dev/null || true
 }
 resolve_hook_channel() {
-  RESOLVE_STATE=""
+  RESOLVE_STATE=""  # NOT local on purpose: consumed by the fail-closed + conservative
+                    # guards AFTER this call returns. Adding 'local' here silently breaks them.
   local cache_dir="${PROJECT_DIR}/verification_findings/.session_channel"
   local cache_file="${cache_dir}/${SESSION_ID}"
   local sid_ok="false"
-  [[ "$SESSION_ID" =~ ^[0-9a-fA-F-]{36}$ ]] && sid_ok="true"
+  [[ "$SESSION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] && sid_ok="true"
   if [[ -n "$HOOK_CHANNEL" ]]; then
     if [[ "$sid_ok" == "true" ]]; then
       local _tf _tn
@@ -207,6 +230,8 @@ resolve_hook_channel() {
       if [[ -n "$_tn" ]] && [[ "$_tn" != "$HOOK_CHANNEL" ]]; then
         echo "  -> env channel $HOOK_CHANNEL wins; transcript disagrees ($_tn)" >> "$LOGFILE" 2>/dev/null
       fi
+      # Seed the registry from the env channel (spawn-back-compat: a future env-less
+      # resume of this session reads it as the step-3 fallback). Not cache invalidation.
       _rhc_cache_write "$HOOK_CHANNEL"
     fi
     return 0
@@ -224,7 +249,7 @@ resolve_hook_channel() {
     local cval
     cval="$(tr -d '\r' < "$cache_file" 2>/dev/null | head -n1)"
     if [[ "$cval" =~ ^[0-9]+$ ]]; then
-      HOOK_CHANNEL="$cval"
+      HOOK_CHANNEL="$((10#$cval))"  # normalize (defensive; all writers already normalize)
       return 0
     fi
   fi
@@ -371,7 +396,8 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
   # Conservative guard (D7/C.1): an UNCHANNELED_CONSERVATIVE session must NOT read the
   # commit pair (skip the whole block) — else it falls through to the top-level unsuffixed
   # pair, a new FM-3 variant. Defensive depth: a conservative session has no completion
-  # claim and never enters this block today, but this guards a future refactor.
+  # claim at time of writing, so it never reaches this block via the current code path —
+  # this guards a future refactor.
   if [[ "$VERIFICATION_FOUND" == "false" ]] && [[ "${RESOLVE_STATE:-}" != "conservative" ]]; then
     COMMIT_RECENCY_SEC="${SENTINEL_COMMIT_RECENCY_SEC:-900}"
 
@@ -422,7 +448,9 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
     fi
   fi
 
-  # Check 2: Squad validation — scoped to active channels to prevent cross-channel leak
+  # Check 1.6: Squad validation — scoped to active channels to prevent cross-channel leak
+  # (numbered 1.6, between Check 1.5 and the CHECK 2 staleness section, to avoid the
+  # name collision the spec § C.1 warned about: the hook's CHECK 2 is the *staleness* gate).
   # Build allowed squad dir patterns from ACTIVE_FILES
   SQUAD_PATTERNS=()
   HAS_UNCHANNELED_ACTIVE="false"

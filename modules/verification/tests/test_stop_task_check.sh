@@ -112,6 +112,7 @@ write_opus_transcript_cmdname_only() {
   jq -nc --arg c "$content" '{type:"user", isSidechain:false, message:{role:"user", content:$c}}' > "$file"
 }
 
+# NOTE: uses a non-UUID session_id ('test-session-$$') intentionally — this trips the resolver's UUID guard so build_input-based tests exercise ONLY the pre-resolver paths. Use build_input_sid() for resolver tests.
 # Build JSON input mimicking CC hook protocol
 build_input() {
   local cwd="$1" msg="${2:-}" stop_active="${3:-false}"
@@ -591,9 +592,11 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "no block (no message = startup)"
 teardown_temp
 
-# --- Test 14: Unchanneled session only checks shared CT, not channel CTs ---
+# --- Test 14: Unchanneled STALENESS check skips channel CTs (only shared CT can be reported) ---
+# NOTE: TASK_FILES still globs ALL channel CTs for an unchanneled session (so Check 1 sees every
+# VERIFICATION_BLOCKED); it is specifically the CHECK 2 *staleness* guard that skips channel CTs.
 echo ""
-echo "Test 14: Unchanneled session ignores channel CTs -> only shared CT checked"
+echo "Test 14: Unchanneled staleness -> channel CTs skipped, only shared CT reported (CHECK 2 guard)"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
@@ -605,8 +608,9 @@ touch_now "$PROJECT/CURRENT_TASK_ch2.md"
 INPUT=$(build_input "$PROJECT" "Continuing work.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-# Only shared CT reported, not ch1 or ch2
-assert_stdout_contains "CURRENT_TASK.md" "blocks for stale shared CT"
+# Staleness reports ONLY the shared CT: the CHECK 2 guard skips ch1/ch2 for an unchanneled
+# session (even though ch1 is also aged). Contrast Test 14b (channeled = own channel only).
+assert_stdout_contains "CURRENT_TASK.md" "unchanneled staleness reports shared CT; channel CTs skipped by the CHECK 2 guard"
 teardown_temp
 
 # --- Test 14b: Channeled session checks own channel + shared ---
@@ -853,7 +857,8 @@ assert_stdout_contains "Failed" "reports failed agents"
 assert_stdout_contains "3/5" "shows 3 of 5 passed"
 teardown_temp
 
-# Note: Tests 28-29 were replaced by the T_manifest_* series below.
+# Note: the original Tests 28-29 (manifest-related) were renamed to the T_manifest_* series
+# below; Tests 28-29 are now repurposed as R7 deferral sub-pattern tests (further below).
 
 # --- Test T_all_done: "ALL DONE" status treated as complete ---
 echo ""
@@ -1117,7 +1122,7 @@ assert_exit 0 "exit 0"
 assert_stdout_empty "invalid JSON = fail-open allow"
 teardown_temp
 
-# --- Tests 37-42: R7 deferral sub-pattern coverage ---
+# --- R7 deferral sub-pattern coverage ---
 echo ""
 echo "Test 33: 'later sprint' -> BLOCK"
 setup_temp
@@ -1843,6 +1848,355 @@ INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "cmdname-only echo is NOT a genuine wrapper; filter + presence both reject; ch3 pair NOT credited; not fail-closed"
+teardown_temp
+
+# --- Test T-resolve-7: leading zero normalised (04 -> 4) + ch4 pair -> ALLOW ---
+echo ""
+echo "Test T-resolve-7: /opus 04 (leading zero) + ch4 pair PASS -> ALLOW (normalised to 4)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch4.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+SID="cccccccc-cccc-cccc-cccc-cccccccccccc"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" "04"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "04 normalises to 4; ch4 pair satisfies R1"
+teardown_temp
+
+# --- Test T-resolve-8: last-adoption-wins (/opus 3 then /opus 5 -> resolves 5) + ch5 pair -> ALLOW ---
+echo ""
+echo "Test T-resolve-8: /opus 3 then /opus 5 (tail-1) + ch5 pair PASS -> ALLOW (last-adoption-wins)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch5.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+SID="dddddddd-dddd-dddd-dddd-dddddddddddd"
+TR="$TMPDIR_ROOT/$SID.jsonl"
+write_opus_transcript "$TR" 3
+content=$(printf '<command-message>opus</command-message>\r\n<command-name>/opus</command-name>\r\n<command-args>5</command-args>')
+jq -nc --arg c "$content" '{type:"user", isSidechain:false, message:{role:"user", content:$c}}' >> "$TR"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TR")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "tail-1 picks /opus 5; ch5 pair satisfies R1"
+teardown_temp
+
+# --- Test AC-7-log: SENTINEL_CHANNEL=5 + transcript /opus 3 -> env wins, disagreement logged ---
+echo ""
+echo "Test AC-7-log: SENTINEL_CHANNEL=5 + transcript /opus 3 + ch5 pair -> ALLOW + disagreement in debug log"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch5.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+SID="eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
+LOG="$TMPDIR_ROOT/dbg.log"; : > "$LOG"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+SENTINEL_CHANNEL=5 SENTINEL_DEBUG_LOG="$LOG" run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "env ch5 wins; ch5 pair satisfies R1"
+TOTAL=$((TOTAL + 1))
+if grep -q "wins; transcript disagrees" "$LOG"; then
+  echo -e "  ${GREEN}PASS${NC}: debug log captured disagreement (env wins; transcript disagrees)"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: debug log missing disagreement text"
+  echo "    log contents: $(cat "$LOG" 2>/dev/null || echo '(empty)')"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test T-prewarm-2: startup source does NOT pre-warm cache ---
+echo ""
+echo "Test T-prewarm-2: SessionStart(startup) + transcript /opus 3 -> cache NOT written"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+SID="ffffffff-ffff-ffff-ffff-ffffffffffff"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
+ORIENT_SCRIPT="$(cd "$SCRIPT_DIR/../../.." && pwd)/modules/core/hooks/session-orient.sh"
+ORIENT_INPUT=$(cat << EOF
+{"session_id":"$SID","cwd":"$PROJECT","source":"startup","transcript_path":"$TMPDIR_ROOT/$SID.jsonl","hook_event_name":"SessionStart"}
+EOF
+)
+echo "$ORIENT_INPUT" | (cd "$TMPDIR_ROOT" && bash "$ORIENT_SCRIPT") > /dev/null 2>&1
+TOTAL=$((TOTAL + 1))
+if [[ ! -f "$PROJECT/verification_findings/.session_channel/$SID" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: startup did NOT write cache (prewarm skipped for startup source)"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: startup incorrectly wrote cache file"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test T-resolve-malformed: corrupt transcript (invalid JSON) -> jq fails, UNCHANNELED, ch4 pair NOT credited ---
+# (Ordinary R1 no-evidence block, NOT the RESOLVE_STATE=ambiguous-presence fail-closed gate: corrupt
+#  JSON fails jq for BOTH channel resolution AND presence detection, so PRESENCE=false -> unchanneled.)
+echo ""
+echo "Test T-resolve-malformed: invalid JSON transcript + ch4 pair + completion -> BLOCK (jq fails, unchanneled, ch4 pair not credited)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch4.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+SID="00000000-1111-2222-3333-444444444444"
+TR="$TMPDIR_ROOT/$SID.jsonl"
+printf '{"type":"user","message":{"content":"<command-message>opus</command-message> <command-name>/opus</command-name> <command-args>4</command-args>" BROKEN_JSON\n' > "$TR"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TR")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "malformed transcript: jq fails, no resolution, ch4 pair not credited"
+teardown_temp
+
+# --- Test T-env-leading-zero: SENTINEL_CHANNEL=04 normalizes to 4 (env-path leading zero) ---
+# Regression guard for the env-path 10# normalization (the transcript path is covered by T-resolve-7).
+echo ""
+echo "Test T-env-leading-zero: SENTINEL_CHANNEL=04 + ch4 pair PASS + completion -> ALLOW (env 04 -> 4)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch4.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+SENTINEL_CHANNEL=04 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "env SENTINEL_CHANNEL=04 normalizes to 4; ch4 pair satisfies R1 (would BLOCK on a missing ch04 pair without the fix)"
+teardown_temp
+
+# ==================== CHANNEL-DETECTION COVERAGE TESTS ====================
+
+# --- Test T-sidechain-rejected: isSidechain:true /opus wrapper NOT a genuine witness ---
+# The F3 filter (select(.isSidechain!=true)) strips sidechain lines from both
+# _rhc_transcript_channel AND _rhc_transcript_presence. A transcript whose ONLY
+# /opus wrapper line has isSidechain:true yields: no channel resolved + no PRESENCE
+# -> truly unchanneled (not ambiguous-presence). With a ch3 pair + completion, the
+# unchanneled session looks for unsuffixed commit_check.md / commit_cold_read.md (which
+# don't exist) -> BLOCK "COMPLETION WITHOUT VERIFICATION".
+echo ""
+echo "Test T-sidechain-rejected: isSidechain:true /opus 3 + ch3 pair + completion -> BLOCK (sidechain filter; not fail-closed)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch3.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+SID="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+TR="$TMPDIR_ROOT/$SID.jsonl"
+# Build a transcript with ONLY a sidechain /opus wrapper (isSidechain:true)
+jq -nc --arg c "$(printf '<command-message>opus</command-message>\r\n<command-name>/opus</command-name>\r\n<command-args>3</command-args>')" \
+  '{type:"user", isSidechain:true, message:{role:"user", content:$c}}' > "$TR"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TR")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "sidechain /opus rejected by F3 filter; session unchanneled; ch3 pair NOT credited; ordinary R1 block (not fail-closed)"
+teardown_temp
+
+# --- Test T-conservative-allow: PRESENCE + non-completion message -> conservative -> ALLOW ---
+# registry entry='xyz' (unresolvable) -> RESOLVE_STATE="ambiguous-presence".
+# Non-completion last message -> fail-closed gate does NOT fire -> RESOLVE_STATE flips to
+# "conservative". Check 1 is skipped (no COMPLETION_CLAIMED). Check 1.5 is skipped
+# (RESOLVE_STATE==conservative guard). Fresh CT avoids staleness. No deferral patterns.
+# -> ALLOW (empty stdout).
+echo ""
+echo "Test T-conservative-allow: registry=xyz (PRESENCE) + no-opus transcript + non-completion + fresh CT -> ALLOW (conservative path, no false-block)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+SID="11223344-5566-7788-99aa-bbccddeeff00"
+jq -nc '{type:"user", isSidechain:false, message:{role:"user", content:"just a normal prompt"}}' > "$TMPDIR_ROOT/$SID.jsonl"
+mkdir -p "$PROJECT/verification_findings/.session_channel"
+printf 'xyz' > "$PROJECT/verification_findings/.session_channel/$SID"
+INPUT=$(build_input_sid "$PROJECT" "Still reviewing the files." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "conservative path (PRESENCE + no completion) does NOT false-block"
+teardown_temp
+
+# --- Test T-cache-write-transcript: Stop with transcript /opus 3 -> registry written ---
+# After resolve_hook_channel with a genuine /opus 3 transcript, _rhc_cache_write is called
+# with '3'. Assert .session_channel/<sid> exists and contains '3'.
+echo ""
+echo "Test T-cache-write-transcript: Stop with transcript /opus 3 -> .session_channel/<sid> written with '3'"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+# Provide ch3 pair so the stop is ALLOW (cache write happens regardless of R1 outcome,
+# but an ALLOW outcome proves the channel resolved correctly end-to-end).
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch3.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+SID="aaaabbbb-cccc-dddd-eeee-ffff00001111"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+# Check that the registry file was written with value '3'
+TOTAL=$((TOTAL + 1))
+CACHE_FILE="$PROJECT/verification_findings/.session_channel/$SID"
+if [[ -f "$CACHE_FILE" ]] && [[ "$(cat "$CACHE_FILE")" == "3" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: cache written: .session_channel/$SID == '3'"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: cache not written or wrong value (expected '3', got '$(cat "$CACHE_FILE" 2>/dev/null || echo MISSING)')"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test T-cache-write-env: Stop with SENTINEL_CHANNEL=5 + UUID sid -> registry written with '5' ---
+# When HOOK_CHANNEL is set via env AND sid_ok=true, _rhc_cache_write seeds the registry
+# from the env channel value. Assert .session_channel/<sid> contains '5'.
+echo ""
+echo "Test T-cache-write-env: SENTINEL_CHANNEL=5 + UUID sid -> .session_channel/<sid> written with '5'"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+# Provide ch5 pair so the stop is ALLOW.
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch5.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+SID="12345678-abcd-ef01-2345-6789abcdef01"
+# Transcript with no /opus (env path, not transcript path)
+jq -nc '{type:"user", isSidechain:false, message:{role:"user", content:"normal prompt"}}' > "$TMPDIR_ROOT/$SID.jsonl"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+SENTINEL_CHANNEL=5 run_hook "$INPUT"
+TOTAL=$((TOTAL + 1))
+CACHE_FILE="$PROJECT/verification_findings/.session_channel/$SID"
+if [[ -f "$CACHE_FILE" ]] && [[ "$(cat "$CACHE_FILE")" == "5" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: env-path cache written: .session_channel/$SID == '5'"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: env-path cache not written or wrong value (expected '5', got '$(cat "$CACHE_FILE" 2>/dev/null || echo MISSING)')"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test T-prewarm-compact: SessionStart source=compact -> cache IS written ---
+# session-orient.sh re-derives on any source that is NOT "startup" or "clear".
+# "compact" is a re-warm source (same as "resume") -> pre-warm writes the registry.
+echo ""
+echo "Test T-prewarm-compact: SessionStart(compact) + transcript /opus 3 -> cache .session_channel/<sid> == 3"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+SID="cafe0000-0000-0000-0000-000000000001"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
+ORIENT_SCRIPT="$(cd "$SCRIPT_DIR/../../.." && pwd)/modules/core/hooks/session-orient.sh"
+ORIENT_INPUT=$(cat << EOF
+{"session_id":"$SID","cwd":"$PROJECT","source":"compact","transcript_path":"$TMPDIR_ROOT/$SID.jsonl","hook_event_name":"SessionStart"}
+EOF
+)
+echo "$ORIENT_INPUT" | (cd "$TMPDIR_ROOT" && bash "$ORIENT_SCRIPT") > /dev/null 2>&1
+TOTAL=$((TOTAL + 1))
+CACHE_FILE="$PROJECT/verification_findings/.session_channel/$SID"
+if [[ -f "$CACHE_FILE" ]] && [[ "$(cat "$CACHE_FILE")" == "3" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: compact source wrote cache=3 (same as resume)"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: compact source did NOT write cache (expected '3', got '$(cat "$CACHE_FILE" 2>/dev/null || echo MISSING)')"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test T-stale-override: SENTINEL_STALE_SEC=120 makes 200s CT stale -> BLOCK ---
+# With SENTINEL_STALE_SEC=120, a CT aged ~200s (> 120) triggers the staleness block.
+# Without the override (default 900), the same 200s age is fresh (< 900 -> ALLOW).
+# One test only: override=120 + 200s age -> BLOCK.
+echo ""
+echo "Test T-stale-override: SENTINEL_CHANNEL=4 + own CT aged ~200s + SENTINEL_STALE_SEC=120 -> BLOCK (200 >= 120)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "DONE"
+create_channel_ct "$PROJECT" 4 "IN PROGRESS"
+must_touch_aged "$PROJECT/CURRENT_TASK_ch4.md" 200
+INPUT=$(build_input "$PROJECT" "Inspecting the current state of the files.")
+SENTINEL_CHANNEL=4 SENTINEL_STALE_SEC=120 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "not updated recently" "SENTINEL_STALE_SEC=120 makes 200s stale -> block"
+teardown_temp
+
+# --- Test T-registry-leading-zero: registry='04' -> normalized to 4 -> ch4 pair satisfies ---
+# The registry read normalizes with 10# (HOOK_CHANNEL="$((10#$cval))"). '04' -> 4.
+# ch4 pair + completion -> ALLOW. If this BLOCKS, 10# normalization is missing -> real bug.
+echo ""
+echo "Test T-registry-leading-zero: registry='04' + no-opus transcript + ch4 pair + completion -> ALLOW (10# normalization)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch4.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+SID="deadbeef-dead-beef-dead-beefdeadbeef"
+jq -nc '{type:"user", isSidechain:false, message:{role:"user", content:"normal prompt, no opus"}}' > "$TMPDIR_ROOT/$SID.jsonl"
+mkdir -p "$PROJECT/verification_findings/.session_channel"
+printf '04' > "$PROJECT/verification_findings/.session_channel/$SID"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "registry '04' normalizes to 4 via 10#; ch4 pair satisfies R1 -> ALLOW (bug if BLOCKS)"
+teardown_temp
+
+# --- Test T-empty-sid: empty session_id -> UUID guard fails -> unchanneled -> ch3 pair NOT credited ---
+# build_input_sid with sid="" produces "session_id":"" in JSON. The hook's sid_ok check
+# (UUID regex) fails -> resolve_hook_channel returns immediately with HOOK_CHANNEL="" ->
+# truly unchanneled. Unchanneled session looks for unsuffixed commit_check.md which is
+# absent -> BLOCK "COMPLETION WITHOUT VERIFICATION".
+echo ""
+echo "Test T-empty-sid: empty session_id + transcript /opus 3 + ch3 pair + completion -> BLOCK (empty sid fails UUID guard; unchanneled)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch3.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+write_opus_transcript "$TMPDIR_ROOT/empty-sid.jsonl" 3
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "" "$TMPDIR_ROOT/empty-sid.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "empty sid -> UUID guard fails -> unchanneled -> ch3 pair NOT credited -> R1 block"
 teardown_temp
 
 # ==================== SUMMARY ====================

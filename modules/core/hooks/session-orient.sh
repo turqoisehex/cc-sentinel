@@ -29,11 +29,14 @@ if [[ "${SENTINEL_LISTENER:-}" != "true" ]]; then
   PW_TPATH="${PW_TPATH/#\~/$HOME}"
   # Re-derive on resume/compact, or on an absent/unrecognized source (safe = resume).
   if [[ "$PW_SOURCE" != "startup" ]] && [[ "$PW_SOURCE" != "clear" ]] \
-     && [[ "$PW_SID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+     && [[ "$PW_SID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
     PW_FILE=""
     if [[ -n "$PW_TPATH" ]] && [[ -f "$PW_TPATH" ]]; then
       PW_FILE="$PW_TPATH"
     else
+      # Simplified vs the Stop hook's _rhc_find_transcript: takes the first glob match
+      # (no inode-dedup / cwd-slug / newest-mtime). Safe: pre-warm is optional and the
+      # Stop hook always re-derives with the full logic.
       shopt -s nullglob
       for g in "$HOME"/.claude/projects/*/"$PW_SID".jsonl; do PW_FILE="$g"; break; done
       shopt -u nullglob
@@ -46,6 +49,7 @@ if [[ "${SENTINEL_LISTENER:-}" != "true" ]]; then
             | select(.message.content|test("<command-message>opus</command-message>"))
             | (.message.content|capture("<command-args>(?<n>[0-9]+)")|.n)' 2>/dev/null \
         | tr -d '\r' | grep -E '^[0-9]+$' | tail -1)"
+      [[ -n "$PW_N" ]] && PW_N="$((10#$PW_N))"  # normalize leading zeros (/opus 04 -> 4), matching the Stop resolver
       if [[ -n "$PW_N" ]]; then
         PW_DIR="${PROJECT_DIR}/verification_findings/.session_channel"
         PW_TMP="${PW_DIR}/.${PW_SID}.tmp.$$"
