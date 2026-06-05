@@ -114,6 +114,10 @@ Net: the script would have worked correctly on the first call if ch0 had written
 - **/cleanup:** commits end-of-session housekeeping. Follow this protocol when `scripts/channel_commit.sh` exists; fall back to raw `git add` only when the enforcement module is NOT installed (Core-only cc-sentinel). The fallback is gated on the script's absence — never on inconvenience.
 - **/audit (stage 1), /design (stage 2):** rarely commit. If they do, follow this protocol.
 
+## Channel resolution at Stop time
+
+The commit pipeline does not write `.commit_channel_marker` (removed). The Stop hook resolves channel identity from your session transcript (the genuine `/opus N` invocation, re-derived every Stop) plus the per-session registry (`verification_findings/.session_channel/<session_id>`). Adopt your channel with `/opus N` before committing `--channel N`; the Stop hook resolves the correct channel automatically.
+
 ## Sync targets
 
 When editing any of the files below, sync all copies listed. `install.sh` preserves locally-modified copies on reinstall (diff-check gated by a `.cc-sentinel-installed` marker), so intentional local divergences survive — but unintentional drift means the next session running from a different copy sees a different script. Keep them aligned.

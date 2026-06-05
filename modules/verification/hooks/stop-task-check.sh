@@ -25,9 +25,9 @@
 #       (jq / unknown JSON shape) → exit 0, no output → allow stop. This
 #       prevents a malformed input from soft-bricking the session.
 #       Note: this fail-open rule does NOT extend to evidence integrity.
-#       Commit-pair recency (Check 1.5) and marker fallback BOTH fail
-#       CLOSED when stat/date return 0/empty or yield a negative age —
-#       unknown age is treated as "not recent," not as "recent."
+#       Commit-pair recency (Check 1.5) fails CLOSED when stat/date return
+#       0/empty or yield a negative age — unknown age is treated as "not
+#       recent," not as "recent."
 #   R7. Deferral gate — if assistant message contains deferral language
 #       ("deferred items", "future sprint", etc.), block and require developer
 #       permission. Complements PreToolUse anti-deferral hook (which only
@@ -50,18 +50,25 @@ INPUT="$(cat)" || exit 0
 } >> "$LOGFILE" 2>/dev/null
 
 # Extract all needed fields from JSON in one jq call (avoids 4-5 subprocess forks)
+# session_id + transcript_path go BEFORE last_assistant_message because the message
+# is variable-length (sed grabs lines 6+). Do NOT reorder without updating the sed
+# indices below.
 PARSED="$(echo "$INPUT" | jq -r '[
   (.stop_hook_active // "false"),
   (.last_assistant_message | length | tostring),
   (.cwd // ""),
+  (.session_id // ""),
+  (.transcript_path // ""),
   (.last_assistant_message // "")
 ] | join("\n")' 2>/dev/null | tr -d '\r')" || exit 0
 
-# Split into variables by line number (last field captures lines 4+ for multiline messages)
+# Split into variables by line number (last field captures lines 6+ for multiline messages)
 STOP_HOOK_ACTIVE="$(echo "$PARSED" | sed -n '1p')"
 LAST_MSG_LEN="$(echo "$PARSED" | sed -n '2p')"
 CWD="$(echo "$PARSED" | sed -n '3p')"
-LAST_MSG="$(echo "$PARSED" | sed -n '4,$p')"
+SESSION_ID="$(echo "$PARSED" | sed -n '4p')"
+TRANSCRIPT_PATH="$(echo "$PARSED" | sed -n '5p')"
+LAST_MSG="$(echo "$PARSED" | sed -n '6,$p')"
 
 # Prevent infinite loops: if we already blocked once, allow the stop
 if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
@@ -114,6 +121,126 @@ if [[ -n "$HOOK_CHANNEL" ]] && ! [[ "$HOOK_CHANNEL" =~ ^[0-9]+$ ]]; then
   echo "  -> SENTINEL_CHANNEL='$HOOK_CHANNEL' is not a bare integer; treating as unchanneled" >> "$LOGFILE" 2>/dev/null
   HOOK_CHANNEL=""
 fi
+
+# BEGIN resolve_hook_channel
+# Env-var-free channel resolution. Operates only on $HOOK_CHANNEL (already set by the
+# per-copy env-layer line), $SESSION_ID, $TRANSCRIPT_PATH — NO SENTINEL_/WAKEFUL_ tokens
+# here, so this region is byte-identical across canonical + deployed copies (parity-drift
+# check enforces it). Sets HOOK_CHANNEL=N on CHANNELED; sets RESOLVE_STATE for the
+# PRESENCE-but-unresolved states (consumed by the guards below). All jq runs without
+# pipefail/-e, captured via 2>/dev/null; on empty/error it falls through to the PRESENCE
+# decision (which fails CLOSED on a completion claim).
+_rhc_find_transcript() {
+  local tp="$1" sid="$2" cwd="$3"
+  tp="${tp/#\~/$HOME}"
+  if [[ -n "$tp" ]] && [[ -f "$tp" ]]; then printf '%s' "$tp"; return 0; fi
+  [[ -z "$sid" ]] && return 1
+  local -a cands=()
+  shopt -s nullglob
+  local g
+  for g in "$HOME"/.claude/projects/*/"$sid".jsonl; do cands+=("$g"); done
+  shopt -u nullglob
+  [[ ${#cands[@]} -eq 0 ]] && return 1
+  local -A seen=()
+  local -a uniq=()
+  local c rp
+  for c in "${cands[@]}"; do
+    rp="$(realpath "$c" 2>/dev/null || echo "$c")"
+    if [[ -z "${seen[$rp]:-}" ]]; then seen[$rp]=1; uniq+=("$c"); fi
+  done
+  if [[ ${#uniq[@]} -eq 1 ]]; then printf '%s' "${uniq[0]}"; return 0; fi
+  local slug
+  slug="$(printf '%s' "$cwd" | sed 's#[/:\\]#-#g')"
+  for c in "${uniq[@]}"; do
+    if [[ "$c" == *"$slug"* ]]; then printf '%s' "$c"; return 0; fi
+  done
+  local newest="" newest_mt=0 mt
+  for c in "${uniq[@]}"; do
+    mt="$(stat -c %Y "$c" 2>/dev/null || stat -f %m "$c" 2>/dev/null || echo 0)"
+    if [[ "$mt" -gt "$newest_mt" ]]; then newest_mt="$mt"; newest="$c"; fi
+  done
+  [[ -n "$newest" ]] && { printf '%s' "$newest"; return 0; }
+  return 1
+}
+_rhc_transcript_channel() {
+  local file="$1"
+  { [[ -z "$file" ]] || [[ ! -f "$file" ]]; } && return 1
+  local n
+  n="$(grep -a '<command-name>/opus</command-name>' "$file" 2>/dev/null \
+    | jq -r 'select(.type=="user")
+        | select((.message.content|type)=="string")
+        | select(.isSidechain!=true)
+        | select(.message.content|test("<command-message>opus</command-message>"))
+        | (.message.content|capture("<command-args>(?<n>[0-9]+)")|.n)' 2>/dev/null \
+    | tr -d '\r' | grep -E '^[0-9]+$' | tail -1)"
+  [[ -n "$n" ]] && { printf '%s' "$n"; return 0; }
+  return 1
+}
+_rhc_transcript_presence() {
+  local file="$1"
+  { [[ -z "$file" ]] || [[ ! -f "$file" ]]; } && return 1
+  grep -a '<command-name>/opus</command-name>' "$file" 2>/dev/null \
+    | jq -e 'select(.type=="user")
+        | select((.message.content|type)=="string")
+        | select(.isSidechain!=true)
+        | select(.message.content|test("<command-message>opus</command-message>"))' \
+        >/dev/null 2>&1
+}
+_rhc_cache_write() {
+  local n="$1"
+  [[ "$SESSION_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || return 0
+  local dir="${PROJECT_DIR}/verification_findings/.session_channel"
+  local tmp="${dir}/.${SESSION_ID}.tmp.$$"
+  { mkdir -p "$dir" && printf '%s' "$n" > "$tmp" && mv -f "$tmp" "$dir/$SESSION_ID"; } 2>/dev/null || true
+}
+resolve_hook_channel() {
+  RESOLVE_STATE=""
+  local cache_dir="${PROJECT_DIR}/verification_findings/.session_channel"
+  local cache_file="${cache_dir}/${SESSION_ID}"
+  local sid_ok="false"
+  [[ "$SESSION_ID" =~ ^[0-9a-fA-F-]{36}$ ]] && sid_ok="true"
+  if [[ -n "$HOOK_CHANNEL" ]]; then
+    if [[ "$sid_ok" == "true" ]]; then
+      local _tf _tn
+      _tf="$(_rhc_find_transcript "$TRANSCRIPT_PATH" "$SESSION_ID" "$CWD")" || _tf=""
+      _tn="$(_rhc_transcript_channel "$_tf")" || _tn=""
+      if [[ -n "$_tn" ]] && [[ "$_tn" != "$HOOK_CHANNEL" ]]; then
+        echo "  -> env channel $HOOK_CHANNEL wins; transcript disagrees ($_tn)" >> "$LOGFILE" 2>/dev/null
+      fi
+      _rhc_cache_write "$HOOK_CHANNEL"
+    fi
+    return 0
+  fi
+  [[ "$sid_ok" == "false" ]] && return 0
+  local tfile tchan
+  tfile="$(_rhc_find_transcript "$TRANSCRIPT_PATH" "$SESSION_ID" "$CWD")" || tfile=""
+  tchan="$(_rhc_transcript_channel "$tfile")" || tchan=""
+  if [[ -n "$tchan" ]]; then
+    HOOK_CHANNEL="$tchan"
+    _rhc_cache_write "$tchan"
+    return 0
+  fi
+  if [[ -f "$cache_file" ]]; then
+    local cval
+    cval="$(tr -d '\r' < "$cache_file" 2>/dev/null | head -n1)"
+    if [[ "$cval" =~ ^[0-9]+$ ]]; then
+      HOOK_CHANNEL="$cval"
+      return 0
+    fi
+  fi
+  # No valid N. Compute PRESENCE (wrapper-level witness, no args-validation):
+  # (i) a registry entry exists, OR (ii) a genuine /opus wrapper in the transcript.
+  local presence="false"
+  [[ -f "$cache_file" ]] && presence="true"
+  if [[ "$presence" == "false" ]]; then
+    _rhc_transcript_presence "$tfile" && presence="true"
+  fi
+  [[ "$presence" == "true" ]] && RESOLVE_STATE="ambiguous-presence"
+  return 0
+}
+resolve_hook_channel
+# END resolve_hook_channel
+
 TASK_FILES=()
 if [[ -n "$HOOK_CHANNEL" ]]; then
   # Channeled session: own channel + shared index
@@ -160,6 +287,30 @@ if [[ "$TASK_STATUS" == "none" ]]; then
   exit 0
 fi
 
+# Completion language patterns (hoisted here so the fail-closed gate below can use it)
+COMPLETION_PATTERNS="(all (items |steps |tasks |work )?(are |is )?(done|complete)|work is (complete|done|finished)|sprint is (complete|done)|task is (complete|done)|everything.s (done|complete)|implementation.* complete|ship.ready|what.s next|what should we|shall we move on|ready to move)"
+
+# Fail-closed gate (spec D / C.1): a PRESENCE-but-unresolved session that claims
+# completion must BLOCK before Check 1 — otherwise ACTIVE_FILES (built from the
+# unchanneled glob-all) lets a FOREIGN channel's VERIFICATION_BLOCKED satisfy R1
+# (the live FM-2). Independent gate; precedes Check 1 AND the bypasses. The completion
+# test is disjoint from the waiting-for-agents bypass language, so a waiting session is
+# unaffected; for an ambiguous-presence session, a completion claim correctly takes
+# precedence (channel ambiguity must be resolved with /opus N first).
+if [[ "${RESOLVE_STATE:-}" == "ambiguous-presence" ]]; then
+  if echo "$LAST_MSG" | grep -qiE "$COMPLETION_PATTERNS" 2>/dev/null; then
+    REASON="COMPLETION WITHOUT RESOLVED CHANNEL: This session adopted a channel (a genuine /opus invocation or a registry entry is present) but no valid channel number resolved (e.g. /opus with missing or non-numeric args, or a corrupt registry entry). Re-run /opus N to re-adopt your channel, then stop again."
+    REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
+    echo "  -> BLOCK (fail-closed: presence but unresolved channel)" >> "$LOGFILE" 2>/dev/null
+    echo "{\"decision\": \"block\", \"reason\": ${REASON_JSON}}"
+    exit 0
+  fi
+  # PRESENCE && !completion-claim -> UNCHANNELED_CONSERVATIVE: credit zero channel
+  # evidence (skip Check 1.5 below); own-staleness suppression is handled by the
+  # existing empty-HOOK_CHANNEL staleness guard.
+  RESOLVE_STATE="conservative"
+fi
+
 # --- CHECK 1: Completion claim without verification ---
 # LAST_MSG already extracted in consolidated jq call above
 
@@ -177,9 +328,6 @@ if echo "$LAST_MSG" | grep -qiE "Watching _pending_(sonnet|opus)/|Waiting for wo
   echo "  -> ALLOW (listener session — announce pattern)" >> "$LOGFILE" 2>/dev/null
   exit 0
 fi
-
-# Completion language patterns
-COMPLETION_PATTERNS="(all (items |steps |tasks |work )?(are |is )?(done|complete)|work is (complete|done|finished)|sprint is (complete|done)|task is (complete|done)|everything.s (done|complete)|implementation.* complete|ship.ready|what.s next|what should we|shall we move on|ready to move)"
 
 # Completion signal: completion language in assistant message (REQUIRED).
 # COMPLETE status in CURRENT_TASK.md alone is NOT sufficient — it may be stale
@@ -220,39 +368,17 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
   # landed. Window is configurable via SENTINEL_COMMIT_RECENCY_SEC (default 900s).
   # Fail-closed on clock or stat failure — unknown age != recent.
   # Trust model is the same as VERIFICATION_BLOCKED: operator + audit, not crypto.
-  if [[ "$VERIFICATION_FOUND" == "false" ]]; then
+  # Conservative guard (D7/C.1): an UNCHANNELED_CONSERVATIVE session must NOT read the
+  # commit pair (skip the whole block) — else it falls through to the top-level unsuffixed
+  # pair, a new FM-3 variant. Defensive depth: a conservative session has no completion
+  # claim and never enters this block today, but this guards a future refactor.
+  if [[ "$VERIFICATION_FOUND" == "false" ]] && [[ "${RESOLVE_STATE:-}" != "conservative" ]]; then
     COMMIT_RECENCY_SEC="${SENTINEL_COMMIT_RECENCY_SEC:-900}"
 
-    # Marker-file fallback: plain CC sessions (not spawned by /spawn) have no
-    # SENTINEL_CHANNEL/WAKEFUL_CHANNEL in env, so HOOK_CHANNEL is empty even
-    # when the operator just ran `channel_commit.sh --channel N`. The script
-    # writes verification_findings/.commit_channel_marker on success; we read
-    # it here if HOOK_CHANNEL is empty. Marker is recency-bounded by mtime
-    # (same window as the pair files) and must contain a valid integer.
-    EFFECTIVE_CHANNEL="$HOOK_CHANNEL"
-    if [[ -z "$EFFECTIVE_CHANNEL" ]]; then
-      MARKER_FILE="${PROJECT_DIR}/verification_findings/.commit_channel_marker"
-      if [[ -f "$MARKER_FILE" ]]; then
-        MARKER_MTIME=$(stat -c %Y "$MARKER_FILE" 2>/dev/null || stat -f %m "$MARKER_FILE" 2>/dev/null || echo 0)
-        NOW_MARKER=$(date +%s 2>/dev/null || echo 0)
-        if [[ "$NOW_MARKER" -gt 0 ]] && [[ "$MARKER_MTIME" -gt 0 ]]; then
-          MARKER_AGE=$((NOW_MARKER - MARKER_MTIME))
-          # Fail-closed on negative age (clock skew / future-dated marker):
-          # treat as untrusted rather than resolving a possibly-wrong channel.
-          if [[ "$MARKER_AGE" -ge 0 ]] && [[ "$MARKER_AGE" -le "$COMMIT_RECENCY_SEC" ]]; then
-            MARKER_CHANNEL=$(head -n1 "$MARKER_FILE" 2>/dev/null | tr -d '[:space:]')
-            if [[ "$MARKER_CHANNEL" =~ ^[0-9]+$ ]]; then
-              EFFECTIVE_CHANNEL="$MARKER_CHANNEL"
-              echo "  -> commit pair using channel from marker file: ${EFFECTIVE_CHANNEL} (marker age ${MARKER_AGE}s)" >> "$LOGFILE" 2>/dev/null
-            fi
-          fi
-        fi
-      fi
-    fi
-
-    if [[ -n "$EFFECTIVE_CHANNEL" ]]; then
-      PAIR_CHECK="${PROJECT_DIR}/verification_findings/commit_check_ch${EFFECTIVE_CHANNEL}.md"
-      PAIR_COLD="${PROJECT_DIR}/verification_findings/commit_cold_read_ch${EFFECTIVE_CHANNEL}.md"
+    # Channel comes from the resolver above (env / transcript / registry).
+    if [[ -n "$HOOK_CHANNEL" ]]; then
+      PAIR_CHECK="${PROJECT_DIR}/verification_findings/commit_check_ch${HOOK_CHANNEL}.md"
+      PAIR_COLD="${PROJECT_DIR}/verification_findings/commit_cold_read_ch${HOOK_CHANNEL}.md"
     else
       PAIR_CHECK="${PROJECT_DIR}/verification_findings/commit_check.md"
       PAIR_COLD="${PROJECT_DIR}/verification_findings/commit_cold_read.md"
@@ -274,9 +400,8 @@ if [[ "$COMPLETION_CLAIMED" == "true" ]]; then
           CHECK_AGE=$((NOW - CHECK_MTIME))
           COLD_AGE=$((NOW - COLD_MTIME))
           # Fail-closed on negative age (clock skew / future-dated pair file):
-          # mirrors the marker-file guard above. Bash -le treats negative ages
-          # as "within window," so without this guard a future-dated pair would
-          # silently satisfy R1.
+          # Bash -le treats negative ages as "within window," so without this
+          # guard a future-dated pair would silently satisfy R1.
           if [[ "$CHECK_AGE" -ge 0 ]] && [[ "$COLD_AGE" -ge 0 ]] && [[ "$CHECK_AGE" -le "$COMMIT_RECENCY_SEC" ]] && [[ "$COLD_AGE" -le "$COMMIT_RECENCY_SEC" ]]; then
             VERIFICATION_FOUND="true"
             echo "  -> commit pair satisfies R1 ($(basename "$PAIR_CHECK") + $(basename "$PAIR_COLD"), ages ${CHECK_AGE}s/${COLD_AGE}s)" >> "$LOGFILE" 2>/dev/null
@@ -424,6 +549,10 @@ fi
 # --- CHECK 2: Stale CT files (only for active/in-progress tasks) ---
 if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
   NOW=$(date +%s) || exit 0
+  # Staleness threshold (spec D7): 15 min default, env-overridable. Channeling
+  # re-activates this check per-channel; the old 120s was too aggressive mid-workflow.
+  STALE_SEC="${SENTINEL_STALE_SEC:-900}"
+  if ! [[ "$STALE_SEC" =~ ^[0-9]+$ ]]; then STALE_SEC=900; fi
   STALE_FILES=""
   for tf in "${ACTIVE_FILES[@]}"; do
     FNAME="$(basename "$tf")"
@@ -442,7 +571,7 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
     FILE_MTIME=$(stat -c %Y "$tf" 2>/dev/null || stat -f %m "$tf" 2>/dev/null) || continue
     FILE_MTIME=$(echo "$FILE_MTIME" | tr -d '\r')
     DIFF=$((NOW - FILE_MTIME)) || continue
-    if [[ "$DIFF" -ge 120 ]]; then
+    if [[ "$DIFF" -ge "$STALE_SEC" ]]; then
       CH=$(get_channel "$tf")
       if [[ -n "$CH" ]]; then
         STALE_FILES="${STALE_FILES} ${FNAME} (ch${CH}, ${DIFF}s)"
@@ -461,9 +590,9 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
 
   if [[ -n "$STALE_FILES" ]]; then
     if [[ -n "$HOOK_CHANNEL" ]]; then
-      REASON="Active CT file(s) not updated in the last 2 minutes:${STALE_FILES}. Before stopping: append a brief status line to your channel CT (what you completed, what's next). Do NOT clear, rewrite, or remove completed steps — history stays intact. Then stop again."
+      REASON="Active CT file(s) not updated recently:${STALE_FILES}. Before stopping: append a brief status line to your channel CT (what you completed, what's next). Do NOT clear, rewrite, or remove completed steps — history stays intact. Then stop again."
     else
-      REASON="Active CT file(s) not updated in the last 2 minutes:${STALE_FILES}. Before stopping: add a brief status line (what you completed, current status). Do NOT clear or rewrite from scratch. Then stop again."
+      REASON="Active CT file(s) not updated recently:${STALE_FILES}. Before stopping: add a brief status line (what you completed, current status). Do NOT clear or rewrite from scratch. Then stop again."
     fi
     REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
     echo "  -> BLOCK (stale:${STALE_FILES})" >> "$LOGFILE" 2>/dev/null

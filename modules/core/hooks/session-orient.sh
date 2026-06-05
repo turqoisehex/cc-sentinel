@@ -20,6 +20,41 @@ done
 
 [[ -z "$PROJECT_DIR" ]] && exit 0
 
+# --- Channel-registry pre-warm (optional; the Stop hook re-derives anyway) ---
+# Listener guard: never pre-warm for listener sessions (canonical: SENTINEL_LISTENER only).
+if [[ "${SENTINEL_LISTENER:-}" != "true" ]]; then
+  PW_SID="$(echo "$INPUT" | jq -r '.session_id // ""' 2>/dev/null | tr -d '\r')"
+  PW_SOURCE="$(echo "$INPUT" | jq -r '.source // ""' 2>/dev/null | tr -d '\r')"
+  PW_TPATH="$(echo "$INPUT" | jq -r '.transcript_path // ""' 2>/dev/null | tr -d '\r')"
+  PW_TPATH="${PW_TPATH/#\~/$HOME}"
+  # Re-derive on resume/compact, or on an absent/unrecognized source (safe = resume).
+  if [[ "$PW_SOURCE" != "startup" ]] && [[ "$PW_SOURCE" != "clear" ]] \
+     && [[ "$PW_SID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+    PW_FILE=""
+    if [[ -n "$PW_TPATH" ]] && [[ -f "$PW_TPATH" ]]; then
+      PW_FILE="$PW_TPATH"
+    else
+      shopt -s nullglob
+      for g in "$HOME"/.claude/projects/*/"$PW_SID".jsonl; do PW_FILE="$g"; break; done
+      shopt -u nullglob
+    fi
+    if [[ -n "$PW_FILE" ]] && [[ -f "$PW_FILE" ]]; then
+      PW_N="$(grep -a '<command-name>/opus</command-name>' "$PW_FILE" 2>/dev/null \
+        | jq -r 'select(.type=="user")
+            | select((.message.content|type)=="string")
+            | select(.isSidechain!=true)
+            | select(.message.content|test("<command-message>opus</command-message>"))
+            | (.message.content|capture("<command-args>(?<n>[0-9]+)")|.n)' 2>/dev/null \
+        | tr -d '\r' | grep -E '^[0-9]+$' | tail -1)"
+      if [[ -n "$PW_N" ]]; then
+        PW_DIR="${PROJECT_DIR}/verification_findings/.session_channel"
+        PW_TMP="${PW_DIR}/.${PW_SID}.tmp.$$"
+        { mkdir -p "$PW_DIR" && printf '%s' "$PW_N" > "$PW_TMP" && mv -f "$PW_TMP" "$PW_DIR/$PW_SID"; } 2>/dev/null || true
+      fi
+    fi
+  fi
+fi
+
 # Clean stale .active files from both pending dirs (>30 min = crashed session).
 # Clean stale .md prompt files from _pending_sonnet/ only (>1 hour = listener crashed).
 # NEVER clean .md files from _pending_opus/ — those are cross-session dispatches

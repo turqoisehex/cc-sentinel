@@ -431,18 +431,6 @@ release_lock
 
 if [[ $COMMIT_EXIT -eq 0 ]]; then
   COMMIT_SHA=$(git rev-parse HEAD)
-  # Marker file: lets the same-session stop hook resolve to this channel's pair
-  # files without requiring SENTINEL_CHANNEL in the session env (the common case
-  # for plain CC sessions not spawned by /spawn). Recency-bounded by mtime; the
-  # hook ignores markers older than SENTINEL_COMMIT_RECENCY_SEC. Channeled
-  # commit writes the channel; unchanneled commit clears any stale marker so
-  # an old channel doesn't leak forward.
-  if [[ -n "$CHANNEL" ]]; then
-    mkdir -p verification_findings 2>/dev/null || true
-    printf '%s\n' "$CHANNEL" > verification_findings/.commit_channel_marker 2>/dev/null || true
-  else
-    rm -f verification_findings/.commit_channel_marker 2>/dev/null || true
-  fi
   echo "SUCCESS: committed $COMMIT_SHA" >&2
   echo "$COMMIT_SHA"
 else

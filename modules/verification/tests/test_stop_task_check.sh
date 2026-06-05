@@ -61,6 +61,57 @@ create_channel_ct() {
 EOF
 }
 
+# Build JSON input with an explicit UUID session_id + transcript_path (resolver tests)
+build_input_sid() {
+  local cwd="$1" msg="$2" sid="$3" tpath="$4" stop_active="${5:-false}"
+  local msg_json tpath_json
+  msg_json=$(printf '%s' "$msg" | jq -Rs '.')
+  tpath_json=$(printf '%s' "$tpath" | jq -Rs '.')
+  cat << EOF
+{
+  "session_id": "$sid",
+  "cwd": "$cwd",
+  "transcript_path": $tpath_json,
+  "stop_hook_active": $stop_active,
+  "last_assistant_message": $msg_json,
+  "hook_event_name": "Stop"
+}
+EOF
+}
+
+# Write a transcript file containing a genuine /opus N invocation line (CRLF-separated
+# tags inside one JSON string, mirroring the wrapper CC emits — spec F3).
+write_opus_transcript() {
+  local file="$1" channel="$2"
+  local content
+  content=$(printf '<command-message>opus</command-message>\r\n<command-name>/opus</command-name>\r\n<command-args>%s</command-args>' "$channel")
+  jq -nc --arg c "$content" '{type:"user", isSidechain:false, message:{role:"user", content:$c}}' > "$file"
+}
+
+# Transcript with a genuine /opus wrapper but NON-numeric/absent args (AMBIGUOUS case).
+write_opus_transcript_bareargs() {
+  local file="$1"
+  local content
+  content=$(printf '<command-message>opus</command-message>\r\n<command-name>/opus</command-name>\r\n<command-args>abc</command-args>')
+  jq -nc --arg c "$content" '{type:"user", isSidechain:false, message:{role:"user", content:$c}}' > "$file"
+}
+
+# Transcript where /opus N appears ONLY inside array (tool_result) content (NOT a wrapper).
+write_opus_transcript_toolresult() {
+  local file="$1"
+  jq -nc '{type:"user", isSidechain:false, message:{role:"user", content:[{type:"tool_result", content:"the file says: claim via /opus 7"}]}}' > "$file"
+}
+
+# Transcript with <command-name>/opus</command-name> + <command-args>N</command-args> but NO
+# <command-message>opus</command-message> wrapper — the echo/transcript-log shape the grep -a
+# prefilter matches yet the F3 wrapper predicate MUST reject (spec F3). Not genuine, not PRESENCE.
+write_opus_transcript_cmdname_only() {
+  local file="$1" channel="$2"
+  local content
+  content=$(printf '<command-name>/opus</command-name>\r\n<command-args>%s</command-args>' "$channel")
+  jq -nc --arg c "$content" '{type:"user", isSidechain:false, message:{role:"user", content:$c}}' > "$file"
+}
+
 # Build JSON input mimicking CC hook protocol
 build_input() {
   local cwd="$1" msg="${2:-}" stop_active="${3:-false}"
@@ -360,12 +411,12 @@ echo "Test 6: Active task + stale CT -> BLOCK"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-must_touch_aged "$PROJECT/CURRENT_TASK.md" 300  # 5 minutes old
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 1000  # over the 900s threshold
 INPUT=$(build_input "$PROJECT" "Let me check that file for you.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains '"decision".*"block"' "blocks (stale CT)"
-assert_stdout_contains "not updated in the last 2 minutes" "mentions staleness"
+assert_stdout_contains "not updated recently" "mentions staleness"
 teardown_temp
 
 # --- Test 7: stop_hook_active=true -> ALLOW (anti-loop) ---
@@ -441,7 +492,7 @@ echo "Test 8c: Sonnet heartbeat does NOT bypass stale CT"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 1000  # over the 900s threshold
 mkdir -p "$PROJECT/verification_findings/_pending_sonnet/ch1"
 touch "$PROJECT/verification_findings/_pending_sonnet/ch1/.heartbeat"
 INPUT=$(build_input "$PROJECT" "Processing the prompt file...")
@@ -456,7 +507,7 @@ echo "Test 8d: Opus heartbeat does NOT bypass stale CT"
 setup_temp
 mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
-must_touch_aged "$PROJECT/CURRENT_TASK.md" 600  # stale
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 1000  # over the 900s threshold
 mkdir -p "$PROJECT/verification_findings/_pending_opus/ch2"
 touch "$PROJECT/verification_findings/_pending_opus/ch2/.heartbeat"
 INPUT=$(build_input "$PROJECT" "Running verification agents...")
@@ -548,8 +599,8 @@ mkdir -p "$PROJECT"
 create_ct "$PROJECT" "IN PROGRESS"
 create_channel_ct "$PROJECT" "1" "IN PROGRESS"
 create_channel_ct "$PROJECT" "2" "IN PROGRESS"
-must_touch_aged "$PROJECT/CURRENT_TASK.md" 300   # shared CT stale
-must_touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 1000   # shared CT stale (over 900s)
+must_touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 1000
 touch_now "$PROJECT/CURRENT_TASK_ch2.md"
 INPUT=$(build_input "$PROJECT" "Continuing work.")
 run_hook "$INPUT"
@@ -566,8 +617,8 @@ mkdir -p "$PROJECT"
 create_ct "$PROJECT" "COMPLETE"  # shared not active
 create_channel_ct "$PROJECT" "1" "IN PROGRESS"
 create_channel_ct "$PROJECT" "2" "IN PROGRESS"
-must_touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 300  # stale but not our channel
-must_touch_aged "$PROJECT/CURRENT_TASK_ch2.md" 300  # stale and IS our channel
+must_touch_aged "$PROJECT/CURRENT_TASK_ch1.md" 1000  # stale but not our channel
+must_touch_aged "$PROJECT/CURRENT_TASK_ch2.md" 1000  # stale and IS our channel (over 900s)
 INPUT=$(build_input "$PROJECT" "Continuing work on channel 2.")
 SENTINEL_CHANNEL=2 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -586,7 +637,7 @@ cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
 ## Plan
 - Step 1: Implement feature
 EOF
-must_touch_aged "$PROJECT/CURRENT_TASK.md" 300
+must_touch_aged "$PROJECT/CURRENT_TASK.md" 1000
 INPUT=$(build_input "$PROJECT" "Continuing implementation.")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
@@ -1224,8 +1275,9 @@ teardown_temp
 # WAKEFUL_CHANNEL as a project-aware fallback. The Wakeful-specific fallback is
 # NOT exercised by this canonical test suite by design — both env vars feed the
 # same HOOK_CHANNEL value via mechanically equivalent bash parameter expansion,
-# and T-pair-18 covers the env-precedence behavior using SENTINEL_CHANNEL.
-# WAKEFUL_CHANNEL is intentionally out-of-scope for cc-sentinel canonical tests.
+# and the env-precedence tests (T-resolve-2 env>transcript, AC-7 env>registry)
+# cover the env-wins behavior using SENTINEL_CHANNEL. WAKEFUL_CHANNEL is
+# intentionally out-of-scope for cc-sentinel canonical tests.
 
 # --- Test T-pair-1: Channeled session + fresh passing pair -> ALLOW ---
 echo ""
@@ -1492,132 +1544,8 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "channeled pair does not satisfy unchanneled session"
 teardown_temp
 
-# --- Test T-pair-15: Marker file resolves channel for non-/spawn session -> ALLOW ---
-echo ""
-echo "Test T-pair-15: No env channel + recent marker=2 + ch2 pair PASS -> ALLOW"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_now "$PROJECT/CURRENT_TASK.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
-touch_now "$PROJECT/verification_findings/.commit_channel_marker"
-INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
-run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_empty "marker file resolves channel without SENTINEL_CHANNEL in env"
-teardown_temp
-
-# --- Test T-pair-16: Stale marker ignored, falls through to top-level (none) -> BLOCK ---
-echo ""
-echo "Test T-pair-16: No env channel + stale marker=2 + ch2 pair PASS -> BLOCK"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_now "$PROJECT/CURRENT_TASK.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
-must_touch_aged "$PROJECT/verification_findings/.commit_channel_marker" 1200  # > 900s default
-INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
-run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "stale marker does not resolve channel"
-teardown_temp
-
-# --- Test T-pair-17: Garbage marker content (non-integer) ignored -> BLOCK ---
-echo ""
-echo "Test T-pair-17: No env channel + recent marker='garbage' + ch2 pair PASS -> BLOCK"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_now "$PROJECT/CURRENT_TASK.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-printf 'not-a-channel\n' > "$PROJECT/verification_findings/.commit_channel_marker"
-touch_now "$PROJECT/verification_findings/.commit_channel_marker"
-INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
-run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "non-integer marker content rejected"
-teardown_temp
-
-# --- Test T-pair-18: HOOK_CHANNEL env takes precedence over marker -> ALLOW (env wins) ---
-echo ""
-echo "Test T-pair-18: SENTINEL_CHANNEL=5 set + marker says 2 + ch5 pair PASS + ch2 absent -> ALLOW"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_now "$PROJECT/CURRENT_TASK.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch5.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch5.md"
-touch_now "$PROJECT/verification_findings/commit_check_ch5.md"
-touch_now "$PROJECT/verification_findings/commit_cold_read_ch5.md"
-printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
-touch_now "$PROJECT/verification_findings/.commit_channel_marker"
-INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
-SENTINEL_CHANNEL=5 run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_empty "env channel wins over marker; ch5 pair satisfies"
-teardown_temp
-
-# --- Test T-pair-19: Future-dated marker (negative age, clock skew) -> BLOCK ---
-echo ""
-echo "Test T-pair-19: No env channel + future-dated marker=2 + ch2 pair PASS -> BLOCK"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_now "$PROJECT/CURRENT_TASK.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
-must_touch_future "$PROJECT/verification_findings/.commit_channel_marker" 120  # 2 min in future
-INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
-run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "future-dated marker rejected (negative age)"
-teardown_temp
-
-# --- Test T-pair-20: channel_commit.sh unchanneled path clears marker -> BLOCK ---
-# Direct test of the script-side `rm -f verification_findings/.commit_channel_marker`
-# branch in channel_commit.sh (D5 contract). We don't run channel_commit.sh end-to-end
-# here (would need a git repo + commit context); instead we exercise the exact
-# rm-f semantic the script executes on unchanneled commit, then prove the hook
-# falls through to top-level paths.
-echo ""
-echo "Test T-pair-20: Marker present, unchanneled clear runs, ch2 pair PASS only -> BLOCK (marker gone, top-level absent)"
-setup_temp
-mkdir -p "$PROJECT"
-create_ct "$PROJECT" "IN PROGRESS"
-touch_now "$PROJECT/CURRENT_TASK.md"
-# Stage: ch2 pair files PASS + a stale marker pointing at ch2
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch2.md"
-echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_check_ch2.md"
-touch_now "$PROJECT/verification_findings/commit_cold_read_ch2.md"
-printf '2\n' > "$PROJECT/verification_findings/.commit_channel_marker"
-touch_now "$PROJECT/verification_findings/.commit_channel_marker"
-# Simulate the unchanneled-commit branch from channel_commit.sh:
-#   else
-#     rm -f verification_findings/.commit_channel_marker 2>/dev/null || true
-rm -f "$PROJECT/verification_findings/.commit_channel_marker" 2>/dev/null || true
-INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
-run_hook "$INPUT"
-assert_exit 0 "exit 0"
-assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "marker cleared on unchanneled commit; hook resolves to top-level paths which are absent"
-teardown_temp
-
 # --- Test T-pair-21: Future-dated pair files (negative age, clock skew) -> BLOCK ---
-# Parallel to T-pair-19 but for the pair files themselves (not the marker).
+# Exercises the negative-age fail-closed guard on the commit-pair files themselves.
 # Bash -le treats negative ages as "within window"; without the -ge 0 guard
 # on CHECK_AGE/COLD_AGE a future-dated pair would silently satisfy R1.
 echo ""
@@ -1634,6 +1562,287 @@ INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
 SENTINEL_CHANNEL=2 run_hook "$INPUT"
 assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "future-dated pair files rejected (negative age)"
+teardown_temp
+
+# --- Test T-parsed-1: multiline completion message still triggers R1 (sed-index regression) ---
+echo ""
+echo "Test T-parsed-1: multiline message with completion phrase on a later line -> BLOCK (R1)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "Here is a summary of the changes.
+I touched three files and updated the docs.
+All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "multiline completion (line 3) still triggers R1 after sed-index move"
+teardown_temp
+
+# --- Test T-parsed-2: multiline deferral message still triggers R7 (sed-index regression) ---
+echo ""
+echo "Test T-parsed-2: multiline message with deferral phrase on a later line -> BLOCK (R7)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+INPUT=$(build_input "$PROJECT" "I made the requested edits.
+The build is green.
+I am leaving the flaky test for a future sprint.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "DEFERRAL" "multiline deferral (line 3) still triggers R7 after sed-index move"
+teardown_temp
+
+# --- Test T-resolve-1: transcript /opus 3 resolves channel (no env) -> ALLOW via ch3 pair ---
+echo ""
+echo "Test T-resolve-1: no env + transcript /opus 3 + ch3 pair PASS -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch3.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+SID="11111111-1111-1111-1111-111111111111"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "transcript resolves ch3; ch3 pair satisfies R1"
+teardown_temp
+
+# --- Test T-resolve-2: env precedence wins + logs disagreement ---
+echo ""
+echo "Test T-resolve-2: SENTINEL_CHANNEL=5 + transcript /opus 3 + ch5 pair PASS -> ALLOW (env wins)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch5.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+SID="22222222-2222-2222-2222-222222222222"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+SENTINEL_CHANNEL=5 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "env ch5 wins over transcript ch3; ch5 pair satisfies"
+teardown_temp
+
+# --- Test T-resolve-3: CRLF-embedded /opus 4 line -> resolves bare 4 ---
+echo ""
+echo "Test T-resolve-3: transcript /opus 4 with CRLF in args -> resolves bare 4"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch4.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch4.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch4.md"
+SID="33333333-3333-3333-3333-333333333333"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 4
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "CRLF /opus 4 resolves to bare 4 (ch4 pair satisfies)"
+teardown_temp
+
+# --- Test T-resolve-4: registry fallback when transcript has no /opus ---
+echo ""
+echo "Test T-resolve-4: no env + transcript without /opus + registry=6 + ch6 pair PASS -> ALLOW"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch6.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch6.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch6.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch6.md"
+SID="44444444-4444-4444-4444-444444444444"
+jq -nc '{type:"user", isSidechain:false, message:{role:"user", content:"just a normal prompt"}}' > "$TMPDIR_ROOT/$SID.jsonl"
+mkdir -p "$PROJECT/verification_findings/.session_channel"
+printf '6' > "$PROJECT/verification_findings/.session_channel/$SID"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "registry=6 resolves when transcript yields no /opus; ch6 pair satisfies"
+teardown_temp
+
+# --- Test T-resolve-5: garbage SID -> skip registry/transcript entirely ---
+echo ""
+echo "Test T-resolve-5: garbage (non-UUID) session_id + transcript /opus 3 -> NOT channeled (skipped)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch3.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+write_opus_transcript "$TMPDIR_ROOT/not-a-uuid.jsonl" 3
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "not-a-uuid" "$TMPDIR_ROOT/not-a-uuid.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "garbage SID skips transcript/registry; ch3 pair NOT credited"
+teardown_temp
+
+# --- Test AC-8: PRESENCE witnessed (bare-args wrapper) + completion -> FAIL CLOSED ---
+echo ""
+echo "Test AC-8: genuine /opus wrapper with non-numeric args + completion -> BLOCK (fail closed)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+SID="55555555-5555-5555-5555-555555555555"
+write_opus_transcript_bareargs "$TMPDIR_ROOT/$SID.jsonl"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT RESOLVED CHANNEL" "AC-8: PRESENCE + no valid N + completion -> deliberate fail closed"
+teardown_temp
+
+# --- Test N1/N2: /opus 7 only in tool_result array content + completion -> NOT fail-closed ---
+echo ""
+echo "Test N1/N2: /opus 7 quoted in tool_result (array content), not a wrapper + completion -> ordinary R1 block (not fail-closed)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+SID="66666666-6666-6666-6666-666666666666"
+write_opus_transcript_toolresult "$TMPDIR_ROOT/$SID.jsonl"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "N1/N2: array-content /opus is NOT PRESENCE; parent glob-all, ordinary R1 block"
+teardown_temp
+
+# --- Test T-conservative-1: garbage registry + top-level pair PASS + completion -> fail-closed, NOT top-level-pair ALLOW ---
+echo ""
+echo "Test T-conservative-1: registry='xyz' (PRESENCE) + top-level pair PASS + completion -> BLOCK (does not read top-level pair)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+SID="77777777-7777-7777-7777-777777777777"
+jq -nc '{type:"user", isSidechain:false, message:{role:"user", content:"normal prompt, no opus"}}' > "$TMPDIR_ROOT/$SID.jsonl"
+mkdir -p "$PROJECT/verification_findings/.session_channel"
+printf 'xyz' > "$PROJECT/verification_findings/.session_channel/$SID"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT RESOLVED CHANNEL" "garbage registry = PRESENCE; fail-closed, does NOT read top-level pair"
+teardown_temp
+
+# --- Test T-stale-1: channeled own CT aged 200s -> ALLOW under 900s threshold ---
+# NOTE: message must NOT match COMPLETION_PATTERNS (else Check 1 blocks before staleness).
+echo ""
+echo "Test T-stale-1: SENTINEL_CHANNEL=4 + own CURRENT_TASK_ch4.md aged 200s -> ALLOW (under 900s)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "DONE"
+create_channel_ct "$PROJECT" 4 "IN PROGRESS"
+must_touch_aged "$PROJECT/CURRENT_TASK_ch4.md" 200
+INPUT=$(build_input "$PROJECT" "Inspecting the current state of the files.")
+SENTINEL_CHANNEL=4 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "own CT aged 200s is fresh under the 900s threshold"
+teardown_temp
+
+# --- Test T-stale-2: channeled own CT aged 1000s -> BLOCK (over 900s) ---
+echo ""
+echo "Test T-stale-2: SENTINEL_CHANNEL=4 + own CURRENT_TASK_ch4.md aged 1000s -> BLOCK (over 900s)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "DONE"
+create_channel_ct "$PROJECT" 4 "IN PROGRESS"
+must_touch_aged "$PROJECT/CURRENT_TASK_ch4.md" 1000
+INPUT=$(build_input "$PROJECT" "Inspecting the current state of the files.")
+SENTINEL_CHANNEL=4 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "not updated recently" "own CT aged 1000s is stale over the 900s threshold"
+teardown_temp
+
+# --- Test T-prewarm-1: SessionStart source=resume re-derives + writes cache ---
+echo ""
+echo "Test T-prewarm-1: SessionStart(resume) + transcript /opus 3 -> cache .session_channel/<sid> == 3"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+SID="88888888-8888-8888-8888-888888888888"
+write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
+ORIENT_SCRIPT="$(cd "$SCRIPT_DIR/../../.." && pwd)/modules/core/hooks/session-orient.sh"
+ORIENT_INPUT=$(cat << EOF
+{"session_id":"$SID","cwd":"$PROJECT","source":"resume","transcript_path":"$TMPDIR_ROOT/$SID.jsonl","hook_event_name":"SessionStart"}
+EOF
+)
+echo "$ORIENT_INPUT" | (cd "$TMPDIR_ROOT" && bash "$ORIENT_SCRIPT") > /dev/null 2>&1
+TOTAL=$((TOTAL + 1))
+if [[ -f "$PROJECT/verification_findings/.session_channel/$SID" ]] \
+   && [[ "$(cat "$PROJECT/verification_findings/.session_channel/$SID")" == "3" ]]; then
+  echo -e "  ${GREEN}PASS${NC}: prewarm wrote cache=3 on resume"
+  PASS=$((PASS + 1))
+else
+  echo -e "  ${RED}FAIL${NC}: prewarm did not write cache=3"
+  FAIL=$((FAIL + 1))
+fi
+teardown_temp
+
+# --- Test AC-7: env channel wins over registry, disagreement logged ---
+echo ""
+echo "Test AC-7: SENTINEL_CHANNEL=5 + registry=3 + ch5 pair PASS -> ALLOW (env wins over registry)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch5.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch5.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch5.md"
+SID="99999999-9999-9999-9999-999999999999"
+jq -nc '{type:"user", isSidechain:false, message:{role:"user", content:"normal prompt"}}' > "$TMPDIR_ROOT/$SID.jsonl"
+mkdir -p "$PROJECT/verification_findings/.session_channel"
+printf '3' > "$PROJECT/verification_findings/.session_channel/$SID"
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+SENTINEL_CHANNEL=5 run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_empty "env ch5 wins over registry ch3; ch5 pair satisfies R1"
+teardown_temp
+
+# --- Test T-resolve-6: <command-name>-only echo (no <command-message> wrapper) -> filter rejects, NOT channeled ---
+# Proves the F3 <command-message>opus</command-message> wrapper predicate is load-bearing: without it,
+# a transcript-log echo of "<command-name>/opus</command-name>" would falsely resolve the channel.
+echo ""
+echo "Test T-resolve-6: <command-name>/opus 3</command-name> WITHOUT <command-message> wrapper + ch3 pair + completion -> BLOCK (echo rejected, ch3 pair NOT credited)"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+mkdir -p "$PROJECT/verification_findings"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check_ch3.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_check_ch3.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read_ch3.md"
+SID="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+write_opus_transcript_cmdname_only "$TMPDIR_ROOT/$SID.jsonl" 3
+INPUT=$(build_input_sid "$PROJECT" "All work is done. Sprint complete." "$SID" "$TMPDIR_ROOT/$SID.jsonl")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "cmdname-only echo is NOT a genuine wrapper; filter + presence both reject; ch3 pair NOT credited; not fail-closed"
 teardown_temp
 
 # ==================== SUMMARY ====================
