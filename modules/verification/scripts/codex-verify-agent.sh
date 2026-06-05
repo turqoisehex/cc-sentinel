@@ -84,11 +84,15 @@ fi
 ROLE_UPPER=$(echo "$ROLE" | tr '[:lower:]' '[:upper:]' | tr '_' ' ')
 PROMPT_BODY=$(awk "/^## ${ROLE_UPPER}/{found=1; next} /^---$/{if(found) exit} found{print}" "$PROMPTS_FILE")
 
-# Splice placeholders
-PROMPT_BODY=$(echo "$PROMPT_BODY" | sed \
-  -e "s|{{WORK_PRODUCT}}|${WORK_PRODUCT}|g" \
-  -e "s|{{SOURCE_SPEC}}|${SOURCE_SPEC}|g" \
-  -e "s|{{SCOPE_SUMMARY}}|${SCOPE_SUMMARY}|g")
+# Splice placeholders via bash parameter expansion (NOT sed). The values are file paths
+# (-w/-s, always contain '/') and free-text scope summaries (-S) that may contain
+# sed-hostile chars: '|' (the s||| delimiter -> "unknown option to s"), '&' (the sed
+# replacement back-reference -> silent corruption), and newlines (-> "unterminated s").
+# ${var//"pat"/"$repl"} substitutes literally — quoted pattern = no glob, quoted
+# replacement = no word-split/glob, and no char in $repl is special. (cc-sentinel BUG-1)
+PROMPT_BODY=${PROMPT_BODY//"{{WORK_PRODUCT}}"/"$WORK_PRODUCT"}
+PROMPT_BODY=${PROMPT_BODY//"{{SOURCE_SPEC}}"/"$SOURCE_SPEC"}
+PROMPT_BODY=${PROMPT_BODY//"{{SCOPE_SUMMARY}}"/"$SCOPE_SUMMARY"}
 
 # Step 3: Invoke codex exec (with reasoning-flag fallback per design-spec section 4.2)
 CODEX_ARGS=(-m "$MODEL" -s read-only --skip-git-repo-check --ephemeral)
