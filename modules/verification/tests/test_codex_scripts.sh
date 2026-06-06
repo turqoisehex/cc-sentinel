@@ -15,6 +15,14 @@ ok(){ echo "  PASS: $1"; PASS=$((PASS+1)); }
 no(){ echo "  FAIL: $1"; FAIL=$((FAIL+1)); }
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+# --- hermetic HOME: codex-verify-agent.sh runs an auth pre-flight (gates on
+# $HOME/.codex/auth.json containing "auth_mode") BEFORE it ever invokes codex; with no
+# auth file it short-circuits to VERDICT: TRANSIENT and the codex stub never runs, so
+# $CX_PROMPT stays empty and every splice assertion fails. CI runners have no ~/.codex,
+# so point HOME at a temp dir with a stub auth file. (postfix-scan has no auth gate.) ---
+export HOME="$TMP/home"
+mkdir -p "$HOME/.codex"
+printf '{"auth_mode":"chatgpt"}\n' > "$HOME/.codex/auth.json"
 # --- codex stub: records args -> $CX_ARGS, stdin -> $CX_PROMPT, echoes a reply ---
 mkdir -p "$TMP/bin"
 cat > "$TMP/bin/codex" <<'STUB'
