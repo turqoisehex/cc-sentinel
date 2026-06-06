@@ -82,6 +82,12 @@ Exception: if `scripts/channel_commit.sh` does not exist in the repo (Core-only 
      - Re-stages in Phase 2, re-hashes, drift-checks, commits
 ```
 
+## Commit-pair as R1 stop-hook evidence
+
+After a successful commit via `channel_commit.sh`, the pair files (`commit_check[_chN].md` + `commit_cold_read[_chN].md`) persist in `verification_findings/`. The stop hook (`stop-task-check.sh`) reads these as lightweight R1 evidence: both must have `VERDICT: PASS|WARN` and mtime within `SENTINEL_COMMIT_RECENCY_SEC` (default 900s). This lets sessions that commit via `channel_commit.sh` satisfy the verification gate without a full 5-agent squad.
+
+The commit pipeline no longer writes `.commit_channel_marker`. Channel identity is resolved at Stop time from your session transcript (re-derived every Stop) plus the per-session registry (`.session_channel/<session_id>`). Adopt your channel with `/opus N` before committing `--channel N`; the Stop hook resolves the correct channel automatically.
+
 ## Why `git diff HEAD -- <file>` is safe
 
 `git diff HEAD -- <file>` compares the working tree against the HEAD tree for the specified file. It does NOT consult the index, so other sessions' staging is invisible. Two consecutive calls produce identical output regardless of what any session has staged in between.
@@ -100,7 +106,7 @@ Any hash you compute by hand will be overwritten or ignored. If the index was po
 
 ## Failure mode example (2026-04-14 incident)
 
-Session ch0 was committing one test file during `/perfect` Phase 3. Session ch2 had independently staged four unrelated files (`CURRENT_TASK_ch2.md`, `MANUAL_TEST_QUEUE.md`, `SPRINT_CHECKLIST.md`, `decisions_ch2_feature.md`) for its own upcoming commit.
+Session ch0 was committing one test file during `/perfect` Phase 3. Session ch2 had independently staged four unrelated files (`CURRENT_TASK_ch2.md`, `MANUAL_TEST_QUEUE.md`, `SPRINT_CHECKLIST.md`, `decisions_ch2_cse_phantom.md`) for its own upcoming commit.
 
 ch0 ran the pre-fix `/build` commit ceremony (since removed — `/build` now resolves directly to `~/.claude/skills/build/SKILL.md`): `git add <file> && git diff --cached > diff_ch0.tmp && git hash-object --stdin < diff_ch0.tmp`. The diff captured all five files (ch0's + ch2's). ch0 wrote verification files with the polluted hash and dispatched agents. Agents correctly reported FAIL: "3 files staged — commit message claims 1." ch0 then attempted `git reset HEAD` (bare) and `git reset HEAD -- <ch2's files>` — both forbidden. Took ~15 tool calls to recover before finally using `channel_commit.sh --files` which handled everything cleanly on the first attempt.
 
@@ -129,6 +135,7 @@ When editing any of the files below, sync all copies listed. `install.sh` preser
 | `commit-adversarial.md` | `cc-sentinel/modules/commit-enforcement/agents/` | `~/.claude/agents/`, project `.claude/agents/` |
 | `commit-cold-reader.md` | `cc-sentinel/modules/commit-enforcement/agents/` | `~/.claude/agents/`, project `.claude/agents/` |
 | `commit-protocol.md` (this file) | `cc-sentinel/modules/commit-enforcement/reference/` | `~/.claude/reference/`, project `.claude/reference/` |
+| `stop-task-check.sh` | `cc-sentinel/modules/verification/hooks/` | `~/.claude/hooks/enforcement/` (deployed copy carries intentional Wakeful divergence: `WAKEFUL_CHANNEL`/`WAKEFUL_LISTENER` fallbacks. Mark with `# INTENTIONAL DIVERGENCE` comments. Project `scripts/claude-hooks/install.sh` lists it as EXTERNAL_HOOKS — never sync from Wakeful repo.) |
 | Sprint-pipeline skills — `audit`, `design`, `build`, `perfect`, `finalize`, `sonnet`, `opus`, `rewrite`, `spawn` (9 skills) | `cc-sentinel/modules/sprint-pipeline/skills/<name>/SKILL.md` | `~/.claude/skills/<name>/SKILL.md` |
 | `cleanup` skill (Core module — distinct from sprint-pipeline) | `cc-sentinel/modules/core/skills/cleanup/SKILL.md` | `~/.claude/skills/cleanup/SKILL.md` |
 

@@ -77,6 +77,19 @@ echo "Test BUG-2b: CODEX_MODEL env override is honored"
 CODEX_MODEL=gpt-5.5-test CODEX_POSTFIX_NO_STREAK=1 bash "$POSTFIX" "$SPEC" "$PFOUT" >"$TMP/p2.log" 2>&1 || true
 if grep -qx 'gpt-5.5-test' "$CX_ARGS" 2>/dev/null; then ok "CODEX_MODEL env override honored"; else no "CODEX_MODEL env override ignored (args: $(tr '\n' ' ' < "$CX_ARGS" 2>/dev/null))"; fi
 
+# ===================== BUG-3: reasoning floor (model_reasoning_effort=high) =====================
+# codex exec must pass -c model_reasoning_effort="high" so the reasoning floor is enforced.
+# The stub writes each argv entry on its own line; -c and its VALUE are separate argv entries,
+# so 'model_reasoning_effort=high' must appear as a standalone line in $CX_ARGS.
+echo "Test BUG-3: postfix-scan passes -c model_reasoning_effort=high to codex exec"
+: > "$CX_ARGS"
+CODEX_POSTFIX_NO_STREAK=1 bash "$POSTFIX" "$SPEC" "$PFOUT" >"$TMP/p3.log" 2>&1 || true
+if grep -qx 'model_reasoning_effort=high' "$CX_ARGS" 2>/dev/null; then
+  ok "postfix-scan passes -c model_reasoning_effort=high (reasoning floor enforced)"
+else
+  no "postfix-scan missing model_reasoning_effort=high in args (captured args: $(tr '\n' ' ' < "$CX_ARGS" 2>/dev/null))"
+fi
+
 echo ""
 echo "RESULTS: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]] && echo "All codex-script tests passed." || exit 1

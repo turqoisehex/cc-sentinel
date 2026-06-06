@@ -60,6 +60,17 @@ done
 [[ ${#FILE_ARRAY[@]} -eq 0 ]] && echo "ERROR: --files \"f1 f2\" required" >&2 && exit 1
 [[ -z "$MESSAGE" ]] && echo "ERROR: -m \"message\" required" >&2 && exit 1
 
+# --- K2 guard: channel env var set but --channel flag missing ---
+# Prevents a channeled session from writing a top-level (unsuffixed) pair, which
+# an unchanneled stop attempt could then read as false R1 evidence.
+# Only fires when a channel env var is set AND --channel was NOT supplied.
+_env_channel="${SENTINEL_CHANNEL:-${WAKEFUL_CHANNEL:-}}"
+if [[ -n "$_env_channel" && -z "$CHANNEL" ]]; then
+  echo "ERROR: channel env var set (SENTINEL_CHANNEL/WAKEFUL_CHANNEL) but --channel flag missing — refusing to run; pass --channel N explicitly" >&2
+  exit 1
+fi
+unset _env_channel
+
 # --- Derived paths ---
 if [[ -n "$CHANNEL" ]]; then
   CH_SUFFIX="_ch${CHANNEL}"
@@ -175,14 +186,19 @@ stamp_hash_into_outputs() {
 # --- Dispatch + Wait ---
 dispatch_and_wait() {
   if [[ "$LOCAL_VERIFY" == "true" ]]; then
-    if [[ ! -f "$CHECK_FILE" ]] || [[ ! -f "$COLD_READ_FILE" ]]; then
-      echo "LOCAL VERIFY: Result files missing." >&2
-      echo "  Expected:" >&2
-      echo "    $CHECK_FILE" >&2
-      echo "    $COLD_READ_FILE" >&2
-      echo "  Hash: $HASH" >&2
-      echo "  Spawn commit-adversarial + commit-cold-reader subagents, then retry with --local-verify." >&2
-      exit 1
+    # When --skip-squad is set the caller has intentionally bypassed the squad;
+    # the pre-flight existence check for result files is also skipped because
+    # there are no agents to produce them. We still stamp the hash as bookkeeping.
+    if [[ "$SKIP_SQUAD" != "true" ]]; then
+      if [[ ! -f "$CHECK_FILE" ]] || [[ ! -f "$COLD_READ_FILE" ]]; then
+        echo "LOCAL VERIFY: Result files missing." >&2
+        echo "  Expected:" >&2
+        echo "    $CHECK_FILE" >&2
+        echo "    $COLD_READ_FILE" >&2
+        echo "  Hash: $HASH" >&2
+        echo "  Spawn commit-adversarial + commit-cold-reader subagents, then retry with --local-verify." >&2
+        exit 1
+      fi
     fi
     # In local-verify mode, agents read the working-tree diff (produced by
     # `git diff HEAD -- <files>`) via the caller, not the staged diff. The
@@ -233,6 +249,14 @@ YAML_EOF
 
 # --- Validate Results ---
 validate_results() {
+  # When both --local-verify and --skip-squad are set the caller has intentionally
+  # bypassed the squad; result files were never produced, so validation is also
+  # skipped. When --skip-squad is used without --local-verify the listener still
+  # produces result files and we validate them normally.
+  if [[ "$LOCAL_VERIFY" == "true" && "$SKIP_SQUAD" == "true" ]]; then
+    echo "SKIP_SQUAD: Skipping result validation (local-verify + skip-squad)." >&2
+    return 0
+  fi
   for f in "$CHECK_FILE" "$COLD_READ_FILE"; do
     [[ ! -f "$f" ]] && echo "ERROR: Missing $f" >&2 && return 1
   done

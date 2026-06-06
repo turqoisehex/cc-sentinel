@@ -445,6 +445,72 @@ assert_file_committed "CLAUDE.md" "CLAUDE.md is in the commit"
 assert_no_lock "lock cleaned up"
 teardown_repo
 
+# --- Test K2a: K2 guard fires when SENTINEL_CHANNEL env set but --channel missing ---
+echo ""
+echo "Test K2a: K2 guard fires (SENTINEL_CHANNEL set, no --channel flag)"
+setup_repo
+create_test_file "file_k2a.txt" "content K2a"
+SENTINEL_CHANNEL=5 run_commit --files "file_k2a.txt" -m "test: k2 guard"
+assert_exit 1 "exits 1 when SENTINEL_CHANNEL set and --channel missing"
+assert_stderr_contains "channel env var set.*--channel flag missing" "K2 error message printed"
+teardown_repo
+
+# --- Test K2b: K2 guard fires when WAKEFUL_CHANNEL env set but --channel missing ---
+echo ""
+echo "Test K2b: K2 guard fires (WAKEFUL_CHANNEL set, no --channel flag)"
+setup_repo
+create_test_file "file_k2b.txt" "content K2b"
+WAKEFUL_CHANNEL=3 run_commit --files "file_k2b.txt" -m "test: k2 guard wakeful"
+assert_exit 1 "exits 1 when WAKEFUL_CHANNEL set and --channel missing"
+assert_stderr_contains "channel env var set.*--channel flag missing" "K2 error message printed"
+teardown_repo
+
+# --- Test K2c: K2 guard is silent when no channel env var set (unchanneled normal usage) ---
+echo ""
+echo "Test K2c: K2 guard silent — no channel env var, no --channel flag (unchanneled)"
+setup_repo
+create_test_file "file_k2c.txt" "content K2c"
+create_heartbeat
+run_commit --files "file_k2c.txt" -m "test: k2 guard silent"
+assert_exit 0 "exits 0 (no channel env, no --channel flag — guard does not fire)"
+assert_no_lock "lock cleaned up"
+teardown_repo
+
+# --- Test K2d: K2 guard silent when --channel supplied even with SENTINEL_CHANNEL set ---
+echo ""
+echo "Test K2d: K2 guard silent — both SENTINEL_CHANNEL env and --channel flag present"
+setup_repo
+create_test_file "file_k2d.txt" "content K2d"
+create_heartbeat "verification_findings/_pending_sonnet/ch5"
+SENTINEL_CHANNEL=5 run_commit --channel 5 --files "file_k2d.txt" -m "test: k2 guard both set"
+assert_exit 0 "exits 0 (env set + --channel flag supplied — guard does not fire)"
+assert_no_lock "lock cleaned up"
+teardown_repo
+
+# --- Test SK1: --skip-squad bypasses local-verify file existence check ---
+echo ""
+echo "Test SK1: --skip-squad --local-verify bypasses result-file existence check"
+setup_repo
+create_test_file "file_sk1.txt" "content SK1"
+# No result files created — with --skip-squad, the check should be skipped
+run_commit --files "file_sk1.txt" -m "test: skip-squad local-verify" --skip-squad --local-verify
+assert_exit 0 "exits 0 with --skip-squad --local-verify even without result files"
+assert_stdout_contains "[0-9a-f]{7,}" "outputs commit SHA"
+assert_no_lock "lock cleaned up"
+teardown_repo
+
+# --- Test SK2: local-verify WITHOUT --skip-squad still requires result files ---
+echo ""
+echo "Test SK2: --local-verify without --skip-squad still requires result files"
+setup_repo
+create_test_file "file_sk2.txt" "content SK2"
+# No result files, no --skip-squad — should fail with LOCAL VERIFY error
+run_commit --files "file_sk2.txt" -m "test: local-verify no skip-squad" --local-verify
+assert_exit 1 "exits 1 when --local-verify without --skip-squad and no result files"
+assert_stderr_contains "LOCAL VERIFY.*Result files missing" "reports missing result files"
+assert_no_lock "lock cleaned up on failure"
+teardown_repo
+
 # ==================== SUMMARY ====================
 
 echo ""

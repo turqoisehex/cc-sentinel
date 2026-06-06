@@ -424,6 +424,159 @@ fi
 assert_no_lock "lock dir absent after both channel commits"
 teardown_repo
 
+# --- Test C3: Concurrent two-channel end-to-end integration ---
+#
+# INTEGRATION TEST (tagged slow — two real concurrent processes).
+# Unlike C1 (lock-contention unit) and C2 (sequential isolation), this test
+# launches channel 2 and channel 3 as TRUE concurrent background processes and
+# asserts that BOTH commits land with no file loss and no cross-channel staging
+# leak.  Uses --governance to bypass the verification pipeline (governance mode
+# sets LOCAL_VERIFY=true and skips dispatch entirely), which is the correct path
+# for an integration harness that only wants to validate the lock serialization
+# and per-channel staging logic end-to-end.
+#
+# Why --governance rather than --skip-squad:
+#   --skip-squad still requires a heartbeat + mock wait_for_results.sh.  Two
+#   concurrent invocations calling the same mock simultaneously would both try
+#   to read from _pending_sonnet at the same time, producing a race on the
+#   dispatch-file lookup.  --governance exits the verify loop immediately after
+#   Phase 1 (no dispatch file written, no wait) and goes straight to Phase 2,
+#   so the only shared resource is the .git/commit.lock — exactly what we test.
+#
+# Skip guard: set SKIP_SLOW_TESTS=1 to exclude from the fast commit-time suite.
+echo ""
+echo "Test C3: Concurrent two-channel end-to-end integration (SLOW — two real background processes)"
+
+if [[ "${SKIP_SLOW_TESTS:-0}" == "1" ]]; then
+  echo "  SKIP: SKIP_SLOW_TESTS=1 — skipping slow integration test"
+else
+  BG_PID2=""
+  BG_PID3=""
+  setup_repo
+  create_test_file "file_ch2_c3.txt" "channel 2 c3 content"
+  create_test_file "file_ch3_c3.txt" "channel 3 c3 content"
+
+  # Launch ch2 and ch3 concurrently.  --governance skips the entire verification
+  # pipeline so no heartbeat or mock wait is needed.
+  {
+    bash "$REPO/scripts_mock/channel_commit.sh" \
+      --channel 2 \
+      --files "file_ch2_c3.txt" \
+      -m "test: ch2 concurrent" \
+      --governance \
+      > "$TMPDIR_ROOT/c3_ch2_stdout" 2> "$TMPDIR_ROOT/c3_ch2_stderr"
+    echo $? > "$TMPDIR_ROOT/c3_ch2_exit"
+  } &
+  BG_PID2=$!
+
+  {
+    bash "$REPO/scripts_mock/channel_commit.sh" \
+      --channel 3 \
+      --files "file_ch3_c3.txt" \
+      -m "test: ch3 concurrent" \
+      --governance \
+      > "$TMPDIR_ROOT/c3_ch3_stdout" 2> "$TMPDIR_ROOT/c3_ch3_stderr"
+    echo $? > "$TMPDIR_ROOT/c3_ch3_exit"
+  } &
+  BG_PID3=$!
+
+  # Wait for both to complete (governance path is fast — Phase1+Phase2 with no dispatch).
+  wait "$BG_PID2" 2>/dev/null || true
+  wait "$BG_PID3" 2>/dev/null || true
+  BG_PID2=""
+  BG_PID3=""
+
+  C3_CH2_EXIT=$(cat "$TMPDIR_ROOT/c3_ch2_exit" 2>/dev/null || echo "unknown")
+  C3_CH3_EXIT=$(cat "$TMPDIR_ROOT/c3_ch3_exit" 2>/dev/null || echo "unknown")
+
+  # (a) Both processes exited successfully
+  TOTAL=$((TOTAL + 1))
+  if [[ "$C3_CH2_EXIT" == "0" && "$C3_CH3_EXIT" == "0" ]]; then
+    echo -e "  ${GREEN}PASS${NC}: both ch2 and ch3 exited 0 (concurrent governance commits)"
+    PASS=$((PASS + 1))
+  else
+    echo -e "  ${RED}FAIL${NC}: expected both exit 0 — ch2=$C3_CH2_EXIT ch3=$C3_CH3_EXIT"
+    echo "    ch2 stderr: $(cat "$TMPDIR_ROOT/c3_ch2_stderr" 2>/dev/null)"
+    echo "    ch3 stderr: $(cat "$TMPDIR_ROOT/c3_ch3_stderr" 2>/dev/null)"
+    FAIL=$((FAIL + 1))
+  fi
+
+  # (b) Both commit messages are present in git log (no commit was lost)
+  TOTAL=$((TOTAL + 1))
+  C3_CH2_MATCH=$(git log --oneline | grep -c "ch2 concurrent" || true)
+  C3_CH3_MATCH=$(git log --oneline | grep -c "ch3 concurrent" || true)
+  if [[ $C3_CH2_MATCH -ge 1 && $C3_CH3_MATCH -ge 1 ]]; then
+    echo -e "  ${GREEN}PASS${NC}: both ch2 and ch3 concurrent commits present in git log (no commit lost)"
+    PASS=$((PASS + 1))
+  else
+    echo -e "  ${RED}FAIL${NC}: missing commit(s) — ch2=$C3_CH2_MATCH ch3=$C3_CH3_MATCH"
+    echo "    git log: $(git log --oneline)"
+    FAIL=$((FAIL + 1))
+  fi
+
+  # (c) ch2's commit does not contain ch3's file (no cross-channel staging leak)
+  TOTAL=$((TOTAL + 1))
+  C3_CH2_COMMIT=$(git log --oneline | grep "ch2 concurrent" | awk '{print $1}' | head -1)
+  if [[ -n "$C3_CH2_COMMIT" ]]; then
+    if ! git show --stat "$C3_CH2_COMMIT" 2>/dev/null | grep -q "file_ch3_c3.txt"; then
+      echo -e "  ${GREEN}PASS${NC}: ch2 concurrent commit contains no ch3 files (no staging leak)"
+      PASS=$((PASS + 1))
+    else
+      echo -e "  ${RED}FAIL${NC}: ch2 concurrent commit CONTAINS ch3 file (cross-channel staging leak)"
+      FAIL=$((FAIL + 1))
+    fi
+  else
+    echo -e "  ${RED}FAIL${NC}: ch2 concurrent commit not found — cannot verify isolation"
+    FAIL=$((FAIL + 1))
+  fi
+
+  # (d) ch3's commit does not contain ch2's file
+  TOTAL=$((TOTAL + 1))
+  C3_CH3_COMMIT=$(git log --oneline | grep "ch3 concurrent" | awk '{print $1}' | head -1)
+  if [[ -n "$C3_CH3_COMMIT" ]]; then
+    if ! git show --stat "$C3_CH3_COMMIT" 2>/dev/null | grep -q "file_ch2_c3.txt"; then
+      echo -e "  ${GREEN}PASS${NC}: ch3 concurrent commit contains no ch2 files (no staging leak)"
+      PASS=$((PASS + 1))
+    else
+      echo -e "  ${RED}FAIL${NC}: ch3 concurrent commit CONTAINS ch2 file (cross-channel staging leak)"
+      FAIL=$((FAIL + 1))
+    fi
+  else
+    echo -e "  ${RED}FAIL${NC}: ch3 concurrent commit not found — cannot verify isolation"
+    FAIL=$((FAIL + 1))
+  fi
+
+  # (e) Both files exist on disk after concurrent commits (no file was lost)
+  TOTAL=$((TOTAL + 1))
+  if [[ -f "file_ch2_c3.txt" && -f "file_ch3_c3.txt" ]]; then
+    echo -e "  ${GREEN}PASS${NC}: both channel files present on disk after concurrent commits"
+    PASS=$((PASS + 1))
+  else
+    echo -e "  ${RED}FAIL${NC}: file(s) missing after concurrent commits"
+    echo "    ch2 file: $(ls file_ch2_c3.txt 2>/dev/null || echo 'MISSING')"
+    echo "    ch3 file: $(ls file_ch3_c3.txt 2>/dev/null || echo 'MISSING')"
+    FAIL=$((FAIL + 1))
+  fi
+
+  # (f) git fsck clean after concurrent commits
+  TOTAL=$((TOTAL + 1))
+  FSCK_OUT3=$(git fsck --full 2>&1)
+  FSCK_EXIT3=$?
+  if [[ $FSCK_EXIT3 -eq 0 ]]; then
+    echo -e "  ${GREEN}PASS${NC}: git fsck clean after concurrent commit test"
+    PASS=$((PASS + 1))
+  else
+    echo -e "  ${RED}FAIL${NC}: git fsck reported errors after concurrent commits (exit=$FSCK_EXIT3)"
+    echo "    fsck: $FSCK_OUT3"
+    FAIL=$((FAIL + 1))
+  fi
+
+  # (g) lock dir absent after both concurrent processes finish
+  assert_no_lock "lock dir absent after concurrent two-channel commit"
+
+  teardown_repo
+fi
+
 # ==================== SUMMARY ====================
 
 echo ""

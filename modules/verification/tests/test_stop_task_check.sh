@@ -2199,6 +2199,79 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "empty sid -> UUID guard fails -> unchanneled -> ch3 pair NOT credited -> R1 block"
 teardown_temp
 
+# ==================== SYMMETRIC COMMIT-PAIR (Check 1.5) A4/A5 ====================
+# These four cases prove that a partial or failing pair does NOT satisfy R1.
+# They are the symmetric counterparts to T-pair-4 (check FAIL/cold PASS) and
+# T-pair-5 (cold absent/check present). All four must block.
+
+# --- Test T-pair-A4a: commit_check.md VERDICT FAIL, commit_cold_read.md PASS -> BLOCK ---
+echo ""
+echo "Test T-pair-A4a: commit_check.md FAIL + commit_cold_read.md PASS -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: FAIL (issues found)" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "commit_check FAIL does not satisfy R1"
+assert_stdout_contains "commit_check.md" "block reason names the failing pair file"
+teardown_temp
+
+# --- Test T-pair-A4b: commit_cold_read.md VERDICT FAIL, commit_check.md PASS -> BLOCK ---
+echo ""
+echo "Test T-pair-A4b: commit_cold_read.md FAIL + commit_check.md PASS -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+echo "VERDICT: FAIL (issues found)" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "commit_cold_read FAIL does not satisfy R1"
+assert_stdout_contains "commit_cold_read.md" "block reason names the failing pair file"
+teardown_temp
+
+# --- Test T-pair-A4c: commit_check.md missing, commit_cold_read.md present+PASS -> BLOCK ---
+echo ""
+echo "Test T-pair-A4c: commit_check.md absent + commit_cold_read.md PASS -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# commit_check.md deliberately absent; only cold_read present
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_cold_read.md"
+touch_now "$PROJECT/verification_findings/commit_cold_read.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "missing commit_check.md does not satisfy R1"
+teardown_temp
+
+# --- Test T-pair-A4d: commit_cold_read.md missing, commit_check.md present+PASS -> BLOCK ---
+echo ""
+echo "Test T-pair-A4d: commit_cold_read.md absent + commit_check.md PASS -> BLOCK"
+setup_temp
+mkdir -p "$PROJECT"
+create_ct "$PROJECT" "IN PROGRESS"
+touch_now "$PROJECT/CURRENT_TASK.md"
+# commit_cold_read.md deliberately absent; only check present
+echo "VERDICT: PASS" > "$PROJECT/verification_findings/commit_check.md"
+touch_now "$PROJECT/verification_findings/commit_check.md"
+INPUT=$(build_input "$PROJECT" "All work is done. Sprint complete.")
+run_hook "$INPUT"
+assert_exit 0 "exit 0"
+assert_stdout_contains "COMPLETION WITHOUT VERIFICATION" "missing commit_cold_read.md does not satisfy R1"
+teardown_temp
+
 # ==================== SUMMARY ====================
 
 echo ""
