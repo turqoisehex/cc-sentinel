@@ -618,9 +618,9 @@ if [[ "$TASK_STATUS" == "active" ]] && [[ ${#ACTIVE_FILES[@]} -gt 0 ]]; then
 
   if [[ -n "$STALE_FILES" ]]; then
     if [[ -n "$HOOK_CHANNEL" ]]; then
-      REASON="Active CT file(s) not updated recently:${STALE_FILES}. Before stopping: append a brief status line to your channel CT (what you completed, what's next). Do NOT clear, rewrite, or remove completed steps — history stays intact. Then stop again."
+      REASON="Active CT file(s) not updated recently:${STALE_FILES}. Before stopping, bring your channel CT up to date: tick off completed steps ([ ] -> [x]), add any new tasks or follow-ups you discovered, and revise the status / next-step to match reality. This is real maintenance, NOT a one-line status append — but do NOT blank the file or delete completed history. Then stop again."
     else
-      REASON="Active CT file(s) not updated recently:${STALE_FILES}. Before stopping: add a brief status line (what you completed, current status). Do NOT clear or rewrite from scratch. Then stop again."
+      REASON="Active CT file(s) not updated recently:${STALE_FILES}. Before stopping, bring the CT up to date: tick off completed steps ([ ] -> [x]), add any newly-discovered tasks, and revise the status to match reality. This is real maintenance, NOT a one-line status append — but do NOT blank or rewrite it from scratch. Then stop again."
     fi
     REASON_JSON=$(printf '%s' "$REASON" | jq -Rs '.' | tr -d '\r') || exit 0
     echo "  -> BLOCK (stale:${STALE_FILES})" >> "$LOGFILE" 2>/dev/null
