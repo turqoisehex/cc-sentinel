@@ -955,7 +955,10 @@ echo "Running Codex integrity scan on $(basename "$SPEC_PATH")..." >&2
 # Override via the CODEX_MODEL env var if the account's model changes. (cc-sentinel BUG-2)
 CODEX_MODEL="${CODEX_MODEL:-gpt-5.5}"
 set +e
-"$TIMEOUT_CMD" 300 "$CODEX_CMD" exec -m "$CODEX_MODEL" -c model_reasoning_effort="high" --skip-git-repo-check < "$TMP_PROMPT" \
+# Reasoning floor: -c expects a TOML value, so the string MUST be quoted. Match
+# codex-verify-agent.sh's proven form exactly -> argv carries model_reasoning_effort="high"
+# (literal quotes). Bare model_reasoning_effort=high is not valid TOML. (cc-sentinel BUG-3)
+"$TIMEOUT_CMD" 300 "$CODEX_CMD" exec -m "$CODEX_MODEL" -c "model_reasoning_effort=\"high\"" --skip-git-repo-check < "$TMP_PROMPT" \
   > "$OUTPUT_TMP" 2>"$TMP_STDERR"
 CODEX_EXIT=$?
 set -e

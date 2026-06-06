@@ -86,7 +86,7 @@ Exception: if `scripts/channel_commit.sh` does not exist in the repo (Core-only 
 
 After a successful commit via `channel_commit.sh`, the pair files (`commit_check[_chN].md` + `commit_cold_read[_chN].md`) persist in `verification_findings/`. The stop hook (`stop-task-check.sh`) reads these as lightweight R1 evidence: both must have `VERDICT: PASS|WARN` and mtime within `SENTINEL_COMMIT_RECENCY_SEC` (default 900s). This lets sessions that commit via `channel_commit.sh` satisfy the verification gate without a full 5-agent squad.
 
-The commit pipeline no longer writes `.commit_channel_marker`. Channel identity is resolved at Stop time from your session transcript (re-derived every Stop) plus the per-session registry (`.session_channel/<session_id>`). Adopt your channel with `/opus N` before committing `--channel N`; the Stop hook resolves the correct channel automatically.
+See § Channel resolution at Stop time for how the stop hook identifies which channel's pair files to read.
 
 ## Why `git diff HEAD -- <file>` is safe
 

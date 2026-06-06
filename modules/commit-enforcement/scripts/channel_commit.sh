@@ -188,7 +188,8 @@ dispatch_and_wait() {
   if [[ "$LOCAL_VERIFY" == "true" ]]; then
     # When --skip-squad is set the caller has intentionally bypassed the squad;
     # the pre-flight existence check for result files is also skipped because
-    # there are no agents to produce them. We still stamp the hash as bookkeeping.
+    # there may be no agents to produce them. stamp_hash_into_outputs (below) then
+    # stamps whatever result files exist and silently no-ops over any that are absent.
     if [[ "$SKIP_SQUAD" != "true" ]]; then
       if [[ ! -f "$CHECK_FILE" ]] || [[ ! -f "$COLD_READ_FILE" ]]; then
         echo "LOCAL VERIFY: Result files missing." >&2
@@ -202,8 +203,9 @@ dispatch_and_wait() {
     fi
     # In local-verify mode, agents read the working-tree diff (produced by
     # `git diff HEAD -- <files>`) via the caller, not the staged diff. The
-    # script stamps the hash as a bookkeeping marker. VERDICT is what gates
-    # the commit — the agent's independent assessment.
+    # script stamps the hash into any result files present (a no-op when
+    # --skip-squad produced none). VERDICT is what gates the commit — the
+    # agent's independent assessment.
     stamp_hash_into_outputs
     echo "LOCAL VERIFY: Stamped hash $HASH into verification files." >&2
     return 0
