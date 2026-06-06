@@ -367,9 +367,9 @@ assert_exit 0 "exit 0"
 assert_stdout_contains "PROTECTED" ".claude/protected-files.txt is found"
 teardown_temp
 
-# --- Test 12: GOVERNANCE-EDIT-AUTHORIZED must be standalone line ---
+# --- Test 12: GOVERNANCE-EDIT-AUTHORIZED matches anywhere on a line (unanchored grep, 6f3f9e0) ---
 echo ""
-echo "Test 12: GOVERNANCE-EDIT-AUTHORIZED embedded in text -> not authorized"
+echo "Test 12: GOVERNANCE-EDIT-AUTHORIZED embedded in text -> authorized (looser match, user decision 2026-05-20)"
 setup_temp
 create_protected_list "$PROJECT" "CLAUDE.md"
 cat > "$PROJECT/CURRENT_TASK.md" << 'EOF'
@@ -382,7 +382,7 @@ EOF
 INPUT=$(build_write_input "$PROJECT/CLAUDE.md")
 run_hook "$INPUT"
 assert_exit 0 "exit 0"
-assert_stdout_contains "PROTECTED" "embedded marker not accepted as authorization"
+assert_stdout_empty "embedded marker IS accepted — the file-protection grep is unanchored per the 2026-05-20 user decision (Claude kept failing to place it standalone; 6f3f9e0)"
 teardown_temp
 
 # --- Test 13: .env file -> deny (sensitive pattern) ---

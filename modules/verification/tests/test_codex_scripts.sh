@@ -27,6 +27,12 @@ STUB
 chmod +x "$TMP/bin/codex"
 export PATH="$TMP/bin:$PATH"
 export CX_ARGS="$TMP/cx_args.txt" CX_PROMPT="$TMP/cx_prompt.txt"
+# --- stub prompts file (verify-agent reads $CODEX_PROMPTS_FILE; the real one lives at
+# $HOME/.claude/reference/ which is absent in CI). A MECHANICAL role section (--- delimited)
+# carrying the three placeholders the splice replaces, so we can assert each is spliced. ---
+PROMPTS="$TMP/prompts.md"
+printf '## MECHANICAL\nWORK_PRODUCT={{WORK_PRODUCT}}\nSOURCE_SPEC={{SOURCE_SPEC}}\nSCOPE_SUMMARY={{SCOPE_SUMMARY}}\n---\n## ADVERSARIAL\nstub\n---\n' > "$PROMPTS"
+export CODEX_PROMPTS_FILE="$PROMPTS"
 
 # ===================== BUG-1: codex-verify-agent.sh splice =====================
 echo "Test BUG-1: verify-agent splice handles sed-hostile chars in -w/-s/-S"
@@ -36,7 +42,7 @@ WP="specs/feat|x&y.md"
 SS="docs/spec a/b.md"
 OUT="$TMP/verify_out.md"
 : > "$CX_ARGS"; : > "$CX_PROMPT"
-"$VERIFY" -m gpt-5.5 -r mechanical -w "$WP" -s "$SS" -S "$SCOPE" -o "$OUT" >"$TMP/v.log" 2>&1
+bash "$VERIFY" -m gpt-5.5 -r mechanical -w "$WP" -s "$SS" -S "$SCOPE" -o "$OUT" >"$TMP/v.log" 2>&1
 vrc=$?
 # (a) must not hard-fail on a sed error and must write an output file
 if [[ -s "$OUT" ]]; then ok "verify-agent wrote output (no splice crash), rc=$vrc"; else no "verify-agent produced no output (rc=$vrc): $(tail -2 "$TMP/v.log")"; fi
@@ -52,7 +58,7 @@ echo "Test BUG-2: postfix-scan passes -m gpt-5.5 to codex exec (default)"
 SPEC="$TMP/spec.md"; printf '# spec\nrole: integrity\n' > "$SPEC"
 PFOUT="$TMP/postfix_out.md"
 : > "$CX_ARGS"; : > "$CX_PROMPT"
-CODEX_POSTFIX_NO_STREAK=1 "$POSTFIX" "$SPEC" "$PFOUT" >"$TMP/p.log" 2>&1 || true
+CODEX_POSTFIX_NO_STREAK=1 bash "$POSTFIX" "$SPEC" "$PFOUT" >"$TMP/p.log" 2>&1 || true
 if grep -qx 'exec' "$CX_ARGS" 2>/dev/null && grep -qx 'gpt-5.5' "$CX_ARGS" 2>/dev/null && grep -qx '\-m' "$CX_ARGS" 2>/dev/null; then
   ok "postfix-scan invoked: codex exec -m gpt-5.5"
 else
@@ -60,7 +66,7 @@ else
 fi
 echo "Test BUG-2b: CODEX_MODEL env override is honored"
 : > "$CX_ARGS"
-CODEX_MODEL=gpt-5.5-test CODEX_POSTFIX_NO_STREAK=1 "$POSTFIX" "$SPEC" "$PFOUT" >"$TMP/p2.log" 2>&1 || true
+CODEX_MODEL=gpt-5.5-test CODEX_POSTFIX_NO_STREAK=1 bash "$POSTFIX" "$SPEC" "$PFOUT" >"$TMP/p2.log" 2>&1 || true
 if grep -qx 'gpt-5.5-test' "$CX_ARGS" 2>/dev/null; then ok "CODEX_MODEL env override honored"; else no "CODEX_MODEL env override ignored (args: $(tr '\n' ' ' < "$CX_ARGS" 2>/dev/null))"; fi
 
 echo ""

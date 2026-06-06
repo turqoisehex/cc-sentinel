@@ -70,7 +70,7 @@ if [[ -n "${SYSTEMROOT:-}" ]]; then
 fi
 
 # Step 2: Build prompt from template
-PROMPTS_FILE="$HOME/.claude/reference/codex-verification-prompts.md"
+PROMPTS_FILE="${CODEX_PROMPTS_FILE:-$HOME/.claude/reference/codex-verification-prompts.md}"
 if [[ ! -f "$PROMPTS_FILE" ]]; then
   echo "VERDICT: TRANSIENT — prompts file missing ($PROMPTS_FILE)" > "$TMP_FILE"
   mv -f "$TMP_FILE" "$OUTPUT_PATH"

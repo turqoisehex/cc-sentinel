@@ -442,9 +442,10 @@ run_hook --internal --skip-tests --local-verify -m "cleanup test"
 assert_exit 0 "exits 0, commit succeeds"
 assert_file_not_exists "verification_findings/squad_cleanup1" "complete squad dir removed"
 assert_file_exists "verification_findings/squad_incomplete" "incomplete squad dir preserved"
-# Per-commit agent files should also be cleaned
-assert_file_not_exists "verification_findings/commit_check.md" "commit_check.md removed"
-assert_file_not_exists "verification_findings/commit_cold_read.md" "commit_cold_read.md removed"
+# Per-commit pair files PERSIST as lightweight R1 stop-hook evidence (changed in 5ff2b54);
+# only squad dirs are cleaned. The pair ages out via the recency window, it is not deleted.
+assert_file_exists "verification_findings/commit_check.md" "commit_check.md PERSISTS (R1 evidence)"
+assert_file_exists "verification_findings/commit_cold_read.md" "commit_cold_read.md PERSISTS (R1 evidence)"
 teardown_repo
 
 # --- Test 17: Commit message passed through correctly ---
@@ -602,9 +603,9 @@ run_hook --internal --skip-tests --local-verify -m "channel cleanup"
 assert_exit 0 "exits 0"
 assert_file_not_exists "verification_findings/squad_ch2_run1" "channel squad dir cleaned"
 assert_file_exists "verification_findings/squad_run_other" "non-channel squad dir preserved"
-# Channel-specific agent files cleaned
-assert_file_not_exists "verification_findings/commit_check_ch2.md" "channel commit_check removed"
-assert_file_not_exists "verification_findings/commit_cold_read_ch2.md" "channel cold_read removed"
+# Channel-specific pair files PERSIST as R1 evidence (5ff2b54); only squad dirs are cleaned.
+assert_file_exists "verification_findings/commit_check_ch2.md" "channel commit_check PERSISTS (R1 evidence)"
+assert_file_exists "verification_findings/commit_cold_read_ch2.md" "channel cold_read PERSISTS (R1 evidence)"
 unset SENTINEL_CHANNEL
 teardown_repo
 
