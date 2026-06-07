@@ -1795,6 +1795,7 @@ touch_now "$PROJECT/CURRENT_TASK.md"
 SID="88888888-8888-8888-8888-888888888888"
 write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
 ORIENT_SCRIPT="$(cd "$SCRIPT_DIR/../../.." && pwd)/modules/core/hooks/session-orient.sh"
+[[ -f "$ORIENT_SCRIPT" ]] || ORIENT_SCRIPT="$SCRIPT_DIR/session-orient.sh"  # deployed-companion layout
 ORIENT_INPUT=$(cat << EOF
 {"session_id":"$SID","cwd":"$PROJECT","source":"resume","transcript_path":"$TMPDIR_ROOT/$SID.jsonl","hook_event_name":"SessionStart"}
 EOF
@@ -1937,6 +1938,7 @@ touch_now "$PROJECT/CURRENT_TASK.md"
 SID="ffffffff-ffff-ffff-ffff-ffffffffffff"
 write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
 ORIENT_SCRIPT="$(cd "$SCRIPT_DIR/../../.." && pwd)/modules/core/hooks/session-orient.sh"
+[[ -f "$ORIENT_SCRIPT" ]] || ORIENT_SCRIPT="$SCRIPT_DIR/session-orient.sh"  # deployed-companion layout
 ORIENT_INPUT=$(cat << EOF
 {"session_id":"$SID","cwd":"$PROJECT","source":"startup","transcript_path":"$TMPDIR_ROOT/$SID.jsonl","hook_event_name":"SessionStart"}
 EOF
@@ -2123,6 +2125,7 @@ touch_now "$PROJECT/CURRENT_TASK.md"
 SID="cafe0000-0000-0000-0000-000000000001"
 write_opus_transcript "$TMPDIR_ROOT/$SID.jsonl" 3
 ORIENT_SCRIPT="$(cd "$SCRIPT_DIR/../../.." && pwd)/modules/core/hooks/session-orient.sh"
+[[ -f "$ORIENT_SCRIPT" ]] || ORIENT_SCRIPT="$SCRIPT_DIR/session-orient.sh"  # deployed-companion layout
 ORIENT_INPUT=$(cat << EOF
 {"session_id":"$SID","cwd":"$PROJECT","source":"compact","transcript_path":"$TMPDIR_ROOT/$SID.jsonl","hook_event_name":"SessionStart"}
 EOF
