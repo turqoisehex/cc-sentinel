@@ -106,7 +106,7 @@ Any hash you compute by hand will be overwritten or ignored. If the index was po
 
 ## Failure mode example (2026-04-14 incident)
 
-Session ch0 was committing one test file during `/perfect` Phase 3. Session ch2 had independently staged four unrelated files (`CURRENT_TASK_ch2.md`, `MANUAL_TEST_QUEUE.md`, `SPRINT_CHECKLIST.md`, `decisions_ch2_cse_phantom.md`) for its own upcoming commit.
+Session ch0 was committing one test file during `/perfect` Phase 3. Session ch2 had independently staged four unrelated files (`CURRENT_TASK_ch2.md`, `MANUAL_TEST_QUEUE.md`, `SPRINT_CHECKLIST.md`, `decisions_ch2_feature.md`) for its own upcoming commit.
 
 ch0 ran the pre-fix `/build` commit ceremony (since removed — `/build` now resolves directly to `~/.claude/skills/build/SKILL.md`): `git add <file> && git diff --cached > diff_ch0.tmp && git hash-object --stdin < diff_ch0.tmp`. The diff captured all five files (ch0's + ch2's). ch0 wrote verification files with the polluted hash and dispatched agents. Agents correctly reported FAIL: "3 files staged — commit message claims 1." ch0 then attempted `git reset HEAD` (bare) and `git reset HEAD -- <ch2's files>` — both forbidden. Took ~15 tool calls to recover before finally using `channel_commit.sh --files` which handled everything cleanly on the first attempt.
 

@@ -121,7 +121,7 @@ fi
 # VERIFICATION_BLOCKED — but the CHECK 2 staleness guard skips channel CTs for it (a parent
 # isn't nagged about other channels' staleness). See the TASK_FILES build + guards below.
 # Deployed mirrors may extend this with project-local fallbacks (e.g.,
-# WAKEFUL_CHANNEL). See spec § F8 canonical/deployed divergence note.
+# a project-local channel env var (e.g. ${MYPROJECT_CHANNEL})). See spec § F8 canonical/deployed divergence note.
 HOOK_CHANNEL="${SENTINEL_CHANNEL:-}"
 # Sanitize: channel must be a bare integer (prevents glob/pattern injection in
 # file-path construction and [[ pattern ]] matching downstream).

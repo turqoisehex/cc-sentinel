@@ -492,7 +492,7 @@ SCOPE: [paste one-sentence scope]
    **6a. Identify the entry point.** How does the user arrive at this feature? What screen, what tap, what navigation path?
 
    **6b. Walk each interaction step in user time.** At each step:
-   - What is on screen right now? Read the widget tree.
+   - What is on screen right now? Read the component/view tree — trace the render path from the entry point.
    - What can the user tap? Trace each button's handler. Connected or dead?
    - What audio is playing?
    - What happens when this step ends? Trace the completion condition.

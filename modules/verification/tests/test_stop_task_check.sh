@@ -1279,14 +1279,14 @@ teardown_temp
 # 5-agent squad. Channel-scoped via filename suffix.
 #
 # ENV-VAR COVERAGE NOTE:
-# Canonical cc-sentinel hook reads SENTINEL_CHANNEL only. Deployed Wakeful mirror
-# resolves HOOK_CHANNEL="${SENTINEL_CHANNEL:-${WAKEFUL_CHANNEL:-}}", adding
-# WAKEFUL_CHANNEL as a project-aware fallback. The Wakeful-specific fallback is
-# NOT exercised by this canonical test suite by design — both env vars feed the
-# same HOOK_CHANNEL value via mechanically equivalent bash parameter expansion,
-# and the env-precedence tests (T-resolve-2 env>transcript, AC-7 env>registry)
-# cover the env-wins behavior using SENTINEL_CHANNEL. WAKEFUL_CHANNEL is
-# intentionally out-of-scope for cc-sentinel canonical tests.
+# Canonical cc-sentinel hook reads SENTINEL_CHANNEL only. A deployed project mirror
+# may extend this by resolving HOOK_CHANNEL="${SENTINEL_CHANNEL:-${MYPROJECT_CHANNEL:-}}",
+# adding a project-local channel env var as a project-aware fallback. That
+# project-specific fallback is NOT exercised by this canonical test suite by design
+# — both env vars feed the same HOOK_CHANNEL value via mechanically equivalent bash
+# parameter expansion, and the env-precedence tests (T-resolve-2 env>transcript,
+# AC-7 env>registry) cover the env-wins behavior using SENTINEL_CHANNEL. Project-local
+# channel env vars are intentionally out-of-scope for cc-sentinel canonical tests.
 
 # --- Test T-pair-1: Channeled session + fresh passing pair -> ALLOW ---
 echo ""

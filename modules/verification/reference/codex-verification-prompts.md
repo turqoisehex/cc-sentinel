@@ -210,7 +210,7 @@ SCOPE: {{SCOPE_SUMMARY}}
 3. For EACH change, trace ONE LEVEL OUT:
    - **Upstream:** What creates/writes the data this consumes? `grep -rn "field_name" lib/` to find writers.
    - **Downstream:** What reads/uses this output? `grep -rn "field_name" lib/` to find readers. Check: new params with defaults silently changing behavior, removed fields still referenced.
-   - **Lateral:** DB column added → migration? `find . -name "*.dart" -path "*/migrations/*"`. Constructor changed → `grep -rn "ClassName(" lib/`. File renamed → `grep -rn "old_import" lib/`. Enum changed → grep all switches for exhaustiveness.
+   - **Lateral:** DB column added → migration? `find . -name "*.dart" -path "*/migrations/*"` (Dart/Flutter), `find . -name "*.py" -path "*/migrations/*"` (Python), or equivalent for your stack. Constructor changed → `grep -rn "ClassName(" <source-dir>/`. File renamed → `grep -rn "old_import" <source-dir>/`. Enum changed → grep all switches for exhaustiveness.
 
 4. Mark: `[T]` TRACED (cite where handled), `[U]` UNTRACED (describe risk), `[?]` UNCERTAIN (flag for human review).
 

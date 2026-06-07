@@ -156,7 +156,7 @@ Run `/verify full` scoped to the implementation plan produced in Step 3 (and ref
 
 ### Step 7: External-tool prompt verification (situational — run only if applicable)
 
-If the spec or plan includes a prompt the user must paste into an EXTERNAL tool (e.g., Claude Design for Flutter widgets, an image generator, a transcription model), the prompt is part of the deliverable surface and gets the same /verify rigor BEFORE the user pastes it.
+If the spec or plan includes a prompt the user must paste into an EXTERNAL tool (e.g., a UI design tool, an image generator, a transcription model), the prompt is part of the deliverable surface and gets the same /verify rigor BEFORE the user pastes it.
 
 Run `/verify full` scoped to the prompt(s). Up to **10 rounds**. Same protocol as Step 2.
 
