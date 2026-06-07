@@ -8,7 +8,11 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# cc-sentinel layout: tests/ and hooks/ are siblings under modules/verification/.
 HOOK_SCRIPT="$(cd "$SCRIPT_DIR/.." && pwd)/hooks/stop-task-check.sh"
+# Deployed-companion layout (~/.claude/hooks/enforcement/): the test rides alongside the
+# hook in the same dir, so fall back to a sibling if the cc-sentinel path is absent.
+[[ -f "$HOOK_SCRIPT" ]] || HOOK_SCRIPT="$SCRIPT_DIR/stop-task-check.sh"
 
 if [[ ! -f "$HOOK_SCRIPT" ]]; then
   echo "ERROR: stop-task-check.sh not found at $HOOK_SCRIPT" >&2
