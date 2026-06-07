@@ -452,17 +452,23 @@ setup_repo
 create_test_file "file_k2a.txt" "content K2a"
 SENTINEL_CHANNEL=5 run_commit --files "file_k2a.txt" -m "test: k2 guard"
 assert_exit 1 "exits 1 when SENTINEL_CHANNEL set and --channel missing"
-assert_stderr_contains "channel env var set.*--channel flag missing" "K2 error message printed"
+assert_stderr_contains "channel env var SENTINEL_CHANNEL set.*--channel flag missing" "K2 error message printed"
 teardown_repo
 
-# --- Test K2b: K2 guard fires when WAKEFUL_CHANNEL env set but --channel missing ---
+# --- Test K2b: canonical guard is generic — a non-SENTINEL project-alias env var alone does NOT trigger K2 ---
 echo ""
-echo "Test K2b: K2 guard fires (WAKEFUL_CHANNEL set, no --channel flag)"
+echo "Test K2b: canonical K2 guard is generic — a project-alias env var alone does not trigger refusal"
 setup_repo
 create_test_file "file_k2b.txt" "content K2b"
-WAKEFUL_CHANNEL=3 run_commit --files "file_k2b.txt" -m "test: k2 guard wakeful"
-assert_exit 1 "exits 1 when WAKEFUL_CHANNEL set and --channel missing"
-assert_stderr_contains "channel env var set.*--channel flag missing" "K2 error message printed"
+PROJECT_CHANNEL=3 run_commit --files "file_k2b.txt" -m "test: k2 guard project alias"
+if echo "$LAST_STDERR" | grep -qiE "channel env var.*--channel flag missing"; then
+  echo -e "  ${RED}FAIL${NC}: canonical K2 guard fired on a non-SENTINEL alias — guard must be SENTINEL_CHANNEL-only"
+  FAIL=$((FAIL + 1))
+else
+  echo -e "  ${GREEN}PASS${NC}: canonical K2 guard silent when only a project-alias env var is set (guard is generic)"
+  PASS=$((PASS + 1))
+fi
+TOTAL=$((TOTAL + 1))
 teardown_repo
 
 # --- Test K2c: K2 guard is silent when no channel env var set (unchanneled normal usage) ---

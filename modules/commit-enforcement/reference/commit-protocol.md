@@ -135,7 +135,7 @@ When editing any of the files below, sync all copies listed. `install.sh` preser
 | `commit-adversarial.md` | `cc-sentinel/modules/commit-enforcement/agents/` | `~/.claude/agents/`, project `.claude/agents/` |
 | `commit-cold-reader.md` | `cc-sentinel/modules/commit-enforcement/agents/` | `~/.claude/agents/`, project `.claude/agents/` |
 | `commit-protocol.md` (this file) | `cc-sentinel/modules/commit-enforcement/reference/` | `~/.claude/reference/`, project `.claude/reference/` |
-| `stop-task-check.sh` | `cc-sentinel/modules/verification/hooks/` | `~/.claude/hooks/enforcement/` (deployed copy carries intentional Wakeful divergence: `WAKEFUL_CHANNEL`/`WAKEFUL_LISTENER` fallbacks. Mark with `# INTENTIONAL DIVERGENCE` comments. Project `scripts/claude-hooks/install.sh` lists it as EXTERNAL_HOOKS — never sync from Wakeful repo.) |
+| `stop-task-check.sh` | `cc-sentinel/modules/verification/hooks/` | `~/.claude/hooks/enforcement/` (a host project's deployed copy may carry project-specific env-var fallbacks, marked with `# INTENTIONAL DIVERGENCE` comments. If the host installer treats it as an external/deployed-only hook, never sync the deployed copy back into the canonical.) |
 | Sprint-pipeline skills — `audit`, `design`, `build`, `perfect`, `finalize`, `sonnet`, `opus`, `rewrite`, `spawn` (9 skills) | `cc-sentinel/modules/sprint-pipeline/skills/<name>/SKILL.md` | `~/.claude/skills/<name>/SKILL.md` |
 | `cleanup` skill (Core module — distinct from sprint-pipeline) | `cc-sentinel/modules/core/skills/cleanup/SKILL.md` | `~/.claude/skills/cleanup/SKILL.md` |
 

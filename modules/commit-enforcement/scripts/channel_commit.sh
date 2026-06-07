@@ -64,9 +64,10 @@ done
 # Prevents a channeled session from writing a top-level (unsuffixed) pair, which
 # an unchanneled stop attempt could then read as false R1 evidence.
 # Only fires when a channel env var is set AND --channel was NOT supplied.
-_env_channel="${SENTINEL_CHANNEL:-${WAKEFUL_CHANNEL:-}}"
+# Host projects may extend this with a project-specific alias as a marked intentional divergence (e.g. ${SENTINEL_CHANNEL:-${PROJECT_CHANNEL:-}}).
+_env_channel="${SENTINEL_CHANNEL:-}"
 if [[ -n "$_env_channel" && -z "$CHANNEL" ]]; then
-  echo "ERROR: channel env var set (SENTINEL_CHANNEL/WAKEFUL_CHANNEL) but --channel flag missing — refusing to run; pass --channel N explicitly" >&2
+  echo "ERROR: channel env var SENTINEL_CHANNEL set but --channel flag missing — refusing to run; pass --channel N explicitly" >&2
   exit 1
 fi
 unset _env_channel
