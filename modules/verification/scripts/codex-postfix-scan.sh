@@ -948,8 +948,9 @@ echo "Running Codex integrity scan on $(basename "$SPEC_PATH")..." >&2
 # or codex's own non-zero exit. Without this, an operator debugging a flaky scan
 # cannot tell whether codex itself returned non-zero or whether the wrapper's
 # heuristics fired on a successful-but-malformed reply.
-# Model: this account's Codex CLI runs ONLY gpt-5.5. The CLI's OWN default is
-# gpt-5.3-codex, and ALL '-codex' variants HTTP-400 on a ChatGPT account ("not
+# Model: this account's Codex CLI runs gpt-5.4, gpt-5.4-mini, and gpt-5.5. The
+# CLI's OWN historical default gpt-5.3-codex (and all '-codex' variants) was sunset
+# for ChatGPT accounts ~2026-06 and now HTTP-400s on a ChatGPT account ("not
 # supported when using Codex with a ChatGPT account") -> codex rc=1 -> the scan
 # returns VERDICT: TRANSIENT_NO_OUTPUT on EVERY run. So pass -m explicitly.
 # Override via the CODEX_MODEL env var if the account's model changes. (cc-sentinel BUG-2)

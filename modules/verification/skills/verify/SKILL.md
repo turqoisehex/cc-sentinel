@@ -67,7 +67,7 @@ Parent enters the interleaved phase loop after writing manifest:
 
 4. **R2: 5 Codex agents (cross-architecture sweep on post-fix content)**
    ONE message, all 5 parallel: `Bash(~/.claude/scripts/codex-verify-agent.sh -m MODEL -r ROLE -w WORK_PRODUCT -s SOURCE_SPEC -S "SCOPE" -o SQUAD_DIR/codex_ROLE.md, run_in_background: true)` × 5
-   MODEL = manifest `codex_model` value (default: `gpt-5.3-codex`)
+   MODEL = manifest `codex_model` value (default: `gpt-5.4`)
    Wait for all 5 to complete. Read outputs.
    R2 is UNCONDITIONAL — runs regardless of R1 results (DD-11).
 
@@ -102,7 +102,7 @@ Parent enters the interleaved phase loop after writing manifest:
 **Before writing `manifest.json`: delete any existing `manifest.json` in the squad dir.** Stale partial-run manifests poison the commit gate (which checks filenames against the `launched` list verbatim). Agent names MUST include the `.md` extension.
 
 ```json
-{"launched": ["sonnet_mechanical.md", "sonnet_adversarial.md", "sonnet_completeness.md", "sonnet_dependency.md", "sonnet_cold_reader.md"], "codex": ["codex_mechanical.md", "codex_adversarial.md", "codex_completeness.md", "codex_dependency.md", "codex_cold_reader.md"], "codex_model": "gpt-5.3-codex", "codex_model_r4": "gpt-5.5", "reason": "interleaved squad — R1 Sonnet, R2 Codex, R3 re-validate, R4 conditional", "timestamp": "ISO"}
+{"launched": ["sonnet_mechanical.md", "sonnet_adversarial.md", "sonnet_completeness.md", "sonnet_dependency.md", "sonnet_cold_reader.md"], "codex": ["codex_mechanical.md", "codex_adversarial.md", "codex_completeness.md", "codex_dependency.md", "codex_cold_reader.md"], "codex_model": "gpt-5.4", "codex_model_r4": "gpt-5.5", "reason": "interleaved squad — R1 Sonnet, R2 Codex, R3 re-validate, R4 conditional", "timestamp": "ISO"}
 ```
 
 When Codex CLI is absent: `launched` uses unprefixed filenames, `codex`/`codex_model`/`codex_model_r4` are omitted entirely. Fallback manifest:
