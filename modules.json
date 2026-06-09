@@ -202,7 +202,9 @@
           "verification-squad.md",
           "verification-behavior.md",
           "codex-verification-prompts.md",
-          "codex-postfix-prompt.md"
+          "codex-postfix-prompt.md",
+          "adversarial-loop.md",
+          "workflows-config.md"
         ],
         "skills": [
           "grill",
@@ -210,7 +212,10 @@
         ],
         "tests": [
           "test_stop_task_check.sh",
-          "test_comment_replacement.sh"
+          "test_comment_replacement.sh",
+          "test_workflows_config_parser.sh",
+          "test_reference_manifest_parity.sh",
+          "test_install_roundtrip.sh"
         ]
       },
       "settings_merge": {
@@ -317,7 +322,8 @@
           "perfect",
           "rewrite",
           "sonnet",
-          "spawn"
+          "spawn",
+          "prove"
         ],
         "scripts": [
           "heartbeat_watcher.sh"

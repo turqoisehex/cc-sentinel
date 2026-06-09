@@ -32,7 +32,7 @@ Check that `.claude/skills/` contains all expected skill directories for install
 
 - **Core:** `self-test`, `cold`, `cleanup`, `status`
 - **Verification:** `verify`, `grill`
-- **Sprint Pipeline:** `1` through `5`, `audit`, `design`, `build`, `perfect`, `finalize`, `opus`, `sonnet`, `rewrite`, `spawn`
+- **Sprint Pipeline:** `1` through `5`, `audit`, `design`, `build`, `perfect`, `finalize`, `opus`, `sonnet`, `rewrite`, `spawn`, `prove`
 - **Governance Protection:** `mistake`, `prune-rules`
 
 ### 3. Reference files
@@ -40,7 +40,7 @@ Check that `.claude/skills/` contains all expected skill directories for install
 Check `.claude/reference/` for expected files:
 
 - **Core:** `operator-cheat-sheet.md`
-- **Verification:** `verification-squad.md`, `verification-behavior.md`, `codex-verification-prompts.md`, `codex-postfix-prompt.md`
+- **Verification:** `verification-squad.md`, `verification-behavior.md`, `codex-verification-prompts.md`, `codex-postfix-prompt.md`, `adversarial-loop.md`, `workflows-config.md`
 - **Commit Enforcement:** `channel-routing.md`
 - **Sprint Pipeline:** `spec-verification.md`
 
@@ -66,7 +66,7 @@ Check that installed skills exist in `.claude/skills/<name>/SKILL.md`:
 - **Core:** `cleanup`, `cold`, `self-test`, `status`
 - **Context Awareness:** `configure-context-awareness`
 - **Verification:** `grill`, `verify`
-- **Sprint Pipeline:** `1`, `2`, `3`, `4`, `5`, `audit`, `design`, `build`, `perfect`, `finalize`, `opus`, `sonnet`, `rewrite`, `spawn`
+- **Sprint Pipeline:** `1`, `2`, `3`, `4`, `5`, `audit`, `design`, `build`, `perfect`, `finalize`, `opus`, `sonnet`, `rewrite`, `spawn`, `prove`
 - **Governance Protection:** `mistake`, `prune-rules`
 
 ### 8. Auto-invoke rules

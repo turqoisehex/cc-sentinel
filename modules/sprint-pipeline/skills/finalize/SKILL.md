@@ -81,6 +81,47 @@ If on feature branch: merge to main. If already on main: skip.
 
 ### 9.5. CT completeness audit (REQUIRED before any cleanup)
 
+#### Shared scope resolver
+
+Build `scopeContext` via the **shared resolver** (used by both `/5` and `/prove` — DRY, no separate implementations):
+
+- Resolved CTs: channeled `CURRENT_TASK_chN.md` (all lines) + relevant section of shared `CURRENT_TASK.md`.
+- `git diff` since session start (diff of working tree against the commit that was HEAD when the session opened).
+- The plan file referenced by the channel CT's plan pointer.
+- The project DI-graph file(s) + entry-point modules.
+- Lens-7/8/9 probes (full-suite test runner output, git-status, and the static-analysis receipt).
+
+This resolver is **shared with `/prove`** so that both skills operate on the same scope snapshot.
+
+#### Gate invocation
+
+Read `enabled-phases` from `.claude/reference/workflows-config.md` (key `enabled-phases`, default `["/5"]`).
+
+- **If `/5` is NOT listed in `enabled-phases`:** short-circuit to the existing single-pass fallback (Step 9.5 legacy audit below). This is the D2 guarantee — the pre-existing single-pass IS the mandatory fallback.
+- **If `/5` IS listed:** invoke the gate at `.claude/reference/adversarial-loop.md` heading `## 4` with the `/5` finderSet and the `scopeContext` built above.
+
+On the gate's `terminal`:
+- `CLEAN` → proceed to §9.5a, then Step 10.
+- `CAPPED` → list all parked items; apply the existing `/5` FAIL-handling (explicit deferral with SPRINT_CHECKLIST.md entry) fed by the `pending` list from the returned tuple.
+- `ERROR → fallback` → the gate already bannered the reason; continue with the single-pass fallback below.
+- Any `FINDINGS` survivors → apply the existing `/5` FAIL-handling: fix each or obtain explicit user deferral approval with a SPRINT_CHECKLIST.md entry. Never proceed to Step 10 with unresolved survivors.
+
+The **pre-existing single-pass Step 9.5 audit** (CT completeness check below) IS the mandatory fallback (D2). It runs whenever the gate is skipped, errors, or config is OFF.
+
+#### Legacy single-pass fallback (D2 — also the gate's fallback)
+
+### 9.5a. First-/5 workflow discovery hint (one-time, marker-gated)
+
+On the FIRST `/5` after install when `.claude/reference/workflows-config.md` is
+absent or OFF, AND the marker file `.claude/.workflows-hint-shown` does NOT exist:
+print ONCE —
+  "Tip: the `/5` prove-gate can run a 9-lens adversarial engine instead of the
+   single-pass audit. It is default-OFF (budget-respecting). To opt in, edit one
+   line in `.claude/reference/workflows-config.md`. (Pro plans also need the
+   `/config` Dynamic-workflows row.)"
+Then create `.claude/.workflows-hint-shown` so this NEVER repeats. This is a
+one-time hint gated behind a marker file — NOT a per-run footer (MD-21).
+
 Read both files in full:
 - **Channeled CT** (`CURRENT_TASK_chN.md`) — every line, top to bottom.
 - **Shared CT** (`CURRENT_TASK.md`) — every item belonging to this channel/session only (your section). Ignore other channels' sections.

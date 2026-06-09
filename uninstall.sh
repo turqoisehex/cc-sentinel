@@ -72,15 +72,17 @@ SCRIPTS=(
 
 SKILLS=(
   1 2 3 4 5 audit build cleanup cold configure-context-awareness
-  design finalize grill mistake opus perfect prune-rules rewrite
+  design finalize grill mistake opus perfect prove prune-rules rewrite
   self-test sonnet spawn status verify
 )
 
 REFERENCE=(
+  adversarial-loop.md
   audit-pointer-rules.md channel-routing.md codex-postfix-prompt.md
   codex-verification-prompts.md commit-protocol.md
   operator-cheat-sheet.md spec-verification.md
   verification-behavior.md verification-squad.md
+  workflows-config.md
 )
 
 TEMPLATES=(

@@ -43,10 +43,10 @@ $Scripts = @("channel_commit.sh", "codex-verify-agent.sh", "codex-postfix-scan.s
 $Skills = @(
     "1","2","3","4","5","audit","build","cleanup","cold",
     "configure-context-awareness","design","finalize","grill","mistake",
-    "opus","perfect","prune-rules","rewrite","self-test","sonnet",
+    "opus","perfect","prove","prune-rules","rewrite","self-test","sonnet",
     "spawn","status","verify"
 )
-$Reference = @("audit-pointer-rules.md","channel-routing.md","codex-postfix-prompt.md","codex-verification-prompts.md","commit-protocol.md","operator-cheat-sheet.md","spec-verification.md","verification-behavior.md","verification-squad.md")
+$Reference = @("adversarial-loop.md","audit-pointer-rules.md","channel-routing.md","codex-postfix-prompt.md","codex-verification-prompts.md","commit-protocol.md","operator-cheat-sheet.md","spec-verification.md","verification-behavior.md","verification-squad.md","workflows-config.md")
 $Templates = @("channel-template.md","current-task-template.md","design-invariants.md","plugin-auto-invoke.md","terminology.md")
 $Tools = @("spawn.py", "spawn.json")
 $Agents = @("sonnet-implementer.md","sonnet-verifier.md","commit-adversarial.md","commit-cold-reader.md")
