@@ -66,8 +66,8 @@ Parent enters the interleaved phase loop after writing manifest:
 3. **Fix R1:** Fix all above-INFO findings in place. Run integrity scan (codex-postfix-scan.sh). Proceed only after CLEAN.
 
 4. **R2: 5 Codex agents (cross-architecture sweep on post-fix content)**
-   ONE message, all 5 parallel: `Bash(~/.claude/scripts/codex-verify-agent.sh -m MODEL -r ROLE -w WORK_PRODUCT -s SOURCE_SPEC -S "SCOPE" -o SQUAD_DIR/codex_ROLE.md, run_in_background: true)` × 5
-   MODEL = manifest `codex_model` value (default: `gpt-5.4`)
+   ONE message, all 5 parallel: `Bash(~/.claude/scripts/codex-verify-agent.sh -m MODEL --reasoning xhigh -r ROLE -w WORK_PRODUCT -s SOURCE_SPEC -S "SCOPE" -o SQUAD_DIR/codex_ROLE.md, run_in_background: true)` × 5
+   MODEL = manifest `codex_model` value (default: `gpt-5.4` with `--reasoning xhigh`)
    Wait for all 5 to complete. Read outputs.
    R2 is UNCONDITIONAL — runs regardless of R1 results (DD-11).
 

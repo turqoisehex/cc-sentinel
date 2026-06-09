@@ -953,7 +953,9 @@ echo "Running Codex integrity scan on $(basename "$SPEC_PATH")..." >&2
 # for ChatGPT accounts ~2026-06 and now HTTP-400s on a ChatGPT account ("not
 # supported when using Codex with a ChatGPT account") -> codex rc=1 -> the scan
 # returns VERDICT: TRANSIENT_NO_OUTPUT on EVERY run. So pass -m explicitly.
-# Override via the CODEX_MODEL env var if the account's model changes. (cc-sentinel BUG-2)
+# Default = gpt-5.5: the integrity scan is a mechanical convergent check, which is
+# gpt-5.5's strength; gpt-5.4 (the deliberate deep-read model) is reserved for the
+# /verify R2 squad. Override via the CODEX_MODEL env var if the account's model changes. (cc-sentinel BUG-2)
 CODEX_MODEL="${CODEX_MODEL:-gpt-5.5}"
 set +e
 # Reasoning floor: -c expects a TOML value, so the string MUST be quoted. Match
