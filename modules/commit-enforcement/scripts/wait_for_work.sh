@@ -27,6 +27,16 @@ case "$MODEL" in
   *) echo "ERROR: --model must be 'opus' or 'sonnet', got '$MODEL'" >&2; exit 1 ;;
 esac
 
+# Anchor on repo root so a listener armed from a SUBDIRECTORY still polls the
+# canonical inbox. PENDING_DIR below is repo-root-relative; without this anchor,
+# a subdir CWD makes the listener poll (and heartbeat into) a phantom nested
+# path and silently look dead while it is in fact polling hard in the wrong
+# place. Falls back to the current CWD outside a git repo (no worse than before).
+_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -n "$_ROOT" ]]; then
+  cd "$_ROOT" || true
+fi
+
 if [[ -n "$CHANNEL" ]]; then
   PENDING_DIR="verification_findings/_pending_${MODEL}/ch${CHANNEL}"
 else

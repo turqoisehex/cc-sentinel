@@ -18,6 +18,14 @@ done
 
 [[ -z "$CHANNEL" ]] && { echo "Usage: heartbeat_watcher.sh --channel N" >&2; exit 1; }
 
+# Anchor on repo root (HB path below is repo-root-relative). Same CWD footgun as
+# wait_for_work.sh: a watcher armed from a SUBDIRECTORY would watch a phantom
+# nested path and always report "no listener." Falls back to CWD outside a git repo.
+_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -n "$_ROOT" ]]; then
+  cd "$_ROOT" || true
+fi
+
 HB="verification_findings/_pending_sonnet/ch${CHANNEL}/.heartbeat"
 INTERVAL=5
 ELAPSED=0

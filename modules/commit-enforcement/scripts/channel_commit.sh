@@ -89,6 +89,16 @@ COMMIT_ACTIVE_FILE="${PENDING_DIR}/.commit_active"
 # Resolve scripts directory: project-local first, then global
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Anchor on repo root AFTER SCRIPT_DIR resolves (SCRIPT_DIR needs $0 relative to
+# the invoking CWD). All path vars below (PENDING_DIR, CHECK_FILE, LOCK_DIR, the
+# --files entries, git ops) are repo-root-relative; without this anchor a subdir
+# invocation reads a phantom heartbeat/inbox and falsely falls back to local
+# verification. Falls back to CWD outside a git repo.
+_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -n "$_ROOT" ]]; then
+  cd "$_ROOT" || true
+fi
+
 _cleanup_exit() {
   rm -f "$COMMIT_ACTIVE_FILE" 2>/dev/null
   # Only remove lock if we own it (another session may hold it)
