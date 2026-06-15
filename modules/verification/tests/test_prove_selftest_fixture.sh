@@ -6,12 +6,14 @@ set -uo pipefail
 PASS=0; FAIL=0
 ok(){ echo "  PASS: $1"; PASS=$((PASS+1)); }
 no(){ echo "  FAIL: $1"; FAIL=$((FAIL+1)); }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Resolve adversarial-loop.md (host deploy or CWD-relative project install)
 ADVERS_LOOP=""
 for candidate in \
     "$HOME/.claude/reference/adversarial-loop.md" \
-    ".claude/reference/adversarial-loop.md"; do
+    ".claude/reference/adversarial-loop.md" \
+    "$SCRIPT_DIR/../reference/adversarial-loop.md"; do
   [[ -f "$candidate" ]] && { ADVERS_LOOP="$candidate"; break; }
 done
 [[ -n "$ADVERS_LOOP" ]] || { echo "FAIL: adversarial-loop.md not found at expected deploy targets"; exit 1; }
@@ -122,7 +124,8 @@ grep -q "active finderSet = the lenses declared in the phase" "$ADVERS_LOOP" \
 WFCFG=""
 for candidate in \
     "$HOME/.claude/reference/workflows-config.md" \
-    ".claude/reference/workflows-config.md"; do
+    ".claude/reference/workflows-config.md" \
+    "$SCRIPT_DIR/../reference/workflows-config.md"; do
   [[ -f "$candidate" ]] && { WFCFG="$candidate"; break; }
 done
 [[ -n "$WFCFG" ]] || { echo "FAIL: workflows-config.md not found at expected deploy targets"; exit 1; }
@@ -135,7 +138,8 @@ grep -q "fanoutTypeCap" "$WFCFG" \
 # (the /4-mode sub-block header is absent); PASSES after Step 7.1 + Deploy D.
 PROVE_SKILL=""
 for candidate in \
-    "$HOME/.claude/skills/prove/SKILL.md"; do
+    "$HOME/.claude/skills/prove/SKILL.md" \
+    "$SCRIPT_DIR/../../sprint-pipeline/skills/prove/SKILL.md"; do
   [[ -f "$candidate" ]] && { PROVE_SKILL="$candidate"; break; }
 done
 if [[ -z "$PROVE_SKILL" ]]; then
