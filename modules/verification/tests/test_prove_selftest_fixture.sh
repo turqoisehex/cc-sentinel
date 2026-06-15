@@ -7,10 +7,11 @@ PASS=0; FAIL=0
 ok(){ echo "  PASS: $1"; PASS=$((PASS+1)); }
 no(){ echo "  FAIL: $1"; FAIL=$((FAIL+1)); }
 
-# Resolve adversarial-loop.md (host deploy only)
+# Resolve adversarial-loop.md (host deploy or CWD-relative project install)
 ADVERS_LOOP=""
 for candidate in \
-    "$HOME/.claude/reference/adversarial-loop.md"; do
+    "$HOME/.claude/reference/adversarial-loop.md" \
+    ".claude/reference/adversarial-loop.md"; do
   [[ -f "$candidate" ]] && { ADVERS_LOOP="$candidate"; break; }
 done
 [[ -n "$ADVERS_LOOP" ]] || { echo "FAIL: adversarial-loop.md not found at expected deploy targets"; exit 1; }
@@ -120,7 +121,8 @@ grep -q "active finderSet = the lenses declared in the phase" "$ADVERS_LOOP" \
 # --- Group C: workflows-config fanoutTypeCap ---
 WFCFG=""
 for candidate in \
-    "$HOME/.claude/reference/workflows-config.md"; do
+    "$HOME/.claude/reference/workflows-config.md" \
+    ".claude/reference/workflows-config.md"; do
   [[ -f "$candidate" ]] && { WFCFG="$candidate"; break; }
 done
 [[ -n "$WFCFG" ]] || { echo "FAIL: workflows-config.md not found at expected deploy targets"; exit 1; }

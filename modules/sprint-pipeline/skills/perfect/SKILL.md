@@ -62,7 +62,7 @@ DELEGATE four agents. Report only. YAML frontmatter required.
 
 ### Touched TYPE resolution (PRIMARY + SECONDARY signals)
 
-**PRIMARY — class body changed:** a model/Drift-table/enum class whose class body changed in the baseline diff (field added/removed/renamed, type changed, enum value changed). Include.
+**PRIMARY — class body changed:** a data-model class, ORM/table entity, enum, or schema type whose class body changed in the baseline diff (field added/removed/renamed, type changed, enum value changed). Include.
 
 **SECONDARY — fidelity-relevant consumer change only (narrow):** a consumer whose change is fidelity-relevant (adds/changes/removes a `??`/`||` default, clamp, transform, or validation applied to `M`'s value; OR substitutes which field of `M` it reads; OR deletes its only read of a field of `M`). A plain read or pass-through rename is NOT fidelity-relevant. Do NOT include every type constructed/read in a touched file.
 

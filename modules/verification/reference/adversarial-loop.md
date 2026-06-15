@@ -401,7 +401,7 @@ This is the named `/4` finderSet. Runs once per touched data-model TYPE `M` (det
 ### The 7 lenses
 
 **Lens 1 — `[D]` declared-not-consumed (LLM)**
-A field, enum value, or method of `M` declared in the codebase but never read by any runtime consumer. Grep `lib/` for read sites. A declaration with zero read sites is dead — FAIL.
+A field, enum value, or method of `M` declared in the codebase but never read by any runtime consumer. Grep the project's source tree (`<src>` supplied by the phase skill) for read sites. A declaration with zero read sites is dead — FAIL.
 
 *Adversarial prime applies. Per-type scope.*
 

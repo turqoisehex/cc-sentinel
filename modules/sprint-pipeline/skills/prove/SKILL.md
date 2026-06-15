@@ -215,7 +215,7 @@ These assertions run as part of `--selftest` and point at the relevant proc-doc 
 
 **Procedure:**
 
-(a) Run one engine round using the synthetic fixture scope, producing a signed deterministic receipt for a carried-forward lens (6, 8, or 9) at `scopeHash` H1.
+(a) Run one engine round using the synthetic fixture scope, producing a signed deterministic receipt for a carried-forward lens from the active finderSet's declared deterministic lanes at `scopeHash` H1.
 
 (b) Mutate an in-scope file so the content digest changes to H2 (H2 ≠ H1) — simulating a parent fix, a cross-channel commit, or an untracked/generated file change landing mid-run.
 
