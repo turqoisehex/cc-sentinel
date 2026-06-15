@@ -107,17 +107,103 @@ A silent fallback is a bug. A degraded run that does not banner its reason is a 
 SELFTEST FAIL: ToolSearch select:Workflow returned no schema. Workflow tool unavailable.
 ```
 
-**(b) Materialization succeeds:** The §5 gate (`.claude/reference/adversarial-loop.md` heading `## 4`) reaches launch WITHOUT taking any fallback branch. Specifically: the path banner MUST read
+**(b) Materialization succeeds:** The §5 gate (`.claude/reference/adversarial-loop.md` heading `## 4`) reaches launch WITHOUT taking any fallback branch. Any of the four fallback banners is a FAIL. A run that exits via ANY fallback is a selftest FAIL, never a caveated pass.
 
+`--selftest` runs BOTH a `/5`-mode assertion sub-block AND a `/4`-mode assertion sub-block in ONE invocation — each keyed to its active finderSet declaration. No mode flag required.
+
+#### `/5`-mode sub-block (9 lenses, deterministic `{6,8,9}`, 3 receipts)
+
+The path banner MUST read:
 ```
 PROVE-GATE: engine path (9 lenses, K=2, max 5)
 ```
 
-Any of the four fallback banners — `FALLBACK single-pass — reason: config OFF`, `reason: config PARSE-FAIL`, `reason: tool absent`, `reason: materialization ERRORED` — is a FAIL. A run that exits via ANY fallback is a selftest FAIL, never a caveated pass.
+Liveness (journal): `llmFanOutAgentIds[]` count = 6 (lanes 1,2,3,4,5,7); `deterministicReceiptIds[]` count = 3 (lanes 6, 8, 9).
+
+**FILE-TEXT GREP step (b-prose):** grep the deployed `adversarial-loop.md ## 1.2` section for the expected post-edit string:
+```bash
+grep "all lenses in the active finderSet" ~/.claude/reference/adversarial-loop.md
+```
+Expected: 1+ match. AND assert the old literal is ABSENT:
+```bash
+grep "all 9 lenses" ~/.claude/reference/adversarial-loop.md
+```
+Expected: 0 matches. A builder who updated the receipt struct or count but neglected the prose edit is caught by this assertion.
+
+Stale-receipt rejection: `{6, 8, 9}` set — run one round, mutate scope (H1→H2), assert all three receipts rejected and lenses re-run.
+
+Generalized invalidation path: assert `## 6.3`/`## 6.4` invalidates EXACTLY the active finderSet's declared deterministic lanes (not hardcoded `{6,8,9}`).
+
+#### `/4`-mode sub-block (7 lenses, deterministic `{6}`, 1 receipt)
+
+Use the `/4` finderSet (`## 3b`) with a synthetic fixture scope (one fabricated touched TYPE with known field stubs — same bypass as the standalone --selftest scope, explicitly exempt from MD-15 no-CT pre-flight).
+
+**(i) BANNER assertion:** the `/4` banner-string emits `7 lenses`:
+```bash
+# Assert banner shows "7 lenses" not "9 lenses"
+# (Run engine with /4 finderSet active; read banner from stdout)
+# Expected: PROVE-GATE: engine path (7 lenses, K=2, max 5)
+```
+Failure: banner shows "9 lenses" = residual hardcoded constant.
+
+**(ii) JOURNAL-LIVENESS assertion (separate from banner):**
+- `llmFanOutAgentIds[]` count = 6 (lanes 1,2,3,4,5,7)
+- `deterministicReceiptIds[]` count = 1 (lane 6 only)
+
+**(iii) `## 3b` existence + 7 lenses named in `## 3b`:**
+```bash
+grep "## 3b" ~/.claude/reference/adversarial-loop.md
+# Expected: 1 match (the section heading)
+
+# Scope Lens count check to ## 3b section only (grep -c "Lens [1-7]" over the full file
+# would already pass from the /5 finderSet's Lens 1-9 headings)
+awk '/^## 3b\./{found=1} found && /^## [^3]/{exit} found{print}' \
+  ~/.claude/reference/adversarial-loop.md | grep -c "Lens [1-7]"
+# Expected: 7 (exactly 7 lens headings in ## 3b)
+```
+
+**(iv) Generalized liveness resolves for BOTH finderSets:**
+- `/5`: 6 agent-ids + 3 receipts (from `/5`-mode sub-block above)
+- `/4`: 6 agent-ids + 1 receipt (from this sub-block)
+
+**(v) Stale-receipt rejection for 1-element deterministic set `{6}`:**
+Run one round with `/4` finderSet active. Mutate scope (H1→H2). Assert: lane-6 receipt REJECTED, lane 6 re-runs, `dryStreak` NOT incremented.
+Failure: 1-element set treated differently from 3-element set = partial generalization bug.
+
+**(vi) Generalized `## 6.3`/`## 6.4` for 1-element set:**
+Assert the invalidation path fires for `{6}` (the active finderSet's deterministic lanes), NOT for hardcoded `{6,8,9}`. A partial generalization that left `{6,8,9}` in the invalidation path MUST FAIL this guard.
+
+**(vii) FILE-TEXT GREP — `## 2` fan-out-cap prose:**
+```bash
+grep "≤ the active finderSet" ~/.claude/reference/adversarial-loop.md
+# Expected: 1+ match in ## 2 region
+
+grep "≤9 lenses" ~/.claude/reference/adversarial-loop.md
+# Expected: 0 matches
+```
+
+**(viii) FILE-TEXT GREP — `## 2.2` jsonl `"lensCount"`:**
+```bash
+grep '"lensCount": <active' ~/.claude/reference/adversarial-loop.md
+# Expected: 1 match (the generalized form)
+
+grep '"lensCount": 9' ~/.claude/reference/adversarial-loop.md
+# Expected: 0 matches
+```
+
+**(ix) FILE-TEXT GREP — `## 2.2` liveness prose paragraph:**
+```bash
+grep "all lenses in the active finderSet accounted-for" ~/.claude/reference/adversarial-loop.md
+# Expected: 1+ match in ## 2.2 region
+
+grep -E "all-9.*lensStatus|all 9 lenses accounted" ~/.claude/reference/adversarial-loop.md
+# Expected: 0 matches outside ## 3 (the /5 finderSet section itself)
+```
+Catches a builder who fixes `## 1.2` liveness prose and the `## 2.2` jsonl block but leaves the standalone `## 2.2` liveness paragraph hardcoded.
 
 **(c) Real LLM fan-out executes:** At least one round of real LLM fan-out executes with the expected lens agents reporting. A no-op, a mock, or a zero-agent round is a FAIL.
 
-**(d) Liveness assertion (journal):** Read the on-disk run-journal at the harness-observed path (`subagents/workflows/<runId>/journal.jsonl`). Assert all-9 `lensStatus[]` accounted-for per round: agent IDs for the LLM lanes, signed receipts for the deterministic lanes 6/8/9. NOT "≥9 agent IDs" — the count is insufficient; each lane must be individually identified. Absent journal = FAIL. Any missing `lensStatus` entry = FAIL.
+**(d) Liveness assertion (journal):** Read the on-disk run-journal at the harness-observed path (`subagents/workflows/<runId>/journal.jsonl`). Assert all lenses in the ACTIVE finderSet's `lensStatus[]` are accounted-for per round: agent IDs for the LLM lanes, signed receipts for the active finderSet's declared deterministic lanes. Absent journal = FAIL. Any missing `lensStatus` entry = FAIL. The count is finderSet-declared (9 for `/5`-mode; 7 for `/4`-mode) — NOT a hardcoded constant.
 
 ### Additional deterministic in-harness assertions
 
@@ -148,8 +234,8 @@ These assertions run as part of `--selftest` and point at the relevant proc-doc 
 **Procedure:**
 
 (a) Write a synthetic partial journal into the harness-observed run-journal path (`subagents/workflows/<runId>/journal.jsonl`):
-- Round 1 entry: a **complete** record — all required fields present (`round`, `lensStatus[]` with all 9 lenses, `llmFanOutAgentIds[]`, `deterministicReceiptIds[]`, `coverageReceipt`, `scopeHash`, `pending`, `terminal: null`), written atomically (no torn line).
-- Round 2 entry: a **half-written / torn** record — simulate a mid-round session kill by truncating the journal after N lenses (N < 9), leaving an incomplete `lensStatus[]` and no `coverageReceipt` or `terminal` field.
+- Round 1 entry: a **complete** record — all required fields present (`round`, `lensStatus[]` with all lenses in the active finderSet, `llmFanOutAgentIds[]`, `deterministicReceiptIds[]`, `coverageReceipt`, `scopeHash`, `pending`, `terminal: null`), written atomically (no torn line).
+- Round 2 entry: a **half-written / torn** record — simulate a mid-round session kill by truncating the journal after N lenses (N < the active finderSet's lens count), leaving an incomplete `lensStatus[]` and no `coverageReceipt` or `terminal` field.
 
 (b) Invoke the gate's cross-session detection path (as if a new session opened against this working tree with a prior run journal present).
 
@@ -166,8 +252,6 @@ These assertions run as part of `--selftest` and point at the relevant proc-doc 
 
 **Failure condition:** partial journal accepted as liveness-complete — i.e., the torn round-2 entry counts as covered, `dryStreak` is incremented, or the gate does not announce the restart.
 
-### Deferred execution note
+### Runtime selftest gate
 
-The full in-harness `--selftest` RUN is DEFERRED to the Task 14 end-to-end acceptance. Running it at Task 5 authoring time would record a false materialization failure caused by plan ordering (gate §4 from Task 6, journal/liveness from Task 7, and finderSet §3 from Task 4 do not yet exist). The Task 1 spike proved early materialization; this contract specifies what Task 14 must satisfy.
-
-Do NOT invoke `/prove --selftest` until Task 14.
+The in-harness `--selftest` RUN is the Task 7 Step 7.6 acceptance gate. The `/5`-mode sub-block runs under the already-enabled `/5` finderSet; the `/4`-mode sub-block runs once the operator adds `"/4"` to the live `enabled-phases` (the deliberate spend-gated activation step).

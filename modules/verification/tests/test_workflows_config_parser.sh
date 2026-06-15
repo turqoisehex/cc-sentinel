@@ -38,7 +38,17 @@ parse_config() {
   (( max < dry )) && { echo "PARSE-FAIL maxRounds<dryRounds"; return; }   # CLEAN unreachable
   (( dry < 2 )) && dry=2                                                  # floor clamp
   # budget and budgetGuard are recognized optional-when-enabled keys (no presence check required)
-  echo "ENABLED dry=$dry max=$max"
+  # fanoutTypeCap is an optional key; absent → DEFAULT_8 (never PARSE-FAIL); apply tr -d '\r' for CRLF
+  local cap
+  if grep -qE "^fanoutTypeCap:" "$f"; then
+    cap=$(grep -E '^fanoutTypeCap:' "$f" | head -1 | sed 's/.*: *//' | tr -d '\r')
+    [[ "$cap" =~ ^[0-9]+$ ]] || { echo "PARSE-FAIL fanoutTypeCap-nonnumeric:$cap"; return; }
+  else
+    cap="DEFAULT_8"
+  fi
+  local phases
+  phases=$(grep -E '^enabled-phases:' "$f" | head -1 | sed 's/.*: *//' | tr -d '\r')
+  echo "ENABLED dry=$dry max=$max fanoutTypeCap=$cap phases=$phases"
 }
 
 # (1) absent file = FILE-ABSENT (gate maps to OFF/fallback, NOT parse-fail)
@@ -67,6 +77,27 @@ printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/
 # (9) enabled with optional budget/budgetGuard recognized (no PARSE-FAIL)
 printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/5"]\nbudget: {rounds: 12}\nbudgetGuard: true\n' > "$TMP/full.md"
 [[ "$(parse_config "$TMP/full.md")" == ENABLED* ]] && ok "budget+budgetGuard=ENABLED" || no "budget+budgetGuard"
+
+# (10) fanoutTypeCap present with valid integer is parsed (with CRLF trim guard)
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/4","/5"]\nfanoutTypeCap: 12\n' \
+  > "$TMP/cap_valid.md"
+result=$(parse_config "$TMP/cap_valid.md")
+[[ "$result" == *"fanoutTypeCap=12"* ]] && ok "fanoutTypeCap valid int parsed" || no "fanoutTypeCap valid int: got $result"
+
+# (11) fanoutTypeCap absent => defaults to 8 without PARSE-FAIL (optional key)
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/4","/5"]\n' \
+  > "$TMP/cap_absent.md"
+result=$(parse_config "$TMP/cap_absent.md")
+[[ "$result" == *"fanoutTypeCap=DEFAULT_8"* ]] && ok "fanoutTypeCap absent=DEFAULT_8 not PARSE-FAIL" \
+  || no "fanoutTypeCap absent: got $result"
+
+# (12) enabled-phases ["/4","/5"] is valid — both phases present in output
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/4","/5"]\n' \
+  > "$TMP/both_phases.md"
+result=$(parse_config "$TMP/both_phases.md")
+[[ "$result" == ENABLED* && "$result" == *"/4"* && "$result" == *"/5"* ]] \
+  && ok "enabled-phases /4+/5 = ENABLED with both phases in output" \
+  || no "enabled-phases /4+/5: got $result"
 
 echo "config-parser: $PASS passed, $FAIL failed"
 [[ $FAIL -eq 0 ]]

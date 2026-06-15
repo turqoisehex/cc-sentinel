@@ -13,7 +13,7 @@ the phase skill.
 |-------|-------------|
 | `scopeContext` | What finders read: work products, plan, CT, spec, diff, the project DI-graph and entry-point modules. Assembled by the phase skill's shared `scopeContext` resolver. |
 | `scopeHash` | A working-tree content digest — see definition below. Computed by the PARENT per engine invocation and passed in. |
-| `finderSet` | A named, versioned collection of `finderLenses[]`. The `/5` finderSet = the 9 lenses in §3. |
+| `finderSet` | A named, versioned collection of `finderLenses[]`. The active finderSet = the lenses declared in the phase finderSet section (§3 for `/5`; §3b for `/4`). |
 | `finderLenses[]` | N adversarial roles, each a distinct lens and prompt. Each returns a schema-validated VERDICT; a missing or malformed VERDICT = FAIL + auto-retry that lens (never a silent pass). |
 | `dedupKey(f)` | The stable identity of a finding across rounds. Used by the dedup filter and the acceptedDeferrals ledger. |
 | `verifyLens` | The refute-it check applied to each fresh finding. Runs in a FRESH context — `{finding, scope}` only, never the finder's reasoning chain (Rule 7). |
@@ -36,7 +36,7 @@ the phase skill.
   round,
   lensStatus[]          // each lens: ran | found-N | errored | carried-forward
   llmFanOutAgentIds[]   // agent ids for the LLM-backed lanes
-  deterministicReceiptIds[]  // signed receipts for lenses 6/8/9
+  deterministicReceiptIds[]  // signed receipts for the active finderSet's declared deterministic lanes
   coverageReceipt,
   scopeHash,
   pending,
@@ -44,7 +44,7 @@ the phase skill.
 }
 ```
 
-**Liveness = all 9 lenses accounted-for in `lensStatus[]`** — agent ids for the LLM lanes + signed receipts for the 3 deterministic lanes (lenses 6/8/9). NOT "≥9 agent ids": a valid run has ~6 agent ids + 3 receipts. Written by the runtime and agents (a logger-agent if needed, counting against caps/budget) — the workflow script itself has NO filesystem access.
+**Liveness = all lenses in the active finderSet accounted-for in `lensStatus[]`** — agent ids for the LLM lanes + signed receipts for the active finderSet's declared deterministic lanes. NOT "≥ agent id count": a valid run has agent ids (one per LLM lane) + signed receipts (one per declared deterministic lane). Written by the runtime and agents (a logger-agent if needed, counting against caps/budget) — the workflow script itself has NO filesystem access.
 
 **open-findings set (PARENT)** — `open = (found ∪ disagreements ∪ pending across fix-cycles, by dedupKey) − acceptedDeferrals`. The no-progress circuit-breaker compares open IDENTITIES (not `|open|`) across cycles.
 
@@ -92,11 +92,11 @@ ENGINE(scopeContext, scopeHash, finderLenses[], verifyLens, dryRounds K, maxRoun
 
     // scopeHash guard — runs at EVERY round boundary
     if scopeHash changed since this round's start:
-      invalidate carried deterministic receipts (lenses 6/8/9)
+      invalidate carried deterministic receipts for the active finderSet's declared deterministic lanes
       reset dryStreak to 0
       recompute scopeHash
 
-    // parallel fan-out (≤ concurrency cap, ≤9 lenses)
+    // parallel fan-out (≤ concurrency cap, ≤ the active finderSet's lens count)
     raw = parallel(finderLenses -> agent(lens.prompt, scopeContext))
 
     // schema validation — missing/malformed VERDICT = FAIL + auto-retry that lens
@@ -157,9 +157,9 @@ ENGINE(scopeContext, scopeHash, finderLenses[], verifyLens, dryRounds K, maxRoun
 
 **Disagreements are first-class, never dropped.** A persistent finder/verifier conflict is recorded in `disagreements` and returned to the parent; it blocks CLEAN and routes to the parent's MD-5 investigation (§7). It is NOT swallowed as "refuted."
 
-**`verifyLens` runs sequentially after each round's fan-out** — `{finding, scope}` only, never the finder's chain (Rule 7) — keeping concurrency within the cap: finders fan out (≤9), then verifiers. A non-empty `pending` backlog blocks dry — un-refuted findings can never count toward a clean round.
+**`verifyLens` runs sequentially after each round's fan-out** — `{finding, scope}` only, never the finder's chain (Rule 7) — keeping concurrency within the cap: finders fan out (≤ active finderSet lens count), then verifiers. A non-empty `pending` backlog blocks dry — un-refuted findings can never count toward a clean round.
 
-**Coverage carry-forward is bound to `scopeHash`.** The engine re-validates it at every round boundary and before any terminal verdict; any in-scope change invalidates carried receipts and forces the deterministic pass to re-run before dry can be credited. A silently-skipped or errored lens also blocks dry.
+**Coverage carry-forward is bound to `scopeHash`.** The engine re-validates it at every round boundary and before any terminal verdict; any in-scope change invalidates carried receipts for the active finderSet's declared deterministic lanes and forces their re-run before dry can be credited. A silently-skipped or errored lens also blocks dry.
 
 ### 2.2 Observability + run-journal
 
@@ -174,7 +174,7 @@ ONE on-disk run-journal per engine invocation: `subagents/workflows/<runId>/jour
   round,
   lensStatus[],               // each lens: ran | found-N | errored | carried-forward
   llmFanOutAgentIds[],        // agent ids for the LLM-backed lanes (lenses 1–5, 7)
-  deterministicReceiptIds[],  // signed receipts for lenses 6/8/9
+  deterministicReceiptIds[],  // signed receipts for the active finderSet's declared deterministic lanes
   coverageReceipt,
   scopeHash,
   pending,
@@ -182,7 +182,7 @@ ONE on-disk run-journal per engine invocation: `subagents/workflows/<runId>/jour
 }
 ```
 
-**Liveness = all-9 `lensStatus[]` accounted-for** — agent ids for the LLM lanes PLUS signed receipts for the 3 deterministic lanes (lenses 6/8/9). This is NOT "≥9 agent ids"; a valid run has ~6 agent ids + 3 receipts. No terminal verdict is accepted without the journal showing all 9 lenses accounted-for in `lensStatus[]`. A silent no-op or any fallback can never read as CLEAN — the liveness check catches it.
+**Liveness = all lenses in the active finderSet accounted-for in `lensStatus[]`** — agent ids for the LLM lanes PLUS signed receipts for the active finderSet's declared deterministic lanes. This is NOT "≥ agent id count"; a valid run has one agent id per LLM lane plus one signed receipt per declared deterministic lane. No terminal verdict is accepted without the journal showing all active finderSet lenses accounted-for in `lensStatus[]`. A silent no-op or any fallback can never read as CLEAN — the liveness check catches it.
 
 The proof-sentinel and the jsonl-audit line are **SEPARATE** artifacts from the journal (see §2.2.4 below).
 
@@ -206,15 +206,40 @@ Round N dry (1/2) — one more clean round required
 
 This signal does NOT stop the engine at K=1. The engine requires `dryStreak >= K` (K=2 floor) before crediting CLEAN; this is a progress indicator only.
 
-#### Deterministic pre-pass + lens-9 cadence (MD-2)
+#### Deterministic pre-pass + per-component cadence (MD-2)
 
-Before any LLM fan-out, lenses 6, 8, and 9 run as a **`--timeout 120s`-bounded labeled deterministic pre-pass** with per-gate progress ticks (one tick per lens as it completes). Output format:
+Before any LLM fan-out, the active finderSet's declared deterministic lanes run as a **`--timeout 120s`-bounded labeled deterministic pre-pass** with per-gate progress ticks (one tick per lane as it completes).
+
+Each deterministic lane declares one or more named sub-checks with per-component cadence via the formal schema:
+
+```json
+[{ "check": "<name>", "cadence": "per-round" | "pre-gate" | "post-fix" | "pre-gate+post-fix", "receiptId": "<lane>/<name>" }]
+```
+
+Valid `cadence` values: `"per-round"` (runs every round), `"pre-gate"` (runs once before LLM fan-out), `"post-fix"` (runs after each PARENT fix), `"pre-gate+post-fix"` (both pre-gate and post-fix but NOT between rounds — used for expensive sub-checks).
+
+**`/5` lens-9 per-component cadence** (the split that a single monolithic cadence attribute would DROP):
+
+```json
+[
+  { "check": "git-status",  "cadence": "per-round",          "receiptId": "9/git-status"  },
+  { "check": "full-suite",  "cadence": "pre-gate+post-fix",  "receiptId": "9/full-suite"  }
+]
+```
+
+**`/4` lane-6 per-component cadence:**
+
+```json
+[{ "check": "field-consumption", "cadence": "per-round", "receiptId": "6/field-consumption" }]
+```
+
+Output format (progress ticks, one per sub-check):
 
 ```
-[deterministic pre-pass] lens-6 test-honesty ... PASS | lens-8 call-site ... PASS | lens-9 git-status ... PASS | lens-9 full-suite ... PASS (Ns)
+[deterministic pre-pass] lens-6 field-consumption ... PASS | lens-9 git-status ... PASS | lens-9 full-suite ... PASS (Ns)
 ```
 
-Lens-9 full-suite cadence: **pre-gate + post-fix only** (the full suite is too expensive to repeat every round). Lens-9 git-status re-runs each round (cheap). Lens-9's git-check **EXCLUDES** the proof-sentinel and jsonl-audit paths (§2.2.4) so a sentinel write never triggers a false uncommitted-change block.
+Lens-9's git-check **EXCLUDES** the proof-sentinel and jsonl-audit paths (§2.2.4) so a sentinel write never triggers a false uncommitted-change block.
 
 #### Survivor presentation (MD-4)
 
@@ -281,7 +306,7 @@ The closing report is always a **"materially better" shape-report** (K rounds, N
 
 **jsonl-audit line:**
 - Path (implementer-chosen, recorded in config): e.g. `.claude/.prove-gate-audit.jsonl`
-- Format: one appended line per gate run — `{ "runId": "<id>", "ts": "<iso8601>", "terminal": "<state>", "scopeHash": "<hash>", "lensCount": 9, "roundsRun": N, "found": N, "deferred": N }`
+- Format: one appended line per gate run — `{ "runId": "<id>", "ts": "<iso8601>", "terminal": "<state>", "scopeHash": "<hash>", "lensCount": <active-finderSet-declared count>, "roundsRun": N, "found": N, "deferred": N }`
 - The audit is **fail-open**: a hook bug or write failure NEVER hard-locks the session. The gate completes; the audit write is best-effort.
 - Lens-9's git-check **EXCLUDES** both the sentinel path and the audit path from its uncommitted-change scan (so audit appends never trigger a false block).
 
@@ -354,6 +379,79 @@ The production DI-graph file(s) and entry-point modules MUST be included in `sco
 
 ---
 
+## 3b. The 7-lens `/4` finderSet
+
+This is the named `/4` finderSet. Runs once per touched data-model TYPE `M` (determined by the Phase 2.5 resolver in the `/4` skill). **Lenses 8 and 9 are ABSENT** — they are structurally N/A for `/4` because `/4` never commits and runs pre-commit: lens 8 (call-site wiring assertions that require "deleting the block fails a test") and lens 9 (committed-state / full-suite / git-status) both require a committed state that `/4` does not produce. They apply post-commit only (`/5`'s domain). A `/4` finderSet reader must see this rationale without leaving `## 3b`. `lensCount: 7`.
+
+**finderSet declaration (read by the engine's lens-structure generalization):**
+- `lensCount: 7`
+- LLM lanes: `{1, 2, 3, 4, 5, 7}` — `model: sonnet` each
+- Deterministic lane: `{6}` — per-component cadence: `[{ "check": "field-consumption", "cadence": "per-round", "receiptId": "6/field-consumption" }]`
+- Deterministic count: 1 receipt per round
+
+**Adversarial prime (LLM lanes 1–5, 7 only):** *"Prove that `M`'s wiring is NOT fully or correctly complete. Default to finding a gap. 'Looks wired' = look harder — grep the call sites, open the cited file, confirm the claim."* Lane 6 is deterministic and is NOT primed.
+
+**Citation content-match obligation (LLM lanes):** Every finding citing a specific field, method, or file path MUST include a grep or Read artifact confirming the cited target was opened and the claimed content confirmed — never inferred from memory. A phantom citation (resolves-but-absent) is itself a finding. The PARENT must NOT assemble an unchecked LLM-lane claim into the artifact; if a lane emits a citation the PARENT cannot ground in a grep/Read, it is flagged as a phantom finding and treated as a live finding to fix.
+
+**`verifyLens` refute prompt (domain-specific; runs in a FRESH AGENT/context — never the same session or context window as the finder; only `{finding, scope}` is passed in, never the finder's reasoning chain):**
+*"Given {finding, type `M`, scope}: try to REFUTE — is this field truly dead? Is this fallback truly hiding a gap? Is this consumer truly missing? Default to REFUTED if the claim cannot be grounded in a grep/Read call on the cited target. Keep only survivors."*
+
+**Post-fix requirement re-read:** After the PARENT applies each fix and before a finding is considered resolved, the PARENT re-reads the governing source/spec requirement for `M` (as resolved in the Phase-0 provenance record) and confirms the fix actually satisfies that requirement — not merely that the finder stopped re-discovering it. A fix that lands but does not satisfy the requirement is NOT resolved.
+
+### The 7 lenses
+
+**Lens 1 — `[D]` declared-not-consumed (LLM)**
+A field, enum value, or method of `M` declared in the codebase but never read by any runtime consumer. Grep `lib/` for read sites. A declaration with zero read sites is dead — FAIL.
+
+*Adversarial prime applies. Per-type scope.*
+
+**Lens 2 — `[F]` silent-fallback (LLM)**
+A consumer swallowing `M`'s value with a `??` or `||` default that hides a wiring gap — `params['fieldX'] ?? 4` where no test confirms `M` declares `fieldX`. Grep consumers for `?? ` and `|| ` near each consumption site.
+
+*Adversarial prime applies. Per-type scope.*
+
+**Lens 3 — `[M-class]` missing-consumer + regression (LLM)**
+A spec-required behavior of `M` with no code consumer — INCLUDING Phase-4(c): a whole spec feature with zero code declaration or consumer. Distinct from the run-level "source/spec unresolved" scoping error. Trace every spec requirement for `M` to a runtime component that READS and USES the field.
+
+*Adversarial prime applies. Per-type scope.*
+
+**Lens 4 — `[I]` incomplete-wiring (LLM)**
+A partially-wired path for `M`: the type is declared, a consumer exists, but the data flow has a break — a field that is passed to a constructor but never stored, a parameter read once but never propagated downstream, a conditional that short-circuits before the value reaches the display layer.
+
+*Adversarial prime applies. Per-type scope.*
+
+**Lens 5 — `[T]` value-trace + test-only (LLM)**
+Enumerate every numeric SOURCE claim governing `M` (duration, ratio, count, BPM, threshold). Trace: source value → spec value → data-layer value → runtime value. **Each hop GROUNDED in an actual grep/Read call, never inferred from memory** (per `spec-verification.md` Phase 3). A consumed-but-WRONG-value field is a finding. Flag test-only fields (`[T]`).
+
+*Adversarial prime applies. Per-type scope.*
+
+**Lens 6 — field-consumption inventory (DETERMINISTIC)**
+The FULL `[C]/[T]/[D]` per-field table for `M`. Procedure: recursive grep over `lib/` and `test/` for `.dart` files — the primary portable form is `find lib test -name '*.dart' | xargs grep -l 'TypeName'` (POSIX `find | xargs grep`): e.g. `find lib test -name '*.dart' | xargs grep -l 'TypeName'` — executed via the skill's Bash tool on Git Bash/bash, NOT PowerShell; use `tr -d '\r'` for CRLF-tolerant output. The `grep -r --include="*.dart"` form is also acceptable where supported (both GNU grep and BSD/macOS grep support `--include`; the `find | xargs grep` form is used as the primary for maximum portability). Then the per-instance second pass: for every `[C]` field on a type that can have multiple instances, enumerate EVERY instance and confirm the field value on each — not just one match. A missing value on any instance = silent default = finding.
+
+*Deterministic — no adversarial prime. Per-component cadence: `{ "check": "field-consumption", "cadence": "per-round", "receiptId": "6/field-consumption" }`.*
+
+**Lens 7 — source↔spec↔model drift + Phase-2 extraction (LLM)**
+Emit the numbered Phase-2 flat-list of `M`'s source items with `[P]/[D]/[F]/[M]/[I]` counts (not only drift survivors — the FULL extraction). Flag drift between `M`'s primary SOURCE, governing spec, and current code shape. Both directions: source item → spec item AND spec item → source item. Either-side gap = FAIL.
+
+*Adversarial prime applies. Per-type scope.*
+
+### Inventory contract (full `spec-verification.md`-conformant payload)
+
+"Compact" describes `## 3b`'s document length, NOT the emitted inventory schema. Every lane EMITS its full structured inventory payload — not only survivors. The assembled artifact MUST carry all `spec-verification.md` REPORT fields:
+
+- **`[C]/[T]/[D]` per-field table** (from lens 6): every declared field, its status, consumers.
+- **Value-trace ledger** (from lens 5): source claim → spec → data → runtime, per numeric value, each hop grounded in a grep/Read.
+- **Phase-2 numbered bidirectional cross-reference** (from lens 7): source items ↔ spec items, both directions, with `[P]/[D]/[F]/[M]/[I]` counts and Phase-5 summary counts (source total, spec total, code-only count).
+- **Phase-0 provenance** (from the resolver, not from lanes): `{ type, sourceMaterialPaths[], governingSpecPath }` — written as the audit's mandatory source-identification section.
+
+The PARENT assembles from lane inventories + resolver Phase-0 provenance. Lanes 1–5, 7 = LLM (`model: sonnet`); lane 6 = deterministic. No severity scale.
+
+### Shared-field merge rule
+
+When N types share a field across per-type inventories, the merged assessment is `[C]` if consumed by ANY consumer, `[T]` if only test consumers across all, `[D]` only if dead across ALL types.
+
+---
+
 ## 4. The opt-in / fallback / budget gate
 
 ### 4.1 Gate pseudocode
@@ -400,13 +498,13 @@ Resolves the absent-vs-malformed ambiguity:
 
 (c) **Parse otherwise fails** → log + fallback bannered `config PARSE-FAIL`.
 
-Config keys (exact, from the shared naming contract): `workflows_enabled` (default `false`), `dryRounds` (alias K; floor 2), `maxRounds` (must be ≥ `dryRounds` — if `maxRounds < dryRounds`, CLEAN is unreachable; reject at parse), `budget` (rounds AND spend), `enabled-phases` (default `["/5"]`), `budgetGuard`. Config file path: `.claude/reference/workflows-config.md`.
+Config keys (exact, from the shared naming contract): `workflows_enabled` (default `false`), `dryRounds` (alias K; floor 2), `maxRounds` (must be ≥ `dryRounds` — if `maxRounds < dryRounds`, CLEAN is unreachable; reject at parse), `budget` (rounds AND spend), `enabled-phases` (default `["/5"]`), `budgetGuard`, `fanoutTypeCap` (optional int, default 8; the maximum touched data-model TYPE count for `/4` Phase 2.5; absent → 8 without PARSE-FAIL). Config file path: `.claude/reference/workflows-config.md`.
 
 ### 4.4 Mandatory path banner (MD-1)
 
 The path banner is **mandatory and top-of-output** on EVERY run:
 
-- **Engine path:** `PROVE-GATE: engine path (9 lenses, K=2, max 5)`
+- **Engine path:** `PROVE-GATE: engine path (<active finderSet lens count> lenses, K=2, max 5)`
 - **Fallback path:** `FALLBACK single-pass — reason: <config OFF | config PARSE-FAIL | tool absent | materialization ERRORED>`
 
 Exactly **four banner reasons**:
@@ -612,7 +710,7 @@ This value is passed in to the ENGINE at invocation time. The PARENT recomputes 
 
 When the engine detects a `scopeHash` change mid-invocation (re-validation does not match):
 
-1. **Invalidate carried deterministic receipts** — any `carried-forward` receipt for lenses 6, 8, or 9 that was signed against the prior `scopeHash` is **rejected**. A receipt is valid only while its signed `scopeHash` matches the current value. A stale receipt cannot count as coverage for the changed tree.
+1. **Invalidate carried deterministic receipts** — any `carried-forward` receipt for the active finderSet's declared deterministic lanes that was signed against the prior `scopeHash` is **rejected**. A receipt is valid only while its signed `scopeHash` matches the current value. A stale receipt cannot count as coverage for the changed tree.
 2. **Reset `dryStreak` to 0** — no dry credit can be carried across a scope change. The lens fan-out must re-run against the new state before dry is credited.
 3. **Recompute `scopeHash`** — the engine updates its local `scopeHash` to the new digest and continues from the current round. The forced re-run of the deterministic lenses ensures the new receipt is signed against the correct content.
 
@@ -620,7 +718,7 @@ When the engine detects a `scopeHash` change mid-invocation (re-validation does 
 
 ### 6.4 Stale-receipt rejection rule
 
-A **carried-forward deterministic lens receipt** (lenses 6/8/9) counts as coverage for a round **only while its signed `scopeHash` still matches the current `scopeHash`**.
+A **carried-forward deterministic lens receipt** (for any of the active finderSet's declared deterministic lanes) counts as coverage for a round **only while its signed `scopeHash` still matches the current `scopeHash`**.
 
 On mismatch, the receipt is **REJECTED**:
 

@@ -14,6 +14,7 @@ can never answer "does this harness expose the tool").
 | `budget` | `{rounds, spend}` | on | Recognized when enabled. Ceiling on BOTH axes, shared across the whole gate incl. all parent re-invocations. |
 | `enabled-phases` | list | `["/5"]` | Required only when `workflows_enabled: true`. A phase not listed short-circuits to fallback. |
 | `budgetGuard` | bool | on | Recognized when enabled. The parent circuit-breaker + budget ceiling. |
+| `fanoutTypeCap` | int | `8` | Optional. Maximum number of touched data-model TYPES Phase 2.5 will fan out to in a single `/4` run. Absent → defaults to 8 without PARSE-FAIL (optional key). Exceeding the cap halts Phase 2.5 with `FIDELITY_BLOCKED` before the engine is invoked; the operator must narrow the type set, raise this value, or annotate the CT with a scoped subset. |
 
 ### Parse semantics (four distinct cases)
 - file absent → FILE-ABSENT → gate = fallback, banner `config OFF`.
@@ -29,8 +30,9 @@ workflows_enabled: false
 <!-- dryRounds: 2     # consecutive fully-covered no-new-gap rounds = discovery converged (floor 2) -->
 <!-- maxRounds: 5     # hard cap on discovery rounds; must be >= dryRounds -->
 <!-- budget: { rounds: 12, spend: <your-ceiling> }  # stop if EITHER is exhausted -->
-<!-- enabled-phases: ["/5"]  # which phases run the engine -->
+<!-- enabled-phases: ["/4","/5"]  # which phases run the engine -->
 <!-- budgetGuard: true -->
+<!-- fanoutTypeCap: 8   # optional; max touched model TYPES for /4 Phase 2.5 fan-out (default 8); absent = 8, not PARSE-FAIL -->
 
 ### Two-signal gate (why a file, not an env var)
 Opt-in = intent flag (this file) AND a live tool probe. One cross-platform `Read`
