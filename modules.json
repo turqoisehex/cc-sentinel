@@ -215,7 +215,9 @@
           "test_comment_replacement.sh",
           "test_workflows_config_parser.sh",
           "test_reference_manifest_parity.sh",
-          "test_install_roundtrip.sh"
+          "test_install_roundtrip.sh",
+          "test_codex_scripts.sh",
+          "test_prove_selftest_fixture.sh"
         ]
       },
       "settings_merge": {

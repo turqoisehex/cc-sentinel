@@ -7,10 +7,9 @@ PASS=0; FAIL=0
 ok(){ echo "  PASS: $1"; PASS=$((PASS+1)); }
 no(){ echo "  FAIL: $1"; FAIL=$((FAIL+1)); }
 
-# Resolve adversarial-loop.md (prefer project-local, fall back to host)
+# Resolve adversarial-loop.md (host deploy only)
 ADVERS_LOOP=""
 for candidate in \
-    "D:/Documents/LLM/App/Wakeful/.claude/reference/adversarial-loop.md" \
     "$HOME/.claude/reference/adversarial-loop.md"; do
   [[ -f "$candidate" ]] && { ADVERS_LOOP="$candidate"; break; }
 done
@@ -121,7 +120,6 @@ grep -q "active finderSet = the lenses declared in the phase" "$ADVERS_LOOP" \
 # --- Group C: workflows-config fanoutTypeCap ---
 WFCFG=""
 for candidate in \
-    "D:/Documents/LLM/App/Wakeful/.claude/reference/workflows-config.md" \
     "$HOME/.claude/reference/workflows-config.md"; do
   [[ -f "$candidate" ]] && { WFCFG="$candidate"; break; }
 done
