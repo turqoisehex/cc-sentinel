@@ -210,6 +210,12 @@ When you encounter a potentially version-gated API:
 - Array append `+=` in bash (3.1+ but behavior differs with `set -u` in 3.2 vs 4.x)
 - `sed -i ''` (macOS) vs `sed -i` (GNU) — in-place edit syntax diverges
 
+### Fidelity-Audit WARN→INFO Triage
+
+Downgrading a fidelity-audit WARN→INFO requires citing the specific spec or plan rule that authorizes the observed behavior. "Belt-and-suspenders" or "no conflict" is not a valid downgrade rationale on its own — grep the plan/spec for explicit prohibitions on the shape being approved before declaring it safe to downgrade.
+
+An observed incident: a WARN was downgraded as "belt-and-suspenders" but the plan explicitly prohibited the early-return shape it approved; the commit-adversarial pass caught the error several rounds later — the downgrade should have grepped the plan for the prohibition first.
+
 ### Sonnet Listener CT Isolation
 
 Sonnet listener sessions must NEVER write to CURRENT_TASK files, even when the stop hook fires. The /sonnet skill states: "Never write to CURRENT_TASK files" and "Ignore stop hooks." Stop hooks are designed for Opus orchestrator sessions, not stateless Sonnet listeners.
