@@ -112,6 +112,14 @@ ch0 ran the pre-fix `/build` commit ceremony (since removed — `/build` now res
 
 Net: the script would have worked correctly on the first call if ch0 had written stub verification files (`VERDICT: PASS`, no hash) and called the script directly. The manual pre-staging and pre-hashing was the cause of the failure, not a precaution against it.
 
+## Commit mechanics — shared-file and cross-session safety
+
+- **`--skip-squad` is WIP-only** and requires stub `VERDICT: PASS` files to exist — the script still checks local-verify files even when `--skip-squad` is passed. Never use it as a way to skip adversarial review on real deliverables.
+- **`--governance` flag** is for `/mistake` + `/prune-rules` governance commits only.
+- **Before editing a shared file:** `git log --oneline -1 -- <file>` to check whether another session has committed to it since your session opened.
+- **Between squad dispatch and commit:** make no unrelated commits. The squad reads the working tree at dispatch time; a stale commit between dispatch and the `channel_commit.sh` call means the agents reviewed code that did not reach git.
+- **Before any cross-session sync commit:** `git show --stat` it to confirm it carries only your channel's files — prevents accidentally sweeping another session's uncommitted WIP into your commit.
+
 ## Stage-specific notes
 
 - **/build (stage 3):** commits at task-group / phase boundaries per the skill's batching rules. Follow this protocol exactly.

@@ -200,6 +200,24 @@ Update `verification_findings/governance_sync_report.md` (or equivalent) with:
 - Every file excluded + reason
 - Deliberate divergences between host and public
 
+## Config-deployment safety
+
+When deploying a canonical default-OFF config file over a project-local or host copy, never blindly overwrite — diff first and preserve any operator-enabled entries. A blind copy silently reverts an operator's live enablement with no error and no warning.
+
+**Procedure:** before copying any config file from cc-sentinel canonical to a host install, run `diff <canonical> <host-copy>` and identify any entries the operator has enabled that differ from the canonical default. Preserve those entries in the deployed result.
+
+## Hooks layout and deployed companion tests
+
+Hooks are canonical in cc-sentinel under `modules/{core,commit-enforcement,governance-protection,verification}/hooks/` (plus `modules/context-awareness/context-awareness-hook.sh`).
+
+A host project may add project-local hooks (deployed via the host project's `install.sh`) that are NOT canonicalized here. Those hooks are not synced into cc-sentinel.
+
+A test file that has a deployed companion (e.g., a test script that is both in the cc-sentinel module tree and deployed alongside the hook it tests) must be kept in sync between both locations. Its `HOOK_SCRIPT` path resolver must find the hook at BOTH:
+- The deployed layout (e.g., `$SCRIPT_DIR/stop-task-check.sh` — the hook and test side by side in `~/.claude/hooks/enforcement/`)
+- The cc-sentinel source layout (e.g., `../hooks/` relative to the test file in `modules/verification/tests/`)
+
+When the resolver finds the hook in one layout but not the other, the test will silently use the wrong hook in CI or fail to run at all. Verify both paths before committing.
+
 ## Anti-patterns (historically painful)
 
 1. **Syncing hooks but not their tests** — test suite compatibility is part of the sync

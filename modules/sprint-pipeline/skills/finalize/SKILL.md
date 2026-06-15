@@ -47,6 +47,15 @@ Read both files. Any unresolved [D]/[F]/[M]/[I]/[T] findings → FAIL. Return to
 
 Only proceed to Step 5 when both audits exist, both verdicts are PASS (or PASS (N/A) for `field_consumption_audit` when zero data-model fields were in scope this sprint), and no unresolved [D]/[F]/[M]/[I]/[T] findings remain (fidelity-audit findings have no INFO tier — every bracket-code entry must be resolved per the rules above). `PASS (N/A)` from `field_consumption_audit` is acceptable because the absence of declared fields means there is nothing to consume; it is not a softened PASS.
 
+### 4.5. Cross-channel gate failure (shared-tree full-suite gate)
+
+Another channel's uncommitted WIP can break the shared-tree full-suite test gate. When the gate fails on a test that is NOT in your channel's scope:
+
+- Align the working-tree test forward without committing it (do NOT revert the other channel's WIP).
+- OR surface it as a cross-channel design decision — never stall the gate waiting for the other channel to reconcile.
+
+Do not commit the forward-aligned test as your channel's work; leave it as an uncommitted working-tree fix for the owning channel to pick up.
+
 ### 5. Accumulated Corrections
 
 Review all issues found this sprint. For each: search CLAUDE.md for existing rule -> strengthen/update. Not found -> add as "Never X. Always Y." with rationale. Never duplicate.
