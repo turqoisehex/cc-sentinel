@@ -95,13 +95,7 @@ HALT Phase 2.5 before invoking the engine. Phase 3 is gated. Never silently fan 
 
 ### Zero-model guard
 
-If the resolved TYPE set is EMPTY, emit the non-opaque banner and skip Phase 2.5 (proceed directly to Phase 3):
-
-```
-/4 fidelity: no-model N/A — no touched data-model types this sprint. Resolver scanned <baseline>; changed files: <list>; none mapped to a model TYPE
-```
-
-This is NOT a CLEAN terminal, NOT a fallback. Only Phase 2.5 is skipped.
+If the resolved TYPE set is EMPTY, emit the zero-model banner (see Phase 2.5 "Zero-model banner" section) and skip Phase 2.5 (proceed directly to Phase 3). This is NOT a CLEAN terminal, NOT a fallback. Only Phase 2.5 is skipped.
 
 ### PARENT fix-application grounding (no-skimming rule)
 
@@ -137,7 +131,7 @@ Else if touched-TYPE set is EMPTY:
 
 Else:
 - `config OFF` (`workflows_enabled: false` / file absent / `"/4"` not in `enabled-phases`):
-  → **Fallback** (reason: config OFF) — loud banner + today's Sonnet-delegated Phase 2.5 (manual `spec-verification.md` procedure). This is the `/4`-specific fallback — the D2 guarantee.
+  → **Fallback** (reason: config OFF) — loud banner + today's Sonnet-delegated Phase 2.5 (manual `reference/spec-verification.md` procedure). This is the `/4`-specific fallback — the D2 guarantee.
 - Workflow tool absent:
   → **Fallback** (reason: tool absent) — same Sonnet-delegated Phase 2.5 fallback as above.
 
@@ -194,13 +188,15 @@ Override path: <narrow type set via CT annotation | raise fanoutTypeCap | author
 
 ### Fallback (when engine path not taken)
 
+Emit this banner immediately before executing the fallback procedure:
+
 ```
 FALLBACK single-pass — reason: <config OFF | config PARSE-FAIL | tool absent | materialization ERRORED>
 ```
 
 The `config OFF` reason covers all non-error cases where the engine is not entered: `workflows_enabled: false`, file absent, or `"/4"` not in `enabled-phases`. Per the canonical gate order in `adversarial-loop.md ## 4.3`, `config PARSE-FAIL` is a distinct reason (file present, required key malformed) and must remain in the banner vocabulary — it is NOT collapsed into `config OFF`.
 
-Execute today's Sonnet-delegated `spec-verification.md` procedure (the D2 guarantee). This is the `/4`-specific fallback — NOT the `## 4.4` "today's Step 9.5" (which is `/5`-specific).
+Execute today's Sonnet-delegated `reference/spec-verification.md` procedure (the D2 guarantee). This is the `/4`-specific fallback — NOT the `## 4.4` "today's Step 9.5" (which is `/5`-specific).
 
 ### Monitoring-script note
 
