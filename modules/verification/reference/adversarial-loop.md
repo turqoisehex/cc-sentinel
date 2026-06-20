@@ -452,6 +452,146 @@ When N types share a field across per-type inventories, the merged assessment is
 
 ---
 
+## 3c. The 5-lens `/3` finderSet
+
+This is the named `/3` finderSet — the lenses the ENGINE runs **only at the checkpoint** (a commit-group / phase boundary, FIRED BY THE SKILL, never by the engine mid-task). It adapts the `/5` lenses (`## 3`) to **pre-commit, build-time** verification. It is **NOT** the per-task verify: the per-task skill stage runs only the deterministic lanes `{4,5}` + cheap gates (`/3` skill, §3.4 of the design). `lensCount: 5`. Lenses are universal; concrete mechanisms (test command, source tree, consumer grep, diff-scan) are **supplied by the build skill** (the `build-gates` config key) — no language/framework-isms in the engine.
+
+**Lens-exclusion rationale (a `## 3c` reader sees why `lensCount` is 5 without leaving `## 3c`):** the set is deliberately smaller than `/5`'s 9 and `/4`'s 7. `/5`-only lenses are **N/A pre-commit** and owned downstream: full plan-execution completeness, cross-file SC/CIP reconciliation, committed-state/full-suite, and call-site entry-point reachability all require a committed state or a sprint-scale scope that `/3` (pre-commit, commit-group scope) does not have. `/4`'s per-type fan-out is also absent (`/3` verifies a commit-group, not a touched-TYPE set). These belong to `## 3b` (`/4`), `## 3` (`/5`), and the commit-time `commit-adversarial`+`commit-cold-reader` pair. The checkpoint LLM pass `{1,2,3}` is a deliberately modest **shift-left lighten-`/4` tripwire**, NOT a replication of `/4`'s or `/5`'s depth.
+
+**finderSet declaration (read by the engine's lens-structure generalization):**
+- `lensCount: 5`. The ENGINE runs this finderSet as a single 5-lens loop-until-dry **only at the checkpoint**, where all 5 are accounted-for per round — `{4,5}` run FRESH as deterministic pre-passes + `{1,2,3}` as LLM fan-out (exactly how `/5` runs `{6,8,9}` deterministic + `{1-5,7}` LLM in ONE finderSet). There is NO per-task engine invocation; a per-task run of only `{4,5}` could never cover the 5-lens set, so it would never be an engine round.
+- LLM lanes: `{1, 2, 3}` — `model: sonnet` each. They run **only in the checkpoint engine loop** (never per-task, never as a skill-layer pre-pass).
+- Deterministic lanes: `{4, 5}` — engine per-component cadence `[{ "check": "test-honesty", "cadence": "per-round", "receiptId": "4/test-honesty" }]` / `[{ "check": "consumer-preflight", "cadence": "per-round", "receiptId": "5/consumer-preflight" }]` (the per-component cadence schema, `## 2.2` MD-2). The engine re-runs these checks FRESH at the checkpoint; they are NOT carried-forward receipts pre-computed elsewhere. The skill-layer per-task execution of the same `{4,5}` checks is a SEPARATE shift-left pass (catch-and-fix at the task) that feeds NOTHING into the engine round. **receiptIds are namespaced to lanes 4 and 5 respectively — NOT `6/…`: the `/5` lens-6 namespace would collide and corrupt `## 6.3`/`## 6.4` stale-receipt handling for the `{4,5}` set.**
+- Deterministic count: 2 receipts per round.
+- Excluded vs `/5`: plan-completeness, cross-file SC/CIP reconcile, call-site entry-point reachability, committed-state/full-suite — N/A pre-commit; owned downstream (rationale above).
+
+**Adversarial prime (LLM lanes 1–3 only, checkpoint engine loop over the commit-group):** *"Prove this commit-group is NOT correctly or completely done. Default to finding a gap. 'Looks done' = look harder — open the cited file, grep the call sites, confirm the changes against the commit-group's acceptance criteria."* Lanes 4 and 5 are deterministic and are NOT primed.
+
+**Citation content-match obligation (BOTH tiers):** Every finding citing a specific field, method, or file path MUST include a grep/Read artifact confirming the target was opened and the content confirmed — never from memory. A phantom citation (resolves-but-absent) is itself a finding. The PARENT must not act on an unchecked claim; an ungroundable citation is flagged as a phantom and treated as a live finding. This applies to the checkpoint LLM lanes AND the per-task deterministic tier (where citations are grep-results).
+
+**`verifyLens` refute prompt (domain-specific; FRESH AGENT/context — never the finder's session or chain; only `{finding, scope}` passed in, per `## 1.1` Rule 7):** *"Given {finding, commit-group scope}: try to REFUTE — does the diff actually satisfy this criterion? Is this really drift, or did the plan authorize it? Is this TODO actually load-bearing, or a benign note? Default to REFUTED if the claim cannot be grounded in a grep/Read on the cited target. Keep only survivors."*
+
+### The 5 lenses
+
+**Lens 1 — Acceptance-criteria-met (LLM)**
+Does the commit-group's produced code satisfy the acceptance criteria for every task in the group, *evidenced*? Each criterion must map to a specific change in the diff that satisfies it; an unwitnessed or hand-waved criterion is a gap. (Adapts `## 3` lens 2, scoped to the **commit-group**.)
+
+*Adversarial prime applies. Commit-group scope. Checkpoint engine loop ONLY (never per-task).*
+
+**Lens 2 — Spec-drift (LLM)**
+Did any implementer in the commit-group deviate from the task's spec/plan intent? A change that contradicts a recorded decision, silently broadens scope, or substitutes a different approach than the plan specified is drift. (Adapts `## 3` lens 3, scoped to the **commit-group**.)
+
+*Adversarial prime applies. Commit-group scope. Checkpoint engine loop ONLY.*
+
+**Lens 3 — No-orphan / partial-work (LLM)**
+Does the commit-group leave mid-file TODOs, "mostly done" markers, dropped sub-bullets, half-finished stubs, commented-out blocks, or provisional defaults never revisited? Partial work is a gap even if the files compile. The checkpoint lens catches **undeclared** orphans; the per-task deterministic pass surfaces **declared** ones (the result-file `todos[]`/`deferrals[]`). (Adapts `## 3` lens 4, scoped to the **commit-group**.)
+
+*Adversarial prime applies. Commit-group scope. Checkpoint engine loop ONLY.*
+
+**Lens 4 — Test-honesty (DETERMINISTIC)**
+Does each new/changed test catch a *real* bug, or is it tautological/unguarded/hardcoded-copy? **Where a seam exists:** source-assert + RED-on-revert. **Where no seam exists (inline logic):** deterministic **mutate-and-run** in a **throwaway worktree/temp copy** — never the primary tree (the engine never writes product files, and a primary-tree mutation would change `scopeHash`). Still passing after mutation = tautological. NOT an LLM "does this hit the seam?" judgment. **Identical mechanism to `## 3` lens 6 / `## 3b` lane 6** — mutate the inline logic in a temp copy, re-run the task's test, still-passing = tautological, clean up the temp; never the primary tree. *Note on "read-only":* the verifier stage is read-only with respect to product files; the throwaway worktree/temp copy (seeded from the primary tree, discarded after the run) is an internal instrument of the check, not a product artifact — the primary tree is never modified.
+
+*Deterministic — no adversarial prime. Engine per-component cadence: `{ "check": "test-honesty", "cadence": "per-round", "receiptId": "4/test-honesty" }`. At the checkpoint the engine's receipt is keyed to the PRIMARY-tree `scopeHash`; the throwaway worktree is used only for the mutate-and-run. The skill ALSO runs this check per-task as a shift-left check — that per-task run is NOT carried forward as a receipt; the checkpoint engine re-runs it FRESH. The engine cadence value is `per-round`; "per-task" is the skill-layer execution, never an engine cadence value.*
+
+**Lens 5 — Data-model-consumer pre-flight (DETERMINISTIC)**
+The build skill's grep-every-consumer rule (`build/SKILL.md` § Procedure step 2 "Data model pre-flight"), promoted from producer self-advice to a **fresh-read deterministic check**: if this task adds/removes/renames/retypes/changes-the-default-of a field on a data model, grep EVERY consumer of that field name across the project's source + test trees (forward-slash include patterns; `tr -d '\r'` CRLF-tolerant; portable `find <src> <test> -name '*.<ext>' | xargs grep -l` form, `<src>`/`<test>`/`<ext>` supplied by the skill via `build-gates`). Confirm every matching consumer reads the same name with **no silent fallback** (`?? `/`|| `) substituting a default. A silent-fallback consumer of a changed field is a gap. **The task diff is the AUTHORITATIVE source of changed-field detection** (via the skill-supplied `diffScan` mechanism): the producer's `changedFields[]` is a **declaration the verifier cross-checks** — a field-change evident in the diff but absent from `changedFields[]` is **itself a FAIL** (under-declaration). The skill greps consumers of the **union** of diff-detected and declared field names. This reuses the **deterministic consumer-grep mechanism** — the silent-fallback `?? `/`|| ` grep over every consumer, akin to `## 3b` lane-6's deterministic shape — **NOT** `## 3b` lane-2's LLM silent-fallback prompt (a `model: sonnet` judgment lane); `/3`'s lens 5 is DETERMINISTIC and runs the grep procedure. It is the per-task, shift-left twin of the silent-fallback check, caught at the task that changed the field, not at `/4`.
+
+*Deterministic — no adversarial prime. Engine per-component cadence: `{ "check": "consumer-preflight", "cadence": "per-round", "receiptId": "5/consumer-preflight" }`. The skill ALSO runs this per-task as a shift-left check; that per-task run is NOT carried forward as a receipt — the checkpoint engine re-runs it FRESH over the commit-group scope. The engine cadence value is `per-round`; "per-task" is the skill-layer execution, never an engine cadence value.*
+
+### Empty-candidate behavior (deterministic lanes 4/5 — trivially covered, NOT a FAIL, NOT a silent skip)
+
+A deterministic lane with no work still emits a **PASS with a receipt** so the round's coverage is witnessed (a silent skip would leave the engine's coverage model unable to distinguish "ran and found nothing" from "never ran"):
+- **Lens 4 (test-honesty), no changed tests** ⇒ trivially-covered PASS with a receipt (`4/test-honesty`, zero candidates).
+- **Lens 5 (consumer pre-flight), no changed data-model fields** (`changedFields[]` empty AND no field-change in the diff) **OR zero consumer matches** ⇒ trivially-covered PASS with a receipt (`5/consumer-preflight`, zero candidates).
+- **Absent `build-gates` config** (or an absent `gates` sub-list) ⇒ the cheap-gate tier degrades to lenses 4/5 only with the skill-default `src`/`test`/`ext`; the lane is trivially-covered, never a PARSE-FAIL and never a silent skip.
+In every case the receipt records the empty candidate set explicitly.
+
+### File-handoff schemas — result-FILE and verdict-FILE (the Rule-10 spine)
+
+Both are JSON, schema-validated under the schema-validation-as-FAIL discipline (`## 1.1` / `## 2` / `## 2.2` — a missing/malformed file = a finding, never a silent pass). The parent orchestrates from THEM, never from a held summary.
+
+**Paths / lifecycle (the selftest discovers these):** all artifacts live under the per-run `verification_findings/build_pipeline[_chN]/` directory (the `_chN` channel suffix mirrors the squad-dir convention):
+- **result-FILE** — `verification_findings/build_pipeline[_chN]/<taskId>.result.json` (one per task; written by PRODUCE).
+- **verdict-FILE** — `verification_findings/build_pipeline[_chN]/<taskId>.verdict.json` (per-task); `verification_findings/build_pipeline[_chN]/checkpoint-<group>.verdict.json` (checkpoint engine, `taskId: 'checkpoint:<group>'`).
+- **pipeline-log** — `verification_findings/build_pipeline[_chN]/pipeline-log.jsonl` (one append-only log per `/3` run; the globally-monotonic `seq` ordering substrate).
+All three are **overwritten per `/3` run** and **cleaned at `/cleanup`** (never committed — working-state under `verification_findings/`).
+
+**Result-FILE schema (the PRODUCE stage writes this; the verifier reads it):**
+
+```json
+{
+  "taskId":        "<plan-task id>",          // required
+  "classification": "SONNET | OPUS | PARENT", // required
+  "filesWritten":  ["<path>", ...],           // required — paths the producer wrote
+  "acceptanceCriteria": [                       // required, MUST be non-empty — when the plan task has no explicit Acceptance field, the skill synthesizes the task description text as the single criterion and writes it HERE (NOT left as []), so the result-FILE, the verifier input, and the surfaced criteriaChecked[] all agree (the synthesized fallback is materialized into the result-FILE, never diverging between channels)
+    { "criterion": "<text>", "satisfiedBy": "<diff ref: file + the change that satisfies it>" }
+  ],
+  "changedFields": [ "<field name added/removed/renamed/retyped on a data model>", ... ], // required (may be [] if the task changes no data-model field) — a DECLARATION the verifier cross-checks against the diff; a field-change visible in the diff but absent here = FAIL (under-declaration); lens 5 greps consumers of the union (diff-detected ∪ declared)
+  "deferrals":     [ "<provisional decision / parked item>", ... ],  // optional
+  "todos":         [ "<TODO / partial-work note>", ... ],           // optional
+  "diffScope":     "<the git-diff range / file set for this task>",  // required
+  "baselineRef":   "<the git stash create object id captured by the parent at PRODUCE(N) start>"  // required — the PERSISTED per-task baseline; a resumed /3 reconstructs `git diff <baselineRef>` (full + path-scoped) from this rather than falling back to cumulative HEAD. Written by the PARENT (the parent owns baseline capture), not the producer
+}
+```
+
+The producer's prose claims are **inputs to verification, never a license to proceed**. `deferrals`/`todos` being non-empty is a signal the orphan/no-orphan lens (lens 3, at the checkpoint) and the strictly-execution discipline act on: a non-empty `todos[]` is a build-execution gap the parent FIXES; a non-empty `deferrals[]` is a `/2`-incompleteness that HALTS the loop and returns to `/2` — `/3` never carries either forward as a provisional default.
+
+The two tiers write **two DIFFERENT verdict files** — they do NOT share one schema. Each is pinned separately: the **per-task verdict-FILE** carries the per-task `PASS | FAIL | RETURN_TO_2` enum + the producer-surfaced fields; the **checkpoint verdict-FILE** carries the engine's `CLEAN | FINDINGS | CAPPED` terminal + the survivor findings, and has NO per-task verdict enum and NO single `declaredIncomplete` (the checkpoint has no single producer to copy partial-work from). Conflating them was the prior defect.
+
+**Per-task verdict-FILE schema (`<taskId>.verdict.json` — the per-task skill verifier writes this; the parent reads it):**
+
+```json
+{
+  "taskId":   "<plan-task id>",                          // required
+  "verdict":  "PASS | FAIL | RETURN_TO_2",               // required — PASS / FAIL (build-execution gap, parent fixes) / RETURN_TO_2 (design-decision-gap, /2 incomplete → halt + return to /2); no benign WARN tier (/3 = strictly execution). This enum is PER-TASK ONLY — the checkpoint engine does NOT use it (it has its own `terminal` field below)
+  "findings": [                                           // required (may be [])
+    {
+      "source":   "<lens-<n> | gate-<name>>",            // required — a lens finding ("lens-4"/"lens-5") OR a non-lens cheap-gate failure ("gate-analyze"/"gate-format"/"gate-test"); a cheap-gate failure has no lens id and uses the gate-<name> form
+      "severity": "FAIL | WARN | HIGH | MEDIUM | LOW | INFO",  // required — enum
+      "address":  "<symbolic addr>",
+      "issue":    "<text>",
+      "citation": "<grep/Read artifact>"
+    }
+  ],
+  "criteriaChecked": [                                   // required, MUST be non-empty — the acceptance criteria SURFACED into the verdict for the parent's record; the SAME criterion set as the result-FILE's `acceptanceCriteria[]` copied through verbatim, so it inherits that field's non-empty guarantee (`acceptanceCriteria[]` is itself MUST-be-non-empty — synthesized from the task description when no explicit Acceptance field exists), so an empty `criteriaChecked[]` is a schema violation, never the no-criteria case. The per-task verifier does NOT score these (acceptance-criteria-met is a checkpoint LLM lens), so per-task `met` is recorded as the producer's claim verbatim
+    { "criterion": "<text>", "met": true, "evidence": "<diff ref / grep-Read artifact>" }
+  ],
+  "declaredIncomplete": {                                 // required — the producer's self-declared partial work, surfaced from the result-FILE (a deterministic read, no LLM judgment)
+    "todos":     [ "<TODO / partial-work note>", ... ],   // copied from the result-FILE todos[]
+    "deferrals": [ "<provisional decision / parked item>", ... ]  // copied from the result-FILE deferrals[]
+  },
+  "scopeHashChecked": "<the scopeHash the verdict was computed against>"  // required — a content digest over task N's filesWritten[] (deferral-ledger and audit writes excluded, mirroring ## 6.1 exclusions), computed by the PARENT at the PRODUCE(N)→VERIFY(N) handoff using the same content-digest function the engine uses (## 6)
+}
+```
+
+The per-task verdict-file carries a flat `PASS | FAIL` plus the halt-return-to-`/2` signal (the per-task verifier is a single read-only deterministic pass — no engine terminal; `/3` is strictly execution, so there is no benign WARN-and-continue tier). The `criteriaChecked[]` and `declaredIncomplete` fields are the surfaced-data channel the §5 rollup reads. The parent reads the verdict-FILE — **never a held summary** — and rejects any verdict-file whose `scopeHashChecked` does not match the tree VERIFY actually ran against.
+
+**Checkpoint verdict-FILE schema (`checkpoint-<group>.verdict.json` — the checkpoint engine writes this; the parent reads it). This is a DISTINCT schema from the per-task verdict-FILE — it carries the engine TERMINAL, NOT the per-task verdict enum:**
+
+```json
+{
+  "taskId":   "checkpoint:<group>",                      // required — the synthetic checkpoint id, never a plan-task id
+  "terminal": "CLEAN | FINDINGS | CAPPED",               // required — the ENGINE's two-level terminal (## 1.3); there is NO `verdict: PASS|FAIL|RETURN_TO_2` field here (that enum is per-task only). The parent reads THIS field for checkpoint state
+  "findings": [                                           // required (may be []) — the engine's surviving findings for this terminal; same finding shape as the per-task verdict's findings[] (source / severity / address / issue / citation)
+    {
+      "source":   "<lens-<n> | gate-<name>>",
+      "severity": "FAIL | WARN | HIGH | MEDIUM | LOW | INFO",
+      "address":  "<symbolic addr>",
+      "issue":    "<text>",
+      "citation": "<grep/Read artifact>"
+    }
+  ],
+  "criteriaChecked": [                                   // required, MUST be non-empty — at the checkpoint, the acceptance-criteria-met LLM lens (lens 1) records the EVIDENCED result (not a producer claim): `met` is the lens verdict, `evidence` the grep/Read artifact. Scoped to the commit-group's tasks; non-empty because every task in the group carries a non-empty `acceptanceCriteria[]` (the result-FILE guarantee), so the union the lens scores is always non-empty
+    { "criterion": "<text>", "met": true, "evidence": "<diff ref / grep-Read artifact>" }
+  ],
+  "scopeHashChecked": "<the engine's full-scope scopeHash>"  // required — the full-scope scopeHash the engine validated at the terminal boundary (## 6.2), NOT a per-task digest
+}
+```
+
+The checkpoint verdict-FILE has **no per-task `verdict` enum and no single `declaredIncomplete`** — a `checkpoint:<group>` output has no single producer/result-file to copy partial-work from, so those per-task-only fields are absent by construction. The parent reads the checkpoint's `terminal` field (`CLEAN`/`FINDINGS`/`CAPPED`) and dispatches per §5; the checkpoint engine's per-round survivor list conforms to the `findings[]` shape above. The per-task tier has a `verdict` and the parent acts on `PASS/FAIL/RETURN_TO_2`; the checkpoint tier has a `terminal` and the parent acts on `CLEAN/FINDINGS/CAPPED`.
+
+---
+
 ## 4. The opt-in / fallback / budget gate
 
 ### 4.1 Gate pseudocode
@@ -498,7 +638,7 @@ Resolves the absent-vs-malformed ambiguity:
 
 (c) **Parse otherwise fails** → log + fallback bannered `config PARSE-FAIL`.
 
-Config keys (exact, from the shared naming contract): `workflows_enabled` (default `false`), `dryRounds` (alias K; floor 2), `maxRounds` (must be ≥ `dryRounds` — if `maxRounds < dryRounds`, CLEAN is unreachable; reject at parse), `budget` (rounds AND spend), `enabled-phases` (default `["/5"]`), `budgetGuard`, `fanoutTypeCap` (optional int, default 8; the maximum touched data-model TYPE count for `/4` Phase 2.5; absent → 8 without PARSE-FAIL). Config file path: `.claude/reference/workflows-config.md`.
+Config keys (exact, from the shared naming contract): `workflows_enabled` (default `false`), `dryRounds` (alias K; floor 2), `maxRounds` (must be ≥ `dryRounds` — if `maxRounds < dryRounds`, CLEAN is unreachable; reject at parse), `budget` (rounds AND spend), `enabled-phases` (default `["/5"]`), `budgetGuard`, `fanoutTypeCap` (optional int, default 8; the maximum touched data-model TYPE count for `/4` Phase 2.5; absent → 8 without PARSE-FAIL), `build-gates` (optional nested object `{ src, test, ext, diffScan?, gates: [{name, cmd}] }` supplying the `/3` per-task verify mechanisms; absent → skill defaults, malformed → graceful-default-with-warning, never PARSE-FAIL). Config file path: `.claude/reference/workflows-config.md`.
 
 ### 4.4 Mandatory path banner (MD-1)
 

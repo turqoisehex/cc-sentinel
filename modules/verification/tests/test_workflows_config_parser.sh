@@ -48,7 +48,51 @@ parse_config() {
   fi
   local phases
   phases=$(grep -E '^enabled-phases:' "$f" | head -1 | sed 's/.*: *//' | tr -d '\r')
-  echo "ENABLED dry=$dry max=$max fanoutTypeCap=$cap phases=$phases"
+  # build-gates: optional NESTED object (single-line inline OR multi-line YAML block)
+  # Absent => DEFAULT (no warn); malformed shape => DEFAULT_WARN; well-formed => OK(...); NEVER PARSE-FAIL
+  local bg
+  if grep -qE "^build-gates:" "$f"; then
+    # Collect the build-gates block: the build-gates: line PLUS all immediately following
+    # indented/continuation lines (handles multi-line YAML-block format).
+    # Use awk: start at ^build-gates:, collect lines until a non-indented non-empty line.
+    local bgblock
+    bgblock=$(awk '/^build-gates:/{found=1; print; next}
+                  found && /^[[:space:]]/{print; next}
+                  found && /^[^[:space:]]/{exit}' "$f" | tr -d '\r')
+    # Extract src, test, ext, diffScan (optional) — present in either inline or block format
+    local s t e ds g namecnt cmdcnt
+    s=$(printf '%s' "$bgblock" | grep -oE 'src:[[:space:]]*"?[^",}[:space:]]+"?' | head -1 | sed -E 's/src:[[:space:]]*"?([^",}[:space:]]+)"?/\1/')
+    t=$(printf '%s' "$bgblock" | grep -oE 'test:[[:space:]]*"?[^",}[:space:]]+"?' | head -1 | sed -E 's/test:[[:space:]]*"?([^",}[:space:]]+)"?/\1/')
+    e=$(printf '%s' "$bgblock" | grep -oE 'ext:[[:space:]]*"?[^",}[:space:]]+"?' | head -1 | sed -E 's/ext:[[:space:]]*"?([^",}[:space:]]+)"?/\1/')
+    # diffScan is OPTIONAL (absent => skill default); captured here so the skill can read it
+    ds=$(printf '%s' "$bgblock" | grep -oE 'diffScan:[[:space:]]*"?[^"]+' | head -1 | sed -E 's/diffScan:[[:space:]]*"?(.*)/\1/' | sed -E 's/"[[:space:]]*[},]?[[:space:]]*$//')
+    # Validate the `gates` array-of-{name,cmd} shape. The malformed case `gates: "oops"` (a STRING,
+    # not an array of objects) must be REJECTED to DEFAULT_WARN — so presence of `gates:` alone is
+    # NOT sufficient. Require BOTH: at least one `name:` AND a matching `cmd:` (every gate object has
+    # both keys). A scalar `gates: "oops"` has zero `name:`/`cmd:` pairs => malformed.
+    namecnt=$(printf '%s' "$bgblock" | grep -oE '(^[[:space:]]*-[[:space:]]+name:|[{,][[:space:]]*name:|^[[:space:]]*name:)' | wc -l | tr -d ' ')
+    cmdcnt=$(printf '%s' "$bgblock" | grep -oE 'cmd:' | wc -l | tr -d ' ')
+    g=$namecnt
+    # gates is present AND well-formed only when it parses to >=1 {name,cmd} pair (name count == cmd
+    # count, both >=1). A `gates:` key with no valid pair (e.g. gates: "oops") is malformed.
+    local gates_ok=0
+    if printf '%s' "$bgblock" | grep -qE 'gates:'; then
+      if [[ "$namecnt" -ge 1 && "$namecnt" -eq "$cmdcnt" ]]; then gates_ok=1; fi
+    fi
+    # diffScan is OPTIONAL: surface it in the parsed output so the skill's lens-5 can read it; absent => the
+    # literal "default" token (the skill substitutes its own changed-field detector). It MUST appear in the
+    # emitted value — capturing it in a local that dies with the function would make it invisible to the skill.
+    [[ -z "$ds" ]] && ds="default"
+    # well-formed requires src/test/ext non-empty AND a well-formed gates array (>=1 {name,cmd} pair)
+    if [[ -n "$s" && -n "$t" && -n "$e" && "$gates_ok" -eq 1 ]]; then
+      bg="OK(src=$s,test=$t,ext=$e,diffScan=$ds,gates=$g)"   # diffScan surfaced for the skill (lens 5); "default" when absent
+    else
+      bg="DEFAULT_WARN"   # malformed shape (bad gates array, or missing src/test/ext): graceful default + warning, never PARSE-FAIL
+    fi
+  else
+    bg="DEFAULT"          # absent: skill defaults, no warning
+  fi
+  echo "ENABLED dry=$dry max=$max fanoutTypeCap=$cap phases=$phases build-gates=$bg"
 }
 
 # (1) absent file = FILE-ABSENT (gate maps to OFF/fallback, NOT parse-fail)
@@ -98,6 +142,72 @@ result=$(parse_config "$TMP/both_phases.md")
 [[ "$result" == ENABLED* && "$result" == *"/4"* && "$result" == *"/5"* ]] \
   && ok "enabled-phases /4+/5 = ENABLED with both phases in output" \
   || no "enabled-phases /4+/5: got $result"
+
+# (N) build-gates well-formed single-line nested object parses correctly
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", test: "test", ext: "dart", gates: [ { name: "analyze", cmd: "flutter analyze" } ] }\n' \
+  > "$TMP/bg_valid.md"
+result=$(parse_config "$TMP/bg_valid.md")
+[[ "$result" == *"build-gates=OK(src=lib,test=test,ext=dart,diffScan=default,gates=1)"* ]] \
+  && ok "build-gates well-formed single-line parsed" || no "build-gates valid single-line: got $result"
+
+# (N+1) build-gates well-formed MULTI-LINE nested object (src/test/ext/gates on separate lines) parses correctly
+# The config format supports YAML-block style: subsequent indented lines belong to build-gates.
+# The parser must handle the object spanning multiple lines (not just grep the first line).
+cat > "$TMP/bg_multiline.md" << 'MLEOF'
+workflows_enabled: true
+dryRounds: 2
+maxRounds: 5
+enabled-phases: ["/3","/5"]
+build-gates:
+  src: "lib"
+  test: "test"
+  ext: "dart"
+  gates:
+    - name: "analyze"
+      cmd: "flutter analyze"
+    - name: "test"
+      cmd: "flutter test"
+MLEOF
+result=$(parse_config "$TMP/bg_multiline.md")
+[[ "$result" == *"build-gates=OK(src=lib,test=test,ext=dart,diffScan=default,gates=2)"* ]] \
+  && ok "build-gates well-formed multi-line parsed" || no "build-gates valid multi-line: got $result"
+
+# (N+2) build-gates malformed (gates not an array of {name,cmd}) => graceful-default WITH warning, NOT PARSE-FAIL
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", gates: "oops" }\n' \
+  > "$TMP/bg_malformed.md"
+result=$(parse_config "$TMP/bg_malformed.md")
+[[ "$result" == *"build-gates=DEFAULT_WARN"* && "$result" != *"PARSE-FAIL"* ]] \
+  && ok "build-gates malformed=DEFAULT_WARN not PARSE-FAIL" || no "build-gates malformed: got $result"
+
+# (N+3) build-gates absent => skill defaults, NO warning, NOT PARSE-FAIL
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\n' \
+  > "$TMP/bg_absent.md"
+result=$(parse_config "$TMP/bg_absent.md")
+[[ "$result" == *"build-gates=DEFAULT"* && "$result" != *"DEFAULT_WARN"* && "$result" != *"PARSE-FAIL"* ]] \
+  && ok "build-gates absent=DEFAULT no warning" || no "build-gates absent: got $result"
+
+# (N+3a) build-gates present with src/test/ext but NO gates sub-list => DEFAULT_WARN (no valid {name,cmd} pair)
+# (the cheap-gate tier degrades to lenses 4/5 only; per §3.3 empty-candidate behavior — distinct from a
+#  bad-shape gates AND from a fully-absent build-gates)
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", test: "test", ext: "dart" }\n' \
+  > "$TMP/bg_nogates.md"
+result=$(parse_config "$TMP/bg_nogates.md")
+[[ "$result" == *"build-gates=DEFAULT_WARN"* && "$result" != *"PARSE-FAIL"* ]] \
+  && ok "build-gates present-but-no-gates=DEFAULT_WARN not PARSE-FAIL" || no "build-gates no-gates sub-list: got $result"
+
+# (N+3b) build-gates with optional diffScan present => still well-formed OK(...) (diffScan is optional and captured)
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", test: "test", ext: "dart", diffScan: "git diff -- lib", gates: [ { name: "analyze", cmd: "flutter analyze" } ] }\n' \
+  > "$TMP/bg_diffscan.md"
+result=$(parse_config "$TMP/bg_diffscan.md")
+[[ "$result" == *"build-gates=OK(src=lib,test=test,ext=dart,diffScan=git diff -- lib,gates=1)"* ]] \
+  && ok "build-gates with optional diffScan parses OK + surfaces diffScan" || no "build-gates diffScan: got $result"
+
+# (N+4) enabled-phases contains "/3" — membership recognized
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\n' \
+  > "$TMP/phases_with_3.md"
+result=$(parse_config "$TMP/phases_with_3.md")
+[[ "$result" == *'phases='*'"/3"'* || "$result" == *"phases="*"/3"* ]] \
+  && ok 'enabled-phases includes "/3" recognized' || no 'enabled-phases "/3" not recognized: got $result'
 
 echo "config-parser: $PASS passed, $FAIL failed"
 [[ $FAIL -eq 0 ]]

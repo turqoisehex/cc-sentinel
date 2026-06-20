@@ -164,7 +164,8 @@ awk '/^## 3b\./{found=1} found && /^## [^3]/{exit} found{print}' \
 
 **(iv) Generalized liveness resolves for BOTH finderSets:**
 - `/5`: 6 agent-ids + 3 receipts (from `/5`-mode sub-block above)
-- `/4`: 6 agent-ids + 1 receipt (from this sub-block)
+- `/4`: 6 agent-ids + 1 receipt (from the `/4`-mode sub-block)
+- `/3`: 3 agent-ids + 2 receipts (from the `/3`-mode sub-block below)
 
 **(v) Stale-receipt rejection for 1-element deterministic set `{6}`:**
 Run one round with `/4` finderSet active. Mutate scope (H1→H2). Assert: lane-6 receipt REJECTED, lane 6 re-runs, `dryStreak` NOT incremented.
@@ -200,6 +201,55 @@ grep -E "all-9.*lensStatus|all 9 lenses accounted" ~/.claude/reference/adversari
 # Expected: 0 matches outside ## 3 (the /5 finderSet section itself)
 ```
 Catches a builder who fixes `## 1.2` liveness prose and the `## 2.2` jsonl block but leaves the standalone `## 2.2` liveness paragraph hardcoded.
+
+#### `/3`-mode sub-block (5 lenses, deterministic `{4,5}`, 2 receipts)
+
+Use the `/3` finderSet (`## 3c`) with a synthetic build-pipeline fixture (≥2 fabricated plan tasks with known produce/verify handoff stubs; for the same-file case, two tasks that both edit the SAME fixture file). The per-task serial loop is SKILL-orchestrated, so the engine JOURNAL cannot observe "serialized produce + read-only verify" or "checkpoint-after-produce" — those are SKILL-observable (file presence + pipeline-log `seq` ordering), NOT engine-journal assertions.
+
+**Selftest-activation rule (resolves the enable-gate deadlock — self-enable then verified-revert):** the engine path is config-OFF unless `"/3"` is in `enabled-phases`, but the HARD-BLOCK enable gate (obligation 6 / Step 7.7) forbids adding `"/3"` to the LIVE `enabled-phases` until this selftest PASSES — a circular deadlock if the selftest needs the engine path. The `/3`-mode selftest therefore **temporarily self-enables `/3` for the duration of the run, then REVERTS** (mirroring the `/4`-mode activation, made self-reverting): at `/3`-mode start the selftest sets `workflows_enabled: true` AND adds `"/3"` to `enabled-phases` in the config it reads (a scoped, in-run enablement — NOT the live operator enablement obligation 6 gates), runs the assertions on the engine path, then **REVERTS both** (removes `"/3"` from `enabled-phases` and restores the prior `workflows_enabled` value). **The revert MUST be verified before any commit** — the selftest re-reads the config after revert and asserts `"/3"` is absent from `enabled-phases` and `workflows_enabled` is restored; a non-reverted config is a selftest FAIL (leaving `/3` live would bypass the obligation-6 hard-block). This self-contained temporary-enable-then-verified-revert is what lets the selftest reach the engine path WITHOUT the operator first performing the live enablement obligation 6 forbids until the selftest passes.
+
+**Engine-journal assertions (the CHECKPOINT 5-lens engine run — journal-observable):**
+
+**(i) BANNER assertion:** the checkpoint banner emits `PROVE-GATE: … (5 lenses …)` (catches a residual hardcoded "9"/"7"; the `PROVE-GATE:` prefix is the engine's fixed string, only the count is finderSet-relative):
+```bash
+# Expected: PROVE-GATE: engine path (5 lenses, K=2, max 5)
+```
+Failure: banner shows "9 lenses" or "7 lenses" = residual hardcoded constant.
+
+**(ii) JOURNAL-LIVENESS assertion (separate from banner):** checkpoint journal liveness resolves for the 5-lens `/3` set — `llmFanOutAgentIds[]` count = 3 (lanes 1,2,3) AND `deterministicReceiptIds[]` count = 2 (lanes 4,5). A valid `/3` checkpoint run = 3 agent ids + 2 receipts (NOT "≥5 agent ids").
+
+**(iii) `## 3c` existence + 5 lenses named in `## 3c` (FILE-TEXT GREP):**
+```bash
+grep "## 3c" ~/.claude/reference/adversarial-loop.md
+# Expected: 1 match (the section heading)
+# Anchor the lens-heading match at start-of-line (^**Lens) so the indented `- **Lens 4 (…`/`- **Lens 5 (…`
+# bullets in the empty-candidate-behavior subsection are NOT miscounted as lens headings (they are bullets,
+# not headings — an unanchored `**Lens [1-5]` would count 7, not 5).
+awk '/^## 3c\./{found=1} found && /^## [^3]/{exit} found{print}' \
+  ~/.claude/reference/adversarial-loop.md | grep -c "^\*\*Lens [1-5]"
+# Expected: 5 (exactly 5 lens headings in ## 3c)
+```
+
+**(iv) Stale-receipt REJECTION for the 2-element deterministic set `{4,5}`** (RECEIPT-INVALIDATION + re-run-trigger; NOT a full lane-4 throwaway-worktree mutate-run — the throwaway worktree is used only inside lens 4's test-honesty check, not as the mutation vehicle here): run one checkpoint round (receipts signed at PRIMARY-tree `scopeHash` H1), then mutate a **PRIMARY-TREE in-scope file** (the mutation vehicle is the primary tree so `scopeHash` changes to H2 ≠ H1). Assert BOTH lane-4 (`4/test-honesty`) and lane-5 (`5/consumer-preflight`) receipts are REJECTED and re-run (NOT carried forward against H2 — dry is NOT credited against stale receipts; `## 6.3`/`## 6.4` for a 2-element set, a new cardinality between `/4`'s 1 and `/5`'s 3). After the assertion, **revert the primary-tree mutation** (the mutation is a test vehicle; leaving it would corrupt subsequent build steps). This 2-element-set assertion is the explicit gate that the `{4,5}` cardinality is selftest-demonstrated before `/3` goes live.
+
+**Skill-observable assertions (the per-task SERIAL produce→verify loop — file-presence / pipeline-log ordering, NOT engine-journal):**
+
+**(v) produce→verify file-handoff occurred per task, in serial order:** the fixture has ≥2 tasks; assert one **result-FILE** (`<taskId>.result.json`) + one **verdict-FILE** (`<taskId>.verdict.json`) exist per fixture task under `verification_findings/build_pipeline[_chN]/`, and the skill pipeline-log shows entries in `seq` order — for each task `PRODUCE` before `VERIFY`, and task N's `VERIFY` before task N+1's `PRODUCE` (the serial single-writer ordering). Ordering is read from the monotonic `seq` counter, NOT file-mtime. A no-op / silent fallback produces no result/verdict files and no pipeline-log entries and fails this.
+
+**(vi) checkpoint engine run fires AFTER all per-task VERIFY entries:** the skill writes a `{ stage: CHECKPOINT_ENGINE_START, seq }` entry to the pipeline-log when it fires the checkpoint engine; assert ENTIRELY WITHIN the pipeline-log that every per-task `VERIFY` entry's `seq` is **less than** the `CHECKPOINT_ENGINE_START` `seq`. This is a single-log `seq` ordering check, NOT a cross-log comparison with the engine journal (the journal has no comparable global `seq`; it separately proves the checkpoint RAN via (ii)/(iii), while the pipeline-log proves the ORDER). Catches an implementer who wired the engine (or LLM lenses 1–3) as a per-task interrupt instead of a single skill-fired checkpoint pass (violating WIP §7 and the §3.4 cadence division).
+
+**(vii) `scopeHashChecked`-REJECTION (parent-enforcement, deterministic fixture assertion):** As part of the fixture run, write a verdict-FILE for a synthetic task with a deliberately MISMATCHED `scopeHashChecked` — a value that does NOT match the digest of the task's actual `filesWritten[]`. The fixture then asserts that the parent:
+- (a) detects the mismatch (logs or emits a rejection signal, not a silent accept),
+- (b) does NOT advance to PRODUCE(N+1) on the basis of the rejected verdict,
+- (c) re-runs VERIFY(N) against the actual tree and replaces the rejected verdict-FILE with a fresh one whose `scopeHashChecked` matches.
+
+Implement this as a checkable fixture step: the synthetic task writes a single known file; the fixture computes the expected `scopeHashChecked` via the same content-digest function the engine uses (`## 6`), then writes a verdict-FILE with a deliberately different value (e.g. the hash of an empty string). The parent's rejection is observable as: the original rejected verdict-FILE is replaced (or the pipeline-log records a re-VERIFY entry for the task); the final accepted verdict-FILE carries the correct `scopeHashChecked`. This is a deterministic, mechanizable assertion — NOT prose-only. *Prose-instruction-level only (not a deterministic fixture assertion):* phantom-citation-rejection (the parent rejects a finding whose citation cannot be grounded, both tiers) and the acceptance-criteria empty→description fallback are documented as parent/skill instructions and checked by review — these are not mechanizable in a static fixture.
+
+**(viii) task-local-diff baseline, same-file/two-task case:** the fixture has two tasks that BOTH edit the SAME file; the parent records a baseline ref via **`git stash create`** (a working-tree snapshot object id — NOT `git write-tree`, which serializes the index only) of the working tree at PRODUCE(N) start and persists it as `baselineRef`. Assert that VERIFY(N) — computing the path-scoped diff of the post-PRODUCE(N) tree against THAT recorded baseline — sees ONLY task N's hunk on the shared file, NOT task N−1's hunk (which a cumulative `git diff HEAD` would conflate). ALSO assert the FULL-diff under-declaration check fires: seed task N to silently touch an UNDECLARED file (absent from `filesWritten[]`) and assert VERIFY(N) FAILs it via the full working-tree diff (a path-scoped diff would miss it). Proves both the single pinned task-local baseline mechanism (path-scoped, shared-file isolation) AND the full-diff under-declaration catch; a builder who used cumulative `HEAD`, `git write-tree`, or a path-scoped diff for under-declaration fails this.
+
+**(ix) design-gap → RETURN-TO-`/2` halt:** the fixture seeds a producer **deferral** — a synthetic task whose result-FILE carries a non-empty `deferrals[]` (a design decision the `/2` plan did not resolve). Assert that the per-task verifier emits `verdict: RETURN_TO_2` (NOT PASS, NOT a benign WARN-continue), that the `/3` loop **HALTS** (does NOT advance to the next PRODUCE and the single `/3` commit does NOT fire), and that the parent **writes the `## Return to /2 — design-decision-gap` note to the CT**. This proves the strictly-execution discipline: a `/2`-incompleteness halts-and-returns rather than being conservative-defaulted or parked for `/3`-end approval. A builder who lets `/3` take a default and continue (the removed pre-RQ-3 behavior) fails this.
+
+**(x) `/5`/`/4`-regression guard:** re-run the existing `/5`-mode (9 lenses, 6 agent-ids + 3 receipts) and `/4`-mode (7 lenses, 6 agent-ids + 1 receipt) blocks — adding the `/3` finderSet must not perturb them (each per-mode block remains independently executable; the global PASS contract now spans THREE modes — `/5`, `/4`, `/3`).
 
 **(c) Real LLM fan-out executes:** At least one round of real LLM fan-out executes with the expected lens agents reporting. A no-op, a mock, or a zero-agent round is a FAIL.
 
