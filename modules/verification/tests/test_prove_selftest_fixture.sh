@@ -120,6 +120,14 @@ grep -q "active finderSet = the lenses declared in the phase" "$ADVERS_LOOP" \
   && ok "generalized ## 1.1 finderSet-relative phrasing present" \
   || no "generalized ## 1.1 finderSet-relative phrasing missing"
 
+# B16: ## 3 lens-6 carries the mutation-target + cleanup guard block (parity with ## 3c lens-4).
+# Scoped to the bare ## 3 section (the 9-lens /5 finderSet) via an awk window that starts at
+# "## 3." and exits at "## 3b." — so a match inside ## 3c lens-4 cannot false-pass this.
+awk '/^## 3\. /{found=1} found && /^## 3b\./{exit} found{print}' "$ADVERS_LOOP" \
+  | grep -qE "lens-6 engine-error FAIL emitted before any mutation" \
+  && ok "B16: ## 3 lens-6 mutation-target guard present (parity with ## 3c lens-4)" \
+  || no "B16: ## 3 lens-6 mutation-target guard ('lens-6 engine-error FAIL emitted before any mutation') missing"
+
 # --- Group C: workflows-config fanoutTypeCap ---
 WFCFG=""
 for candidate in \

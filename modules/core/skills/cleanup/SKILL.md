@@ -46,9 +46,11 @@ Use proper message if changes include completed work. Clean tree -> skip.
 
 Delete session artifacts. **Only YOUR channel's artifacts** — never touch other channels' files.
 
-**Channeled:** Delete `verification_findings/_pending_sonnet/chN/*`, `_staging/*`, `squad_chN_sonnet/`, `squad_chN_opus/`, `build_pipeline_chN/`, `cold_prep_result_chN.md`, `transcript_orphan_result_chN.md`.
+**Channeled:** Delete `verification_findings/_pending_sonnet/chN/*`, `verification_findings/_staging/*`, `verification_findings/squad_chN_sonnet/`, `verification_findings/squad_chN_opus/`, `verification_findings/build_pipeline_chN/`, `verification_findings/cold_prep_result_chN.md`, `verification_findings/transcript_orphan_result_chN.md`. (All paths are subdirectories/files UNDER `verification_findings/` — the `build_pipeline_chN/` entry is `verification_findings/build_pipeline_chN/`, the `/3` write path, NOT a repo-root directory.)
 
-**Unchanneled:** If other channels active (check Active Channels in `CURRENT_TASK.md`), do NOT delete `_pending_sonnet/`. Clean only: `_staging/*`, `squad_sonnet/`, `squad_opus/`, `build_pipeline/`, `cold_prep_result.md`, `transcript_orphan_result.md`.
+**Unchanneled:** If other channels active (check Active Channels in `CURRENT_TASK.md`), do NOT delete `verification_findings/_pending_sonnet/`. Clean only: `verification_findings/_staging/*`, `verification_findings/squad_sonnet/`, `verification_findings/squad_opus/`, `verification_findings/build_pipeline/`, `verification_findings/cold_prep_result.md`, `verification_findings/transcript_orphan_result.md`. (`build_pipeline/` here is `verification_findings/build_pipeline/`, the `/3` write path.)
+
+The `verification_findings/build_pipeline[_chN]/` artifacts are working-state, gitignored at `verification_findings/build_pipeline*/` (a project running `/3` must add `verification_findings/build_pipeline*/` to its `.gitignore` if not already present — see spec obligation 9(a)) — they are overwritten per run and never committed.
 
 **Do NOT delete:** `/perfect`, spec-to-code, or transcript decision results (sprint records). Files referenced in CT or your project backlog. When in doubt, keep it.
 

@@ -55,6 +55,15 @@ parse_config() {
     # Collect the build-gates block: the build-gates: line PLUS all immediately following
     # indented/continuation lines (handles multi-line YAML-block format).
     # Use awk: start at ^build-gates:, collect lines until a non-indented non-empty line.
+    #
+    # COMMENT-STYLE ASSUMPTION (load-bearing — do not break silently): both the `^build-gates:`
+    # presence guard above and this awk block assume the DEFAULT-OFF stub in workflows-config.md is
+    # HTML-comment-guarded — the commented stub line begins with `<!--`, NOT `^build-gates:`, so it is
+    # correctly skipped (a commented stub must never parse as a live config). If the stub format ever
+    # changes to a `#`-style YAML comment (`# build-gates: …`) the `^build-gates:` anchor still skips it
+    # (the `# ` prefix keeps it off column 0); but a bare un-prefixed `build-gates:` left uncommented in
+    # the stub WOULD be collected here. The guard is the `<!--`/`#`-prefixed-stub convention — keep the
+    # stub commented (HTML `<!-- … -->` as shipped) so this parser never ingests example values.
     local bgblock
     bgblock=$(awk '/^build-gates:/{found=1; print; next}
                   found && /^[[:space:]]/{print; next}
@@ -75,19 +84,34 @@ parse_config() {
     g=$namecnt
     # gates is present AND well-formed only when it parses to >=1 {name,cmd} pair (name count == cmd
     # count, both >=1). A `gates:` key with no valid pair (e.g. gates: "oops") is malformed.
-    local gates_ok=0
-    if printf '%s' "$bgblock" | grep -qE 'gates:'; then
+    # Detect the `gates` SUB-key specifically — NOT the `build-gates:` PARENT key (a bare `grep 'gates:'`
+    # would match `build-gates:` and wrongly report the sub-list present). The sub-key appears either after
+    # `{`/`,` (inline form) or at line-start with leading indentation (multi-line YAML block); `build-gates:`
+    # at column 0 is `build-gates:` (prefixed by `build-`), so `^[[:space:]]*gates:` does not match it.
+    local gates_present=0 gates_ok=0
+    if printf '%s' "$bgblock" | grep -qE '(^[[:space:]]*gates:|[{,][[:space:]]*gates:)'; then
+      gates_present=1
       if [[ "$namecnt" -ge 1 && "$namecnt" -eq "$cmdcnt" ]]; then gates_ok=1; fi
     fi
     # diffScan is OPTIONAL: surface it in the parsed output so the skill's lens-5 can read it; absent => the
     # literal "default" token (the skill substitutes its own changed-field detector). It MUST appear in the
     # emitted value — capturing it in a local that dies with the function would make it invisible to the skill.
     [[ -z "$ds" ]] && ds="default"
-    # well-formed requires src/test/ext non-empty AND a well-formed gates array (>=1 {name,cmd} pair)
+    # Three-way semantics (a present-but-no-gates block is NOT malformed — it gracefully degrades like an absent
+    # build-gates, with NO warning; DEFAULT_WARN is reserved for a genuinely malformed shape):
+    #   - src/test/ext present AND a well-formed gates array (>=1 {name,cmd} pair) => OK(...)
+    #   - src/test/ext present AND NO `gates:` key at all                         => DEFAULT (cheap-gate tier
+    #         degrades to lenses 4/5 only, NO warning — same as an absent build-gates; an omitted gates sub-list
+    #         is a valid minimalist config, not a malformed one)
+    #   - otherwise (missing src/test/ext, OR a present-but-malformed `gates:` e.g. the scalar `gates: "oops"`)
+    #                                                                              => DEFAULT_WARN (graceful
+    #         default + warning, never PARSE-FAIL)
     if [[ -n "$s" && -n "$t" && -n "$e" && "$gates_ok" -eq 1 ]]; then
       bg="OK(src=$s,test=$t,ext=$e,diffScan=$ds,gates=$g)"   # diffScan surfaced for the skill (lens 5); "default" when absent
+    elif [[ -n "$s" && -n "$t" && -n "$e" && "$gates_present" -eq 0 ]]; then
+      bg="DEFAULT"        # src/test/ext present, gates sub-list omitted: graceful cheap-gate degrade, NO warning
     else
-      bg="DEFAULT_WARN"   # malformed shape (bad gates array, or missing src/test/ext): graceful default + warning, never PARSE-FAIL
+      bg="DEFAULT_WARN"   # genuinely malformed shape (bad gates array, or missing src/test/ext): graceful default + warning, never PARSE-FAIL
     fi
   else
     bg="DEFAULT"          # absent: skill defaults, no warning
@@ -186,14 +210,15 @@ result=$(parse_config "$TMP/bg_absent.md")
 [[ "$result" == *"build-gates=DEFAULT"* && "$result" != *"DEFAULT_WARN"* && "$result" != *"PARSE-FAIL"* ]] \
   && ok "build-gates absent=DEFAULT no warning" || no "build-gates absent: got $result"
 
-# (N+3a) build-gates present with src/test/ext but NO gates sub-list => DEFAULT_WARN (no valid {name,cmd} pair)
-# (the cheap-gate tier degrades to lenses 4/5 only; per §3.3 empty-candidate behavior — distinct from a
-#  bad-shape gates AND from a fully-absent build-gates)
+# (N+3a) build-gates present with src/test/ext but NO gates sub-list => DEFAULT (graceful cheap-gate degrade,
+# NO warning). An omitted gates sub-list is a valid minimalist config (the cheap-gate tier degrades to lenses
+# 4/5 only, exactly as an absent build-gates does — per §3.3 empty-candidate behavior), NOT a malformed shape.
+# DEFAULT_WARN is reserved for a genuinely malformed shape (a present-but-bad gates array, or missing src/test/ext).
 printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", test: "test", ext: "dart" }\n' \
   > "$TMP/bg_nogates.md"
 result=$(parse_config "$TMP/bg_nogates.md")
-[[ "$result" == *"build-gates=DEFAULT_WARN"* && "$result" != *"PARSE-FAIL"* ]] \
-  && ok "build-gates present-but-no-gates=DEFAULT_WARN not PARSE-FAIL" || no "build-gates no-gates sub-list: got $result"
+[[ "$result" == *"build-gates=DEFAULT"* && "$result" != *"DEFAULT_WARN"* && "$result" != *"PARSE-FAIL"* ]] \
+  && ok "build-gates present-but-no-gates=DEFAULT no warning (graceful degrade, not malformed)" || no "build-gates no-gates sub-list: got $result"
 
 # (N+3b) build-gates with optional diffScan present => still well-formed OK(...) (diffScan is optional and captured)
 printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", test: "test", ext: "dart", diffScan: "git diff -- lib", gates: [ { name: "analyze", cmd: "flutter analyze" } ] }\n' \
