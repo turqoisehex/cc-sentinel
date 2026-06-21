@@ -167,37 +167,39 @@ result=$(parse_config "$TMP/both_phases.md")
   && ok "enabled-phases /4+/5 = ENABLED with both phases in output" \
   || no "enabled-phases /4+/5: got $result"
 
-# (N) build-gates well-formed single-line nested object parses correctly
-printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", test: "test", ext: "dart", gates: [ { name: "analyze", cmd: "flutter analyze" } ] }\n' \
+# (N) build-gates well-formed single-line nested object parses correctly (TypeScript example)
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "src", test: "test", ext: "ts", gates: [ { name: "typecheck", cmd: "npx tsc --noEmit" } ] }\n' \
   > "$TMP/bg_valid.md"
 result=$(parse_config "$TMP/bg_valid.md")
-[[ "$result" == *"build-gates=OK(src=lib,test=test,ext=dart,diffScan=default,gates=1)"* ]] \
+[[ "$result" == *"build-gates=OK(src=src,test=test,ext=ts,diffScan=default,gates=1)"* ]] \
   && ok "build-gates well-formed single-line parsed" || no "build-gates valid single-line: got $result"
 
 # (N+1) build-gates well-formed MULTI-LINE nested object (src/test/ext/gates on separate lines) parses correctly
 # The config format supports YAML-block style: subsequent indented lines belong to build-gates.
 # The parser must handle the object spanning multiple lines (not just grep the first line).
+# Python example: src=src, test=tests, ext=py, two pytest gates.
 cat > "$TMP/bg_multiline.md" << 'MLEOF'
 workflows_enabled: true
 dryRounds: 2
 maxRounds: 5
 enabled-phases: ["/3","/5"]
 build-gates:
-  src: "lib"
-  test: "test"
-  ext: "dart"
+  src: "src"
+  test: "tests"
+  ext: "py"
   gates:
-    - name: "analyze"
-      cmd: "flutter analyze"
+    - name: "lint"
+      cmd: "ruff check src"
     - name: "test"
-      cmd: "flutter test"
+      cmd: "pytest tests"
 MLEOF
 result=$(parse_config "$TMP/bg_multiline.md")
-[[ "$result" == *"build-gates=OK(src=lib,test=test,ext=dart,diffScan=default,gates=2)"* ]] \
+[[ "$result" == *"build-gates=OK(src=src,test=tests,ext=py,diffScan=default,gates=2)"* ]] \
   && ok "build-gates well-formed multi-line parsed" || no "build-gates valid multi-line: got $result"
 
 # (N+2) build-gates malformed (gates not an array of {name,cmd}) => graceful-default WITH warning, NOT PARSE-FAIL
-printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", gates: "oops" }\n' \
+# Generic example: any language — the key point is the malformed gates value, not the src language.
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "src", gates: "oops" }\n' \
   > "$TMP/bg_malformed.md"
 result=$(parse_config "$TMP/bg_malformed.md")
 [[ "$result" == *"build-gates=DEFAULT_WARN"* && "$result" != *"PARSE-FAIL"* ]] \
@@ -214,17 +216,19 @@ result=$(parse_config "$TMP/bg_absent.md")
 # NO warning). An omitted gates sub-list is a valid minimalist config (the cheap-gate tier degrades to lenses
 # 4/5 only, exactly as an absent build-gates does — per §3.3 empty-candidate behavior), NOT a malformed shape.
 # DEFAULT_WARN is reserved for a genuinely malformed shape (a present-but-bad gates array, or missing src/test/ext).
-printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", test: "test", ext: "dart" }\n' \
+# Generic/JavaScript example: src=src (the pinned generic fallback default), test=test, ext=js.
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "src", test: "test", ext: "js" }\n' \
   > "$TMP/bg_nogates.md"
 result=$(parse_config "$TMP/bg_nogates.md")
 [[ "$result" == *"build-gates=DEFAULT"* && "$result" != *"DEFAULT_WARN"* && "$result" != *"PARSE-FAIL"* ]] \
   && ok "build-gates present-but-no-gates=DEFAULT no warning (graceful degrade, not malformed)" || no "build-gates no-gates sub-list: got $result"
 
 # (N+3b) build-gates with optional diffScan present => still well-formed OK(...) (diffScan is optional and captured)
-printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: "lib", test: "test", ext: "dart", diffScan: "git diff -- lib", gates: [ { name: "analyze", cmd: "flutter analyze" } ] }\n' \
+# Go example: src=. (Go projects root-scan), test=., ext=go, diffScan scopes to repo root.
+printf 'workflows_enabled: true\ndryRounds: 2\nmaxRounds: 5\nenabled-phases: ["/3","/5"]\nbuild-gates: { src: ".", test: ".", ext: "go", diffScan: "git diff -- .", gates: [ { name: "vet", cmd: "go vet ./..." } ] }\n' \
   > "$TMP/bg_diffscan.md"
 result=$(parse_config "$TMP/bg_diffscan.md")
-[[ "$result" == *"build-gates=OK(src=lib,test=test,ext=dart,diffScan=git diff -- lib,gates=1)"* ]] \
+[[ "$result" == *"build-gates=OK(src=.,test=.,ext=go,diffScan=git diff -- .,gates=1)"* ]] \
   && ok "build-gates with optional diffScan parses OK + surfaces diffScan" || no "build-gates diffScan: got $result"
 
 # (N+4) enabled-phases contains "/3" — membership recognized

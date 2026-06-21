@@ -9,9 +9,9 @@ ok(){ echo "  PASS: $1"; PASS=$((PASS+1)); }
 no(){ echo "  FAIL: $1"; FAIL=$((FAIL+1)); }
 
 # Resolve each artifact PROJECT-LOCAL-FIRST, then host, then cc-sentinel source — mirroring the existing
-# test_prove_selftest_fixture.sh candidate-loop. Wakeful RUNTIME reads the PROJECT-LOCAL `.claude/reference/*`
+# test_prove_selftest_fixture.sh candidate-loop. A consuming project's RUNTIME reads the PROJECT-LOCAL `.claude/reference/*`
 # (CWD-relative gate resolution), so a host-only check would let project-local B2/C2 drift pass green while
-# `/3` inside Wakeful still runs stale engine content. PROJECT_ROOT defaults to CWD; override via $1.
+# `/3` inside the project still runs stale engine content. PROJECT_ROOT defaults to CWD; override via $1.
 PROJECT_ROOT="${1:-$PWD}"
 # cc-sentinel SOURCE root, computed repo-relative from this test file's location
 # (modules/verification/tests/ -> cc-sentinel root), so the last-resort fall-through resolves on ANY
