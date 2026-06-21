@@ -25,9 +25,11 @@ echo "Using: $ADVERS_LOOP"
 grep -q "## 3b" "$ADVERS_LOOP" \
   && ok "## 3b section exists" || no "## 3b section missing"
 
-# A2: lensCount: 7 declared in ## 3b (scoped to ## 3b section to avoid /5 section false-pass)
-awk '/^## 3b\./{found=1} found && /^## [^3]/{exit} found{print}' "$ADVERS_LOOP" \
-  | grep -q "lensCount: 7" \
+# A2: lensCount: 7 declared in ## 3b. Scoped via `grep -A` to the ## 3b heading rather than an
+# awk section-window: the awk form (`/^## 3b\./{f=1} f && /^## [^3]/{exit}`) diverges between
+# gawk and CI's mawk after the ## 3c insertion, so prefer the portable grep. -A 6 stays inside the
+# ## 3b finderSet declaration (lensCount: 7 is within ~5 lines) and never reaches ## 3c's lensCount: 5.
+grep -A 6 "^## 3b\." "$ADVERS_LOOP" | grep -q "lensCount: 7" \
   && ok "lensCount: 7 declared in ## 3b" || no "lensCount: 7 not found in ## 3b"
 
 # A3: deterministic lane {6} declared in ## 3b
