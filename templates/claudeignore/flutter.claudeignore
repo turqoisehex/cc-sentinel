@@ -1,0 +1,8 @@
+build/
+.dart_tool/
+android/.gradle/
+android/app/build/
+ios/Pods/
+*.apk
+*.ipa
+*.aab

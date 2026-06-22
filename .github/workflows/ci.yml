@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-bash:
+    name: Bash Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Run all bash test suites
+        run: |
+          PASS=0
+          FAIL=0
+          for test_file in modules/*/tests/test_*.sh; do
+            echo "::group::$(basename "$test_file")"
+            if bash "$test_file"; then
+              PASS=$((PASS + 1))
+            else
+              FAIL=$((FAIL + 1))
+              echo "::error::$test_file failed"
+            fi
+            echo "::endgroup::"
+          done
+          echo "Results: $PASS passed, $FAIL failed"
+          if [[ $FAIL -gt 0 ]]; then
+            exit 1
+          fi
+
+  test-python:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run Python tests
+        run: python -m pytest modules/sprint-pipeline/tests/ -v

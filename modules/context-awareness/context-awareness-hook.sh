@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# cc-context-awareness — Hook actuator (optimized)
+# Reads trigger flag file and outputs additionalContext for Claude Code.
+# Designed to be fast in the common case (no trigger file present).
+
+set -u
+
+# Save full stdin for session_id and tool_name access
+SAVED_INPUT="$(cat)"
+SESSION_ID="$(echo "$SAVED_INPUT" | jq -r '.session_id // ""' | tr -d '\r')" || true
+
+[[ -z "$SESSION_ID" ]] && exit 0
+
+# Determine config file location (env override, then script-relative, then local CWD, then global)
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${CC_CTX_CONFIG:-}" && -f "$CC_CTX_CONFIG" ]]; then
+  CONFIG_FILE="$CC_CTX_CONFIG"
+elif [[ -f "$_SCRIPT_DIR/config.json" ]]; then
+  CONFIG_FILE="$_SCRIPT_DIR/config.json"
+elif [[ -f "./.claude/cc-context-awareness/config.json" ]]; then
+  CONFIG_FILE="./.claude/cc-context-awareness/config.json"
+elif [[ -f "$HOME/.claude/cc-context-awareness/config.json" ]]; then
+  CONFIG_FILE="$HOME/.claude/cc-context-awareness/config.json"
+else
+  CONFIG_FILE=""
+fi
+
+# Load config values (2>/dev/null: malformed JSON falls through to defaults)
+FLAG_DIR=""
+HOOK_EVENT=""
+if [[ -n "$CONFIG_FILE" ]]; then
+  read -r FLAG_DIR HOOK_EVENT <<< "$(jq -r '[.flag_dir // "/tmp", .hook_event // "PreToolUse"] | @tsv' "$CONFIG_FILE" 2>/dev/null | tr -d '\r')" || true
+fi
+[[ -z "$FLAG_DIR" ]] && FLAG_DIR="/tmp"
+[[ -z "$HOOK_EVENT" ]] && HOOK_EVENT="PreToolUse"
+
+TRIGGER_FILE="${FLAG_DIR}/.cc-ctx-trigger-${SESSION_ID}"
+
+# Fast path: no trigger file, exit immediately
+[[ ! -f "$TRIGGER_FILE" ]] && exit 0
+
+# Trigger file exists — read message and level
+MESSAGE="$(jq -r '.message // empty' "$TRIGGER_FILE" | tr -d '\r')"
+LEVEL="$(jq -r '.level // ""' "$TRIGGER_FILE" | tr -d '\r')"
+
+if [[ -z "$MESSAGE" ]]; then
+  rm -f "$TRIGGER_FILE"
+  exit 0
+fi
+
+# --- All levels: inject message as additionalContext ---
+jq -n --arg msg "$MESSAGE" --arg evt "$HOOK_EVENT" '{
+  "hookSpecificOutput": {
+    "hookEventName": $evt,
+    "additionalContext": $msg
+  }
+}'
+
+# Remove trigger flag so it doesn't fire again
+rm -f "$TRIGGER_FILE"

@@ -1,0 +1,37 @@
+# Governance files protected from accidental edits during normal tasks.
+# One filename per line. Lines starting with # are comments.
+# Edit this list to add/remove protected files for your project.
+#
+# To edit these files: add "GOVERNANCE-EDIT-AUTHORIZED" as its own line
+# in CURRENT_TASK.md (not appended to another line — must be a standalone line).
+# The file-protection hook checks for this marker before allowing edits.
+CLAUDE.md
+# Rules files
+design-invariants.md
+terminology.md
+spec-verification.md
+plugin-auto-invoke.md
+testing.md
+verification-squad.md
+# Skill definitions (matches basename only — protects every SKILL.md globally; unlock via GOVERNANCE-EDIT-AUTHORIZED marker)
+SKILL.md
+# Slash commands
+0.md
+1.md
+2.md
+3.md
+4.md
+5.md
+mistake.md
+grill.md
+prune-rules.md
+rewrite.md
+status.md
+verify.md
+sonnet.md
+perfect.md
+cold.md
+finalize.md
+# Agent definitions
+commit-adversarial.md
+commit-cold-reader.md

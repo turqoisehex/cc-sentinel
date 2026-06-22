@@ -1,0 +1,475 @@
+#!/usr/bin/env bash
+# channel_commit.sh — Atomic multi-channel commit with locking and verification dispatch
+#
+# Usage:
+#   bash scripts/channel_commit.sh [--channel N] --files "f1 f2" -m "msg" [--skip-squad] [--skip-tests] [--local-verify] [--governance] [--integration]
+#
+# Output:
+#   stdout: commit SHA on success
+#   stderr: status messages, errors
+#   exit 0: success, exit 1: failure
+#
+# --- Index ownership (READ THIS before editing) ---
+#
+# This script is the ONLY place in the governance surface that is allowed to
+# touch the git index (`git add`, `git reset`, `git diff --cached`, `git
+# hash-object`). It does so inside `.git/commit.lock` after calling
+# `acquire_lock`, so no other session can race it. Inside the lock:
+#
+#   1. `git reset` clears ANY foreign staging left by other channels.
+#   2. `git add <files>` re-stages ONLY the files this invocation owns.
+#   3. `git diff --cached > $DIFF_FILE` is safe HERE — the index now contains
+#      exactly this invocation's files and nothing else.
+#
+# Callers (skills, agents, the commit-protocol) MUST NOT run these commands.
+# Callers produce a `git diff HEAD -- <files>` working-tree diff instead,
+# which is index-independent. See `.claude/reference/commit-protocol.md`
+# for the full rules. If you are tempted to add a `git diff --cached` in
+# another script or skill, STOP — that is the 2026-04-14 failure mode.
+
+set -euo pipefail
+
+# --- Parse arguments ---
+CHANNEL=""
+FILE_ARRAY=()
+MESSAGE=""
+SKIP_SQUAD="false"
+SKIP_TESTS="false"
+LOCAL_VERIFY="false"
+GOVERNANCE="false"
+INTEGRATION="false"
+MAX_RETRIES=3
+
+# Trailing `true` required: under set -e, [[ ]] returning false would exit.
+_require_value() { [[ $# -lt 2 ]] && echo "ERROR: $1 requires a value" >&2 && exit 1; true; }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --channel) _require_value "$@"; CHANNEL="$2"; shift 2 ;;
+    --files)   _require_value "$@"; IFS=' ' read -ra FILE_ARRAY <<< "$2"; shift 2 ;;
+    -m)        _require_value "$@"; MESSAGE="$2"; shift 2 ;;
+    --skip-squad)   SKIP_SQUAD="true"; shift ;;
+    --skip-tests)   SKIP_TESTS="true"; shift ;;
+    --local-verify) LOCAL_VERIFY="true"; shift ;;
+    --integration)  INTEGRATION="true"; shift ;;
+    --governance)   GOVERNANCE="true"; SKIP_SQUAD="true"; SKIP_TESTS="true"; LOCAL_VERIFY="true"; shift ;;
+    *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
+  esac
+done
+
+[[ ${#FILE_ARRAY[@]} -eq 0 ]] && echo "ERROR: --files \"f1 f2\" required" >&2 && exit 1
+[[ -z "$MESSAGE" ]] && echo "ERROR: -m \"message\" required" >&2 && exit 1
+
+# --- K2 guard: channel env var set but --channel flag missing ---
+# Prevents a channeled session from writing a top-level (unsuffixed) pair, which
+# an unchanneled stop attempt could then read as false R1 evidence.
+# Only fires when a channel env var is set AND --channel was NOT supplied.
+# Host projects may extend this with a project-specific alias as a marked intentional divergence (e.g. ${SENTINEL_CHANNEL:-${PROJECT_CHANNEL:-}}).
+_env_channel="${SENTINEL_CHANNEL:-}"
+if [[ -n "$_env_channel" && -z "$CHANNEL" ]]; then
+  echo "ERROR: channel env var SENTINEL_CHANNEL set but --channel flag missing — refusing to run; pass --channel N explicitly" >&2
+  exit 1
+fi
+unset _env_channel
+
+# --- Derived paths ---
+if [[ -n "$CHANNEL" ]]; then
+  CH_SUFFIX="_ch${CHANNEL}"
+  PENDING_DIR="verification_findings/_pending_sonnet/ch${CHANNEL}"
+else
+  CH_SUFFIX=""
+  PENDING_DIR="verification_findings/_pending_sonnet"
+fi
+CHECK_FILE="verification_findings/commit_check${CH_SUFFIX}.md"
+COLD_READ_FILE="verification_findings/commit_cold_read${CH_SUFFIX}.md"
+DIFF_FILE="verification_findings/staged_diff${CH_SUFFIX}.diff"
+LOCK_DIR=".git/commit.lock"
+COMMIT_ACTIVE_FILE="${PENDING_DIR}/.commit_active"
+
+# Resolve scripts directory: project-local first, then global
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Anchor on repo root AFTER SCRIPT_DIR resolves (SCRIPT_DIR needs $0 relative to
+# the invoking CWD). All path vars below (PENDING_DIR, CHECK_FILE, LOCK_DIR, the
+# --files entries, git ops) are repo-root-relative; without this anchor a subdir
+# invocation reads a phantom heartbeat/inbox and falsely falls back to local
+# verification. Falls back to CWD outside a git repo.
+_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -n "$_ROOT" ]]; then
+  cd "$_ROOT" || true
+fi
+
+_cleanup_exit() {
+  rm -f "$COMMIT_ACTIVE_FILE" 2>/dev/null
+  # Only remove lock if we own it (another session may hold it)
+  if [[ -f "$LOCK_DIR/pid" ]] && [[ "$(cat "$LOCK_DIR/pid" 2>/dev/null)" == "$$" ]]; then
+    rm -rf "$LOCK_DIR" 2>/dev/null
+  fi
+}
+trap _cleanup_exit EXIT
+
+# --- Lock functions ---
+acquire_lock() {
+  local max_wait=180 stale_threshold=120 waited=0
+  while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    local lock_time now
+    lock_time=$(cat "$LOCK_DIR/time" 2>/dev/null || echo 0)
+    now=$(date +%s)
+    if (( lock_time > 0 && now - lock_time > stale_threshold )); then
+      echo "Removing stale commit lock (age: $((now - lock_time))s)" >&2
+      rm -rf "$LOCK_DIR"
+      continue
+    fi
+    sleep 1
+    waited=$((waited + 1))
+    if (( waited >= max_wait )); then
+      echo "ERROR: LOCK_TIMEOUT — waited ${max_wait}s for commit lock" >&2
+      exit 1
+    fi
+  done
+  date +%s > "$LOCK_DIR/time"
+  echo "$$" > "$LOCK_DIR/pid"
+  echo "${CHANNEL:-unchanneled}" > "$LOCK_DIR/channel"
+}
+
+release_lock() { rm -rf "$LOCK_DIR" 2>/dev/null; }
+
+# --- Phase 1: Stage + Hash ---
+phase1_stage_and_hash() {
+  local attempt=$1
+  acquire_lock
+
+  local currently_staged
+  currently_staged=$(git diff --cached --name-only 2>/dev/null || true)
+  if [[ -n "$currently_staged" ]]; then
+    local unrelated=""
+    for staged_file in $currently_staged; do
+      local is_ours="false"
+      for f in "${FILE_ARRAY[@]}"; do
+        [[ "$staged_file" == "$f" ]] && is_ours="true" && break
+      done
+      [[ "$is_ours" == "false" ]] && unrelated="$unrelated $staged_file"
+    done
+    [[ -n "$unrelated" ]] && echo "WARNING: Clearing unrelated staged files:$unrelated" >&2
+  fi
+
+  git reset --quiet 2>/dev/null || true
+  for f in "${FILE_ARRAY[@]}"; do
+    if ! git add "$f" 2>/dev/null; then
+      echo "ERROR: Failed to stage: $f" >&2
+      release_lock
+      return 1
+    fi
+  done
+
+  git diff --cached > "$DIFF_FILE"
+  HASH=$(git hash-object --stdin < "$DIFF_FILE")
+
+  # Never delete existing verification files here.
+  # Stale files are handled by dispatch_and_wait: pre-dispatch deletion in
+  # listener mode, and post-check stamping in local-verify mode. Either way,
+  # the VERDICT line (not hash) is what validate_results gates on.
+
+  release_lock
+  echo "Phase 1 complete (attempt $attempt/$MAX_RETRIES) — hash: $HASH" >&2
+}
+
+# --- Hash stamping helper ---
+# Stamps current $HASH into both verification files. Agents no longer write HASH
+# lines themselves (see agent files + commit-protocol.md) — the script owns the
+# stamp in BOTH local-verify and listener modes. This removes the listener-mode
+# gap where validate_results greps for HASH but agents never write it.
+# "Stamps" means: overwrite an existing `HASH:` line, or insert one after the
+# `VERDICT:` line. If neither exists, sed makes no change and validate_results
+# will fail on the missing VERDICT first.
+stamp_hash_into_outputs() {
+  for f in "$CHECK_FILE" "$COLD_READ_FILE"; do
+    [[ -f "$f" ]] || continue
+    local tmp="${f}.tmp"
+    if grep -q '^HASH:' "$f" 2>/dev/null; then
+      sed "s/^HASH:.*/HASH: $HASH/" "$f" > "$tmp" && mv "$tmp" "$f"
+    else
+      sed "/^VERDICT:/a HASH: $HASH" "$f" > "$tmp" && mv "$tmp" "$f"
+    fi
+  done
+}
+
+# --- Dispatch + Wait ---
+dispatch_and_wait() {
+  if [[ "$LOCAL_VERIFY" == "true" ]]; then
+    # When --skip-squad is set the caller has intentionally bypassed the squad;
+    # the pre-flight existence check for result files is also skipped because
+    # there may be no agents to produce them. stamp_hash_into_outputs (below) then
+    # stamps whatever result files exist and silently no-ops over any that are absent.
+    if [[ "$SKIP_SQUAD" != "true" ]]; then
+      if [[ ! -f "$CHECK_FILE" ]] || [[ ! -f "$COLD_READ_FILE" ]]; then
+        echo "LOCAL VERIFY: Result files missing." >&2
+        echo "  Expected:" >&2
+        echo "    $CHECK_FILE" >&2
+        echo "    $COLD_READ_FILE" >&2
+        echo "  Hash: $HASH" >&2
+        echo "  Spawn commit-adversarial + commit-cold-reader subagents, then retry with --local-verify." >&2
+        exit 1
+      fi
+    fi
+    # In local-verify mode, agents read the working-tree diff (produced by
+    # `git diff HEAD -- <files>`) via the caller, not the staged diff. The
+    # script stamps the hash into any result files present (a no-op when
+    # --skip-squad produced none). VERDICT is what gates the commit — the
+    # agent's independent assessment.
+    stamp_hash_into_outputs
+    echo "LOCAL VERIFY: Stamped hash $HASH into verification files." >&2
+    return 0
+  fi
+
+  # Listener mode: delete any stale output files before dispatch. This ensures
+  # wait_for_results only completes on FRESH writes from the current dispatch,
+  # preventing the script from reading prior-run verdicts. The old stale-file
+  # guard was a $HASH grep in validate_results, but agents no longer write HASH
+  # (the script stamps it post-wait) so deletion is the only reliable guard.
+  rm -f "$CHECK_FILE" "$COLD_READ_FILE" 2>/dev/null || true
+
+  mkdir -p "$PENDING_DIR"
+  rm -f "${PENDING_DIR}"/verify_*.md 2>/dev/null || true
+
+  local dispatch_file="${PENDING_DIR}/verify_${HASH}.md"
+  cat > "$dispatch_file" << YAML_EOF
+---
+type: commit-verification
+diff_path: ${DIFF_FILE}
+agents:
+  - name: commit-adversarial
+    output_path: ${CHECK_FILE}
+  - name: commit-cold-reader
+    output_path: ${COLD_READ_FILE}
+---
+## Commit Verification
+Hash: ${HASH}
+Message: ${MESSAGE}
+Files: ${FILE_ARRAY[*]}
+YAML_EOF
+
+  echo "Dispatched to ${dispatch_file} — waiting for results" >&2
+  bash "$SCRIPT_DIR/wait_for_results.sh" --timeout 300 "$CHECK_FILE" "$COLD_READ_FILE"
+  local wait_rc=$?
+  if [[ $wait_rc -eq 0 ]]; then
+    # Same stamp used in local-verify mode — script owns HASH in both paths.
+    stamp_hash_into_outputs
+    echo "LISTENER: Stamped hash $HASH into verification files." >&2
+  fi
+  return $wait_rc
+}
+
+# --- Validate Results ---
+validate_results() {
+  # When both --local-verify and --skip-squad are set the caller has intentionally
+  # bypassed the squad; result files were never produced, so validation is also
+  # skipped. When --skip-squad is used without --local-verify the listener still
+  # produces result files and we validate them normally.
+  if [[ "$LOCAL_VERIFY" == "true" && "$SKIP_SQUAD" == "true" ]]; then
+    echo "SKIP_SQUAD: Skipping result validation (local-verify + skip-squad)." >&2
+    return 0
+  fi
+  for f in "$CHECK_FILE" "$COLD_READ_FILE"; do
+    [[ ! -f "$f" ]] && echo "ERROR: Missing $f" >&2 && return 1
+  done
+
+  # Hash is stamped by dispatch_and_wait in BOTH modes (local-verify and listener).
+  # Stale-file detection is handled by pre-dispatch deletion in listener mode.
+  # The old listener-mode hash grep is removed — it became tautological after
+  # the script took ownership of stamping from agents.
+
+  if ! grep -qE "^VERDICT: (PASS|WARN)( |$)" "$CHECK_FILE" 2>/dev/null; then
+    echo "ADVERSARIAL CHECK FAILED — see: $CHECK_FILE" >&2
+    return 2
+  fi
+  if ! grep -qE "^VERDICT: (PASS|WARN)( |$)" "$COLD_READ_FILE" 2>/dev/null; then
+    echo "COLD-READER CHECK FAILED — see: $COLD_READ_FILE" >&2
+    return 2
+  fi
+
+  echo "Verification passed (hash: $HASH)" >&2
+  return 0
+}
+
+# --- Heartbeat + Liveness Check ---
+# Returns 0 = dispatch normally, 1 = switch to local (or optimistic dispatch if OPTIMISTIC_DISPATCH set).
+# Sets OPTIMISTIC_DISPATCH="true" when listener may recover (stale + .active).
+# Heartbeat state machine: fresh (<5min) -> dispatch; warn-stale (5-15min) ->
+# dispatch with warning; stale (>15min) + .active -> optimistic dispatch; stale
+# + no .active -> switch to local verify.
+OPTIMISTIC_DISPATCH="false"
+
+check_heartbeat() {
+  local hb_file="${PENDING_DIR}/.heartbeat"
+  local active_file="${PENDING_DIR}/.active"
+
+  # State: Missing heartbeat (any .active state) → not started or crashed
+  if [[ ! -f "$hb_file" ]]; then
+    echo "WARNING: No listener heartbeat detected — switching to local verification." >&2
+    echo "  Start /sonnet in a second terminal for full per-commit verification." >&2
+    return 1
+  fi
+
+  local now hb_time age active_info=""
+  now=$(date +%s)
+  hb_time=$(stat -c %Y "$hb_file" 2>/dev/null || stat -f %m "$hb_file" 2>/dev/null || echo 0)
+  age=$((now - hb_time))
+  [[ -f "$active_file" ]] && active_info=$(cat "$active_file" 2>/dev/null)
+
+  if (( age > 900 )); then
+    # Stale heartbeat (>15 min)
+    if [[ -n "$active_info" ]]; then
+      echo "WARNING: Listener may be stuck (heartbeat ${age}s, active: $active_info) — dispatching + local fallback." >&2
+      OPTIMISTIC_DISPATCH="true"
+      return 1
+    else
+      echo "WARNING: Listener likely down (heartbeat ${age}s) — switching to local verification." >&2
+      return 1
+    fi
+  elif (( age > 300 )); then
+    # Warn-stale heartbeat (5–15 min)
+    if [[ -n "$active_info" ]]; then
+      echo "Listener busy on long task (heartbeat ${age}s, active: $active_info)." >&2
+    else
+      echo "WARNING: Listener slow or briefly stalled (heartbeat ${age}s)." >&2
+    fi
+    return 0
+  else
+    # Fresh heartbeat (<5 min)
+    if [[ -n "$active_info" ]]; then
+      echo "Listener alive, processing: $active_info" >&2
+    fi
+    return 0
+  fi
+}
+
+# --- Main Flow ---
+HASH=""
+mkdir -p "$PENDING_DIR"
+printf '%s\n' "${FILE_ARRAY[@]}" > "$COMMIT_ACTIVE_FILE"
+
+# Check listener liveness ONCE before the retry loop.
+# Listener state doesn't change between retries — checking inside the loop
+# wastes a heartbeat check per attempt and delays the LOCAL_VERIFY decision.
+if [[ "$LOCAL_VERIFY" != "true" ]]; then
+  if ! check_heartbeat; then
+    LOCAL_VERIFY="true"
+  fi
+fi
+
+ATTEMPT=0
+while (( ATTEMPT < MAX_RETRIES )); do
+  ATTEMPT=$((ATTEMPT + 1))
+  phase1_stage_and_hash "$ATTEMPT" || exit 1
+
+  # Early exit: if diff is empty, all files already match HEAD.
+  # Another session likely committed first — no work to do.
+  if [[ ! -s "$DIFF_FILE" ]]; then
+    echo "SKIP: All files already match HEAD — nothing to commit." >&2
+    echo "  Another session may have committed these changes first." >&2
+    rm -f "$DIFF_FILE" "$COMMIT_ACTIVE_FILE"
+    echo "$(git rev-parse HEAD)"
+    exit 0
+  fi
+
+  # Governance commits skip the entire verification pipeline.
+  # --governance implies --skip-squad --skip-tests --local-verify.
+  # safe-commit.sh handles all three flags gracefully.
+  if [[ "$GOVERNANCE" == "true" ]]; then
+    echo "GOVERNANCE: Skipping verification pipeline." >&2
+    break
+  fi
+
+  # Optimistic dispatch for stuck listeners (set by check_heartbeat above).
+  if [[ "$OPTIMISTIC_DISPATCH" == "true" && "$ATTEMPT" -eq 1 ]]; then
+    mkdir -p "$PENDING_DIR"
+    rm -f "${PENDING_DIR}"/verify_*.md 2>/dev/null || true
+    cat > "${PENDING_DIR}/verify_${HASH}.md" << OPT_EOF
+---
+type: commit-verification
+diff_path: ${DIFF_FILE}
+agents:
+  - name: commit-adversarial
+    output_path: ${CHECK_FILE}
+  - name: commit-cold-reader
+    output_path: ${COLD_READ_FILE}
+---
+## Commit Verification (optimistic — listener may be stuck)
+Hash: ${HASH}
+Message: ${MESSAGE}
+Files: ${FILE_ARRAY[*]}
+OPT_EOF
+    echo "Optimistic dispatch written — proceeding with local verification" >&2
+  fi
+
+  WAIT_EXIT=0
+  dispatch_and_wait || WAIT_EXIT=$?
+  if [[ $WAIT_EXIT -ne 0 ]]; then
+    echo "Verification failed (attempt $ATTEMPT/$MAX_RETRIES)" >&2
+    (( ATTEMPT >= MAX_RETRIES )) && exit 1
+    # Pre-dispatch cleanup in dispatch_and_wait handles stale files in listener
+    # mode on the next attempt. No explicit cleanup needed here.
+    continue
+  fi
+
+  VAL_EXIT=0
+  validate_results || VAL_EXIT=$?
+  if [[ $VAL_EXIT -eq 0 ]]; then
+    break
+  elif [[ $VAL_EXIT -eq 2 ]]; then
+    # VERDICT: FAIL — hard stop, don't retry
+    exit 1
+  else
+    # Missing VERDICT files — retry (dispatch_and_wait will re-delete stale
+    # outputs in listener mode on the next attempt).
+    (( ATTEMPT >= MAX_RETRIES )) && exit 1
+  fi
+done
+
+# --- Phase 2: Commit ---
+# Tests are owned by safe-commit.sh (single source of truth).
+acquire_lock
+git reset --quiet 2>/dev/null || true
+for f in "${FILE_ARRAY[@]}"; do
+  git add "$f" 2>/dev/null || { echo "ERROR: Phase 2 staging failed: $f" >&2; release_lock; exit 1; }
+done
+
+COMMIT_HASH=$(git diff --cached | git hash-object --stdin)
+if [[ "$COMMIT_HASH" != "$HASH" ]]; then
+  echo "CONFLICT: HEAD advanced and diff changed." >&2
+  release_lock
+  exit 1
+fi
+
+COMMIT_ARGS=(-m "$MESSAGE" --local-verify)
+[[ "$SKIP_SQUAD" == "true" ]] && COMMIT_ARGS+=(--skip-squad)
+[[ "$SKIP_TESTS" == "true" ]] && COMMIT_ARGS+=(--skip-tests)
+[[ "$INTEGRATION" == "true" ]] && COMMIT_ARGS+=(--integration)
+
+[[ -n "$CHANNEL" ]] && export SENTINEL_CHANNEL="$CHANNEL"
+COMMIT_EXIT=0
+# Resolve safe-commit.sh: project-local first, then global
+SAFE_COMMIT=""
+for candidate in ".claude/hooks/safe-commit.sh" "${HOME}/.claude/hooks/safe-commit.sh"; do
+  if [[ -f "$candidate" ]]; then
+    SAFE_COMMIT="$candidate"
+    break
+  fi
+done
+if [[ -z "$SAFE_COMMIT" ]]; then
+  echo "ERROR: safe-commit.sh not found in .claude/hooks/ or ~/.claude/hooks/" >&2
+  exit 1
+fi
+bash "$SAFE_COMMIT" --internal "${COMMIT_ARGS[@]}" || COMMIT_EXIT=$?
+
+rm -f "$DIFF_FILE" "$COMMIT_ACTIVE_FILE"
+release_lock
+
+if [[ $COMMIT_EXIT -eq 0 ]]; then
+  COMMIT_SHA=$(git rev-parse HEAD)
+  echo "SUCCESS: committed $COMMIT_SHA" >&2
+  echo "$COMMIT_SHA"
+else
+  exit $COMMIT_EXIT
+fi

@@ -1,0 +1,15 @@
+.git/objects/
+*.exe
+*.dll
+*.so
+*.dylib
+*.zip
+*.tar.gz
+*.mp4
+*.mp3
+*.wav
+*.avi
+.idea/
+.vscode/
+*.swp
+verification_findings/
